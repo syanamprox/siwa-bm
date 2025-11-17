@@ -229,30 +229,32 @@
                 Manajemen Data
             </div>
 
-            <!-- Data Warga (RT level and above) - Coming Soon -->
+            <!-- Data Warga (RT level and above) -->
             @if(auth()->user()->hasRole(['rt','rw','lurah','admin']))
-            <li class="nav-item">
-                <a class="nav-link disabled" href="#" title="Coming Soon">
+            <li class="nav-item {{ request()->is('warga*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('warga.index') }}">
                     <i class="fas fa-users"></i>
                     <span>Data Warga</span></a>
             </li>
             @endif
 
-            <!-- Data Keluarga (RW level and above) - Coming Soon -->
+            <!-- Data Keluarga (RW level and above) -->
             @if(auth()->user()->hasRole(['rw','lurah','admin']))
-            <li class="nav-item">
-                <a class="nav-link disabled" href="#" title="Coming Soon">
-                    <i class="fas fa-user-friends"></i>
+            <li class="nav-item {{ request()->is('keluarga*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('keluarga.index') }}">
+                    <i class="fas fa-id-card"></i>
                     <span>Data Keluarga</span></a>
             </li>
             @endif
 
-            <!-- Manajemen Iuran - Coming Soon -->
-            <li class="nav-item">
-                <a class="nav-link disabled" href="#" title="Coming Soon">
+            <!-- Manajemen Iuran -->
+            @if(auth()->user()->hasRole(['rt','rw','lurah','admin']))
+            <li class="nav-item {{ request()->is('iuran*') ? 'active' : '' }}">
+                <a class="nav-link" href="#" onclick="alert('Fitur Manajemen Iuran akan segera tersedia'); return false;">
                     <i class="fas fa-dollar-sign"></i>
                     <span>Manajemen Iuran</span></a>
             </li>
+            @endif
 
             <!-- Divider -->
             <hr class="sidebar-divider">
@@ -262,17 +264,16 @@
                 Laporan
             </div>
 
-            <!-- Laporan (Lurah & Admin) - Coming Soon -->
+            <!-- Laporan (Lurah & Admin) -->
             @if(auth()->user()->hasRole(['lurah','admin']))
-            <li class="nav-item">
-                <a class="nav-link disabled" href="#" title="Coming Soon">
+            <li class="nav-item {{ request()->is('laporan*') ? 'active' : '' }}">
+                <a class="nav-link" href="#" onclick="alert('Fitur Laporan akan segera tersedia'); return false;">
                     <i class="fas fa-chart-bar"></i>
                     <span>Laporan</span>
                 </a>
             </li>
             @endif
-
-            <!-- Divider -->
+            
             <hr class="sidebar-divider">
 
             <!-- Heading Sistem -->
@@ -516,42 +517,80 @@
     @endif
 
     <!-- Toast Notification Container -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
         <!-- Toast notifications will be inserted here -->
     </div>
 
     <!-- Common JavaScript Functions -->
     <script>
         // Global variables
-        window.showToast = function(message, type = 'success') {
-            const toastContainer = document.querySelector('.toast-container');
-            const toastId = 'toast-' + Date.now();
+        window.showToast = function(message, type = 'success', duration = 3000) {
 
+            // Simple toast notification that always works
+            const toastId = 'toast-' + Date.now();
+            const toastContainer = document.querySelector('.toast-container');
+
+            if (!toastContainer) {
+                // Fallback to alert if container not found
+                alert(`📢 ${type.toUpperCase()}: ${message}`);
+                return;
+            }
+
+            // Create simple toast with manual animation
             const toastHtml = `
-                <div id="${toastId}" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="toast-header bg-${type} text-white">
-                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
-                        <strong class="me-auto">Notifikasi</strong>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                    <div class="toast-body">
-                        ${message}
+                <div id="${toastId}" class="toast-simple" style="
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    min-width: 300px;
+                    padding: 15px;
+                    margin: 10px;
+                    border-radius: 8px;
+                    background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+                    color: white;
+                    font-weight: bold;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    opacity: 0;
+                    transform: translateX(100%);
+                    transition: all 0.3s ease;
+                    white-space: pre-line;
+                    font-size: 14px;
+                ">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span>${message}</span>
+                        <button onclick="this.parentElement.parentElement.remove()" style="
+                            background: none;
+                            border: none;
+                            color: white;
+                            font-size: 18px;
+                            margin-left: 10px;
+                            cursor: pointer;
+                        ">×</button>
                     </div>
                 </div>
             `;
 
-            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            // Add toast to container
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
             const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement, {
-                autohide: true,
-                delay: 3000
-            });
 
-            toast.show();
+            // Animate in
+            setTimeout(() => {
+                toastElement.style.opacity = '1';
+                toastElement.style.transform = 'translateX(0)';
+            }, 100);
 
-            toastElement.addEventListener('hidden.bs.toast', () => {
-                toastElement.remove();
-            });
+            // Auto remove after duration
+            setTimeout(() => {
+                toastElement.style.opacity = '0';
+                toastElement.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (toastElement && toastElement.parentNode) {
+                        toastElement.parentNode.removeChild(toastElement);
+                    }
+                }, 300);
+            }, duration);
         };
 
         window.showLoading = function() {

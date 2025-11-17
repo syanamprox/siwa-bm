@@ -11,17 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('wilayah', function (Blueprint $table) {
+        Schema::create('wilayahs', function (Blueprint $table) {
             $table->id();
-            $table->string('kode', 10)->unique();
-            $table->string('nama', 100);
-            $table->enum('tingkat', ['kelurahan', 'rw', 'rt']);
+            $table->string('kode');
+            $table->string('nama');
+            $table->enum('tingkat', ['Kelurahan', 'RW', 'RT']);
             $table->unsignedBigInteger('parent_id')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
-            $table->foreign('parent_id')->references('id')->on('wilayah')->onDelete('cascade');
-            $table->index(['kode', 'tingkat', 'parent_id']);
+            // Foreign key to parent wilayah
+            $table->foreign('parent_id')->references('id')->on('wilayahs')->onDelete('cascade');
+
+            // Indexes
+            $table->index(['tingkat', 'parent_id']);
+            $table->index('kode');
         });
     }
 
@@ -30,6 +34,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('wilayah');
+        Schema::dropIfExists('wilayahs');
     }
 };

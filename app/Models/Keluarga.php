@@ -15,7 +15,7 @@ class Keluarga extends Model
      *
      * @var string
      */
-    protected $table = 'keluarga';
+    protected $table = 'keluargas';
 
     /**
      * The attributes that are mass assignable.
@@ -29,6 +29,12 @@ class Keluarga extends Model
         'rt_kk',
         'rw_kk',
         'kelurahan_kk',
+        'kecamatan_kk',
+        'kabupaten_kk',
+        'provinsi_kk',
+        'status_domisili_keluarga',
+        'tanggal_mulai_domisili_keluarga',
+        'keterangan_status',
     ];
 
     /**
@@ -39,6 +45,7 @@ class Keluarga extends Model
     protected function casts(): array
     {
         return [
+            'tanggal_mulai_domisili_keluarga' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
@@ -109,14 +116,7 @@ class Keluarga extends Model
         return $this->anggotaKeluarga()->count();
     }
 
-    /**
-     * Get alamat lengkap
-     */
-    public function getAlamatLengkapAttribute(): string
-    {
-        return "{$this->alamat_kk}, RT {$this->rt_kk}/RW {$this->rw_kk}, {$this->kelurahan_kk}";
-    }
-
+    
     /**
      * Get nama kepala keluarga
      */
@@ -200,6 +200,28 @@ class Keluarga extends Model
                   $subQuery->where('nama_lengkap', 'like', "%{$keyword}%");
               });
         });
+    }
+
+    /**
+     * Get status domisili keluarga label
+     */
+    public function getStatusDomisiliKeluargaLabelAttribute(): string
+    {
+        return match($this->status_domisili_keluarga) {
+            'Tetap' => 'Tetap (Alamat & Domisili Sama)',
+            'Non Domisili' => 'Non Domisili (Alamat Sini, Domisili Luar)',
+            'Luar' => 'Luar (Alamat Luar, Domisili Sini)',
+            'Sementara' => 'Sementara (Kontrak/Ngontrak)',
+            default => $this->status_domisili_keluarga,
+        };
+    }
+
+    /**
+     * Get alamat lengkap keluarga
+     */
+    public function getAlamatLengkapAttribute(): string
+    {
+        return "{$this->alamat_kk}, RT {$this->rt_kk}/RW {$this->rw_kk}, {$this->kelurahan_kk}, {$this->kecamatan_kk}, {$this->kabupaten_kk}, {$this->provinsi_kk}";
     }
 
     /**

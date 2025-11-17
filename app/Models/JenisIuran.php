@@ -15,7 +15,7 @@ class JenisIuran extends Model
      *
      * @var string
      */
-    protected $table = 'jenis_iuran';
+    protected $table = 'jenis_iurans';
 
     /**
      * The attributes that are mass assignable.

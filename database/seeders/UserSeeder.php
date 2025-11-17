@@ -14,42 +14,55 @@ class UserSeeder extends Seeder
     {
         // Create default admin user
         User::create([
-            'username' => 'admin',
             'name' => 'Administrator',
             'email' => 'admin@siwa.test',
             'password' => bcrypt('admin123'),
             'role' => 'admin',
-            'status_aktif' => true,
         ]);
 
         // Create default lurah user
         User::create([
-            'username' => 'lurah',
-            'name' => 'Budi Santoso, S.IP',
+            'name' => 'RULLY PRASETYA NEGARA, S.STP.,M.Si',
             'email' => 'lurah@siwa.test',
             'password' => bcrypt('lurah123'),
             'role' => 'lurah',
-            'status_aktif' => true,
         ]);
 
-        // Create default RW user
+        // Create default RW III user
         User::create([
-            'username' => 'rw01',
-            'name' => 'Ahmad Fadli',
-            'email' => 'rw01@siwa.test',
+            'name' => 'BAMBANG SETYAWAN',
+            'email' => 'rw03@siwa.test',
             'password' => bcrypt('rw123'),
             'role' => 'rw',
-            'status_aktif' => true,
         ]);
 
-        // Create default RT user
+        // Create default RT users
         User::create([
-            'username' => 'rt01',
-            'name' => 'Siti Nurhaliza',
+            'name' => 'TRI BAGUS WAHYUDI',
             'email' => 'rt01@siwa.test',
             'password' => bcrypt('rt123'),
             'role' => 'rt',
-            'status_aktif' => true,
+        ]);
+
+        User::create([
+            'name' => 'AKHMAD SURYADI',
+            'email' => 'rt02@siwa.test',
+            'password' => bcrypt('rt123'),
+            'role' => 'rt',
+        ]);
+
+        User::create([
+            'name' => 'M. YASIN',
+            'email' => 'rt03@siwa.test',
+            'password' => bcrypt('rt123'),
+            'role' => 'rt',
+        ]);
+
+        User::create([
+            'name' => 'SULICHAH',
+            'email' => 'rt04@siwa.test',
+            'password' => bcrypt('rt123'),
+            'role' => 'rt',
         ]);
     }
 }

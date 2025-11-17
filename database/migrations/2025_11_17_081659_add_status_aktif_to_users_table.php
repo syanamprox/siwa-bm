@@ -11,14 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pengaturan_sistem', function (Blueprint $table) {
-            $table->id();
-            $table->string('key', 100)->unique();
-            $table->text('value');
-            $table->string('keterangan', 255)->nullable();
-            $table->timestamps();
-
-            $table->index(['key']);
+        Schema::table('users', function (Blueprint $table) {
+            $table->boolean('status_aktif')->default(true)->after('role');
+            $table->index('status_aktif');
         });
     }
 
@@ -27,6 +22,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('pengaturan_sistem');
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropIndex(['status_aktif']);
+            $table->dropColumn('status_aktif');
+        });
     }
 };

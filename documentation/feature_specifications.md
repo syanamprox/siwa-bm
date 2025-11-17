@@ -90,45 +90,40 @@ pendidikan_terakhir ENUM      ✓           Tidak/Sekolah,SD,SMP,SMA,D1/D2/D3,S1
 foto_ktp         FILE        ✗           JPG/PNG max 2MB
 ```
 
-**Data Domisili (Data Dinamis):**
+**Data Kontak Personal:**
 ```
-Field              Type        Required    Validation
+Field          Type        Required    Validation
 ---------------------------------------------------
-alamat_domisili    TEXT        ✓
-rt_domisili        VARCHAR(3)  ✓           Numeric
-rw_domisili        VARCHAR(3)  ✓           Numeric
-kelurahan_domisili VARCHAR(50) ✓
-no_telepon         VARCHAR(15) ✗           Numeric + +62
-email              VARCHAR(50) ✗           Email format
-status_domisili    ENUM        ✓           Tetap,Kontrak,Ngontrak
-tanggal_mulai      DATE        ✓
+no_telepon     VARCHAR(20) ✗           Phone format
+email          VARCHAR(100)✗           Email format
+kk_id          BIGINT      ✗           Foreign key ke keluarga
+hubungan_keluarga VARCHAR(50)✗         Kepala Keluarga,Istri,Anak,dll
+created_by     BIGINT      ✗           Foreign key ke users
+updated_by     BIGINT      ✗           Foreign key ke users
 ```
 
-**Data Keluarga:**
-```
-Field                Type         Required    Validation
------------------------------------------------------
-kk_id                BIGINT       ✗           Foreign key ke keluarga
-hubungan_keluarga    VARCHAR(25)  ✗           Kepala Keluarga,Istri,Suami,Anak,Orang Tua,Mertua,Lainnya
-```
+**Note:** Alamat dan status domisili dipindahkan ke level keluarga
+
+**Note:** Hubungan keluarga dan KK link sudah dihandle di field di atas
 
 ### 2.2 CRUD Operations
 
 **Create Warga:**
-- Multi-step modal form: Step 1 (Data KTP), Step 2 (Data Domisili), Step 3 (Data Keluarga)
-- Auto-complete untuk alamat (sesuai wilayah)
+- Modal form with tabs: Data KTP, Data Kontak, Data Keluarga
+- Auto-complete untuk alamat KTP (sesuai wilayah)
 - Real-time validation (AJAX)
 - NIK validation: check existing NIK
-- KK lookup: auto-fill KK jika nomor KK sudah ada
+- KK selection: dropdown dari existing KK atau create new KK
 - File upload: foto KTP dengan preview
 
 **Read/View Warga:**
 - Card view & table view
-- Search: NIK, nama, alamat KTP, alamat domisili
-- Filter: RT/RW, jenis kelamin, agama, pekerjaan, pendidikan
+- Search: NIK, nama, alamat KTP
+- Filter: RT/RW (berdasarkan KK), jenis kelamin, agama, pekerjaan, pendidikan
 - Sort: nama, tanggal lahir, created_at
 - Pagination: 20 data per page
 - Export: CSV, PDF (filtered data)
+- Display alamat domisili dari data KK
 
 **Update Warga:**
 - Modal popup edit form dengan pre-filled data
@@ -169,14 +164,20 @@ hubungan_keluarga    VARCHAR(25)  ✗           Kepala Keluarga,Istri,Suami,Anak
 
 **Data Structure:**
 ```
-Field            Type         Required    Validation
------------------------------------------------------
-no_kk            VARCHAR(16)  ✓           Unique, format 16 digit
-kepala_keluarga_id BIGINT     ✓           Foreign key ke warga
-alamat_kk        TEXT         ✓
-rt_kk            VARCHAR(3)   ✓           Numeric
-rw_kk            VARCHAR(3)   ✓           Numeric
-kelurahan_kk     VARCHAR(50)  ✓
+Field                      Type         Required    Validation
+---------------------------------------------------------------
+no_kk                      VARCHAR(16)  ✓           Unique, format 16 digit
+kepala_keluarga_id         BIGINT       ✗           Foreign key ke warga
+alamat_kk                  TEXT         ✓
+rt_kk                      VARCHAR(10)  ✓
+rw_kk                      VARCHAR(10)  ✓
+kelurahan_kk               VARCHAR(100) ✓
+kecamatan_kk               VARCHAR(100) ✓
+kabupaten_kk               VARCHAR(100) ✓
+provinsi_kk                VARCHAR(100) ✓
+status_domisili_keluarga   ENUM         ✓           Tetap,Non Domisili,Luar,Sementara
+tanggal_mulai_domisili_keluarga DATE   ✗
+keterangan_status          TEXT         ✗
 ```
 
 ### 3.2 Family Member Management
@@ -461,9 +462,11 @@ Tempat Lahir        J***karta          High (sensor >3 char)
 Tanggal Lahir       ***-**-****        High
 Jenis Kelamin       L/P               Low
 Alamat KTP          Jl. *** No. **   Medium (sensor detail)
-RT/RW KTP           001/002           Low
-Kelurahan KTP      Kelurahan X       Low
+Alamat Domisili     Jl. *** RT 001    Medium (dari data KK)
+RT/RW Domisili      001/002           Low (dari data KK)
+Kelurahan Domisili  Kelurahan X       Low (dari data KK)
 Status Perkawinan   Kawin             Low
+Hubungan Keluarga   Kepala Keluarga   Low (dari data KK)
 ```
 
 ### 9.2 Cek Status Keluarga
@@ -473,15 +476,17 @@ Status Perkawinan   Kawin             Low
 
 **Output Keluarga (Disensor):**
 ```
-Field                Display Format      Sensitivity Level
------------------------------------------------------------
-No KK               316105********1234  Medium (sensor 10 digit)
-Nama Kepala Keluarga Budi S****o       Medium (sensor 5 char)
-Jumlah Anggota      4 orang           Low
-Alamat KK           Jl. *** RT 001    Medium (sensor detail)
-RT/RW KK            001/002           Low
-Kelurahan KK        Kelurahan X       Low
-Daftar Anggota      [Daftar anak 18+]  Medium
+Field                        Display Format      Sensitivity Level
+-----------------------------------------------------------------
+No KK                       316105********1234  Medium (sensor 10 digit)
+Nama Kepala Keluarga         Budi S****o       Medium (sensor 5 char)
+Jumlah Anggota              4 orang           Low
+Alamat KK                   Jl. *** RT 001    Medium (sensor detail)
+RT/RW KK                    001/002           Low
+Kelurahan KK                Kelurahan X       Low
+Status Domisili Keluarga    Tetap            Low
+Daftar Anggota              [Daftar anak 18+]  Medium
+Tanggal Mulai Domisili      ***-**-****      High
 ```
 
 ### 9.3 Monitoring Iuran Publik
@@ -552,7 +557,7 @@ Nominal Iuran       Rp 25.000/bulan  Tanpa detail sensitif
 
 **UI Framework:**
 - SB Admin 2 template
-- Bootstrap 5.3+ for responsive design
+- Bootstrap 4.6+ for responsive design
 - jQuery 3.7+ for DOM manipulation
 - Font Awesome 6.0+ for icons
 
@@ -767,6 +772,9 @@ Nominal Iuran       Rp 25.000/bulan  Tanpa detail sensitif
 - ✅ Data security & integrity maintained
 - ✅ Public portal with data sanitization
 - ✅ Public security measures implemented
+- ✅ **UPDATED**: Alamat & status domisili moved to keluarga level
+- ✅ **UPDATED**: Real Bendul Merisi data structure implemented
+- ✅ **UPDATED**: Database migration & seeding system complete
 
 ### 13.2 Non-Functional Requirements
 - ✅ System response time < 3 seconds

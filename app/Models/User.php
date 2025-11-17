@@ -17,13 +17,12 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'username',
         'name',
         'email',
         'password',
         'role',
         'status_aktif',
-        'foto_profile',
+        'avatar',
     ];
 
     /**
@@ -181,8 +180,8 @@ class User extends Authenticatable
      */
     public function getFotoProfileUrlAttribute(): string
     {
-        if ($this->foto_profile) {
-            return asset('storage/' . $this->foto_profile);
+        if ($this->avatar) {
+            return asset($this->avatar);
         }
 
         // Default avatar berdasarkan role

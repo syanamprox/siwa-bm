@@ -15,7 +15,7 @@ class Warga extends Model
      *
      * @var string
      */
-    protected $table = 'warga';
+    protected $table = 'wargas';
 
     /**
      * The attributes that are mass assignable.
@@ -44,17 +44,13 @@ class Warga extends Model
         'pendidikan_terakhir',
         'foto_ktp',
 
-        // Data Domisili
+        // Data Keluarga
         'kk_id',
         'hubungan_keluarga',
-        'alamat_domisili',
-        'rt_domisili',
-        'rw_domisili',
-        'kelurahan_domisili',
+
+        // Kontak Personal
         'no_telepon',
         'email',
-        'status_domisili',
-        'tanggal_mulai_domisili',
 
         // Tracking
         'created_by',
@@ -70,7 +66,6 @@ class Warga extends Model
     {
         return [
             'tanggal_lahir' => 'date',
-            'tanggal_mulai_domisili' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
@@ -222,19 +217,7 @@ class Warga extends Model
         };
     }
 
-    /**
-     * Get status domisili label
-     */
-    public function getStatusDomisiliLabelAttribute(): string
-    {
-        return match($this->status_domisili) {
-            'Tetap' => 'Tetap',
-            'Kontrak' => 'Kontrak',
-            'Ngontrak' => 'Ngontrak',
-            default => $this->status_domisili,
-        };
-    }
-
+    
     /**
      * Get kewarganegaraan label
      */
@@ -255,14 +238,7 @@ class Warga extends Model
         return "{$this->alamat_ktp}, RT {$this->rt_ktp}/RW {$this->rw_kp}, {$this->kelurahan_ktp}";
     }
 
-    /**
-     * Get alamat domisili lengkap
-     */
-    public function getAlamatDomisiliLengkapAttribute(): string
-    {
-        return "{$this->alamat_domisili}, RT {$this->rt_domisili}/RW {$this->rw_domisili}, {$this->kelurahan_domisili}";
-    }
-
+    
     /**
      * Get URL foto KTP
      */
@@ -290,16 +266,7 @@ class Warga extends Model
         return $this->hubungan_keluarga === 'Kepala Keluarga';
     }
 
-    /**
-     * Cek apakah domisili sama dengan alamat KTP
-     */
-    public function isDomisiliSamaKtp(): bool
-    {
-        return $this->alamat_domisili === $this->alamat_ktp &&
-               $this->rt_domisili === $this->rt_ktp &&
-               $this->rw_domisili === $this->rw_ktp;
-    }
-
+    
     /**
      * Get daftar agama
      */

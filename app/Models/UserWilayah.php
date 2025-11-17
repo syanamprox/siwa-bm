@@ -14,7 +14,7 @@ class UserWilayah extends Model
      *
      * @var string
      */
-    protected $table = 'user_wilayah';
+    protected $table = 'user_wilayahs';
 
     /**
      * The attributes that are mass assignable.

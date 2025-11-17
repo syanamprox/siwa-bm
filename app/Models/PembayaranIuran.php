@@ -15,7 +15,7 @@ class PembayaranIuran extends Model
      *
      * @var string
      */
-    protected $table = 'pembayaran_iuran';
+    protected $table = 'pembayaran_iurans';
 
     /**
      * The attributes that are mass assignable.

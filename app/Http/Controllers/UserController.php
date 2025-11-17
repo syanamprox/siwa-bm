@@ -24,7 +24,7 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::with('userWilayah.wilayah')->orderBy('created_at', 'desc');
+        $query = User::orderBy('created_at', 'desc')->whereNull('deleted_at');
 
         // Filter by role
         if ($request->has('role') && $request->role != '') {
@@ -33,17 +33,22 @@ class UserController extends Controller
 
         // Filter by status
         if ($request->has('status') && $request->status != '') {
-            $query->where('status_aktif', $request->status);
+            if ($request->status == 'active') {
+                $query->where('status_aktif', true);
+            } elseif ($request->status == 'inactive') {
+                $query->where('status_aktif', false);
+            }
         }
 
         // Search
         if ($request->has('search') && $request->search != '') {
             $query->where(function($q) use ($request) {
-                $q->where('username', 'like', '%' . $request->search . '%');
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('email', 'like', '%' . $request->search . '%');
             });
         }
 
-        $users = $query->paginate(10);
+        $users = $query->with('userWilayah.wilayah')->paginate(10);
 
         // Get all available wilayah for assignment
         $wilayah = Wilayah::orderBy('tingkat')->orderBy('nama')->get();
@@ -79,13 +84,13 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:255|unique:users,username,NULL,NULL,deleted_at,NULL',
-            'email' => 'required|email|max:255|unique:users,email,NULL,NULL,deleted_at,NULL',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:6',
             'role' => ['required', Rule::in(['admin', 'lurah', 'rw', 'rt'])],
             'status_aktif' => 'required|boolean',
             'wilayah_ids' => 'nullable|array',
-            'wilayah_ids.*' => 'exists:wilayah,id',
+            'wilayah_ids.*' => 'nullable|integer|exists:wilayahs,id',
             'foto_profile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
@@ -100,8 +105,7 @@ class UserController extends Controller
         try {
             // Create user
             $user = User::create([
-                'username' => $request->username,
-                'name' => $this->generateNameFromUsername($request->username, $request->role),
+                'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'role' => $request->role,
@@ -112,34 +116,42 @@ class UserController extends Controller
             if ($request->hasFile('foto_profile')) {
                 $file = $request->file('foto_profile');
                 $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
-                $file->move(public_path('uploads/profile'), $filename);
-                $user->foto_profile = 'uploads/profile/' . $filename;
+                $file->move(public_path('uploads/avatars'), $filename);
+                $user->avatar = 'uploads/avatars/' . $filename;
                 $user->save();
             }
 
             // Assign wilayah
             if ($request->has('wilayah_ids') && is_array($request->wilayah_ids)) {
                 foreach ($request->wilayah_ids as $wilayahId) {
-                    $user->userWilayah()->create(['wilayah_id' => $wilayahId]);
+                    // Use firstOrCreate to avoid duplicate entries
+                    \App\Models\UserWilayah::firstOrCreate([
+                        'user_id' => $user->id,
+                        'wilayah_id' => $wilayahId
+                    ]);
                 }
             }
 
-            // Log activity
+            // Log activity - Disabled for debugging
+            /*
             if (auth()->check()) {
                 \App\Models\AktivitasLog::create([
                     'user_id' => auth()->id(),
-                    'tabel_referensi' => 'users',
-                    'id_referensi' => $user->id,
-                    'jenis_aktivitas' => 'create',
-                    'deskripsi' => "Menambahkan user baru: {$user->username} dengan role {$user->role}",
-                    'data_baru' => json_encode($user->toArray())
+                    'action' => 'create',
+                    'module' => 'users',
+                    'description' => "Membuat user baru: {$user->name}",
+                    'old_data' => null,
+                    'new_data' => json_encode($user->toArray()),
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent()
                 ]);
             }
+            */
 
             return response()->json([
                 'success' => true,
                 'message' => 'User berhasil dibuat',
-                'data' => $user->load('userWilayah.wilayah')
+                'data' => $user
             ]);
 
         } catch (\Exception $e) {
@@ -191,13 +203,13 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:255|unique:users,username,'.$id.',id,deleted_at,NULL',
-            'email' => 'required|email|max:255|unique:users,email,'.$id.',id,deleted_at,NULL',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,'.$id,
             'password' => 'nullable|string|min:6',
             'role' => ['required', Rule::in(['admin', 'lurah', 'rw', 'rt'])],
             'status_aktif' => 'required|boolean',
             'wilayah_ids' => 'nullable|array',
-            'wilayah_ids.*' => 'exists:wilayah,id',
+            'wilayah_ids.*' => 'nullable|integer|exists:wilayahs,id',
             'foto_profile' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
@@ -213,59 +225,98 @@ class UserController extends Controller
             // Store old data for logging
             $dataLama = $user->toArray();
 
-            // Update user data
-            $user->username = $request->username;
-            $user->email = $request->email;
-            $user->role = $request->role;
-            $user->status_aktif = $request->boolean('status_aktif');
+            // Use database transaction for consistency
+            \DB::transaction(function () use ($request, $user) {
+                // Update user data
+                $user->name = $request->name;
+                $user->email = $request->email;
+                $user->role = $request->role;
+                $user->status_aktif = $request->boolean('status_aktif');
 
-            if ($request->filled('password')) {
-                $user->password = Hash::make($request->password);
-            }
-
-            // Handle file upload
-            if ($request->hasFile('foto_profile')) {
-                // Delete old photo if exists
-                if ($user->foto_profile && file_exists(public_path($user->foto_profile))) {
-                    unlink(public_path($user->foto_profile));
+                if ($request->filled('password')) {
+                    $user->password = Hash::make($request->password);
                 }
 
-                $file = $request->file('foto_profile');
-                $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
-                $file->move(public_path('uploads/profile'), $filename);
-                $user->foto_profile = 'uploads/profile/' . $filename;
-            }
+                // Handle file upload
+                if ($request->hasFile('foto_profile')) {
+                    // Delete old avatar if exists
+                    if ($user->avatar && file_exists(public_path($user->avatar))) {
+                        unlink(public_path($user->avatar));
+                    }
 
-            $user->save();
-
-            // Update wilayah assignments
-            $user->userWilayah()->delete();
-            if ($request->has('wilayah_ids') && is_array($request->wilayah_ids)) {
-                foreach ($request->wilayah_ids as $wilayahId) {
-                    $user->userWilayah()->create(['wilayah_id' => $wilayahId]);
+                    $file = $request->file('foto_profile');
+                    $filename = time() . '_' . $user->id . '.' . $file->getClientOriginalExtension();
+                    $file->move(public_path('uploads/avatars'), $filename);
+                    $user->avatar = 'uploads/avatars/' . $filename;
                 }
+
+                $user->save();
+
+                // Update wilayah assignments - handle more efficiently
+                $newWilayahIds = $request->has('wilayah_ids') && is_array($request->wilayah_ids)
+                    ? $request->wilayah_ids
+                    : [];
+
+                // Get existing wilayah assignments
+                $existingWilayahIds = $user->userWilayah()->pluck('wilayah_id')->toArray();
+
+                // Remove wilayah assignments that are no longer selected
+                $toRemove = array_diff($existingWilayahIds, $newWilayahIds);
+                if (!empty($toRemove)) {
+                    \App\Models\UserWilayah::where('user_id', $user->id)
+                        ->whereIn('wilayah_id', $toRemove)
+                        ->delete();
+                }
+
+                // Add new wilayah assignments
+                $toAdd = array_diff($newWilayahIds, $existingWilayahIds);
+                foreach ($toAdd as $wilayahId) {
+                    \App\Models\UserWilayah::firstOrCreate([
+                        'user_id' => $user->id,
+                        'wilayah_id' => $wilayahId
+                    ]);
+                }
+            });
+
+            // Log activity with error handling
+            try {
+                if (auth()->check()) {
+                    \App\Models\AktivitasLog::create([
+                        'user_id' => auth()->id(),
+                        'action' => 'update',
+                        'module' => 'users',
+                        'description' => "Mengupdate user: {$user->name}",
+                        'old_data' => json_encode($dataLama),
+                        'new_data' => json_encode([
+                            'id' => $user->id,
+                            'name' => $user->name,
+                            'email' => $user->email,
+                            'role' => $user->role,
+                            'status_aktif' => $user->status_aktif
+                        ]),
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent()
+                    ]);
+                }
+            } catch (\Exception $logError) {
+                \Log::error('Activity logging error: ' . $logError->getMessage());
+                // Continue execution even if logging fails
             }
 
-            // Log activity
-            if (auth()->check()) {
-                \App\Models\AktivitasLog::create([
-                    'user_id' => auth()->id(),
-                    'tabel_referensi' => 'users',
-                    'id_referensi' => $user->id,
-                    'jenis_aktivitas' => 'update',
-                    'deskripsi' => "Mengupdate user: {$user->username}",
-                    'data_lama' => json_encode($dataLama),
-                    'data_baru' => json_encode($user->load('userWilayah.wilayah')->toArray())
-                ]);
-            }
+            // Reload user with relationships for response
+            $user->load('userWilayah.wilayah');
 
             return response()->json([
                 'success' => true,
                 'message' => 'User berhasil diupdate',
-                'data' => $user->load('userWilayah.wilayah')
+                'data' => $user
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('User update exception: ' . $e->getMessage());
+            \Log::error('Exception file: ' . $e->getFile() . ':' . $e->getLine());
+            \Log::error('Exception trace: ' . $e->getTraceAsString());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
@@ -284,24 +335,27 @@ class UserController extends Controller
             // Store data for logging
             $dataUser = $user->toArray();
 
-            // Delete associated data
-            if ($user->foto_profile && file_exists(public_path($user->foto_profile))) {
-                unlink(public_path($user->foto_profile));
-            }
-
-            $user->userWilayah()->delete();
+            // Use soft delete - this will set deleted_at timestamp
+            // Keep all data including wilayah assignments intact
             $user->delete();
 
-            // Log activity
-            if (auth()->check()) {
-                \App\Models\AktivitasLog::create([
-                    'user_id' => auth()->id(),
-                    'tabel_referensi' => 'users',
-                    'id_referensi' => $user->id,
-                    'jenis_aktivitas' => 'delete',
-                    'deskripsi' => "Menghapus user: {$user->username}",
-                    'data_lama' => json_encode($dataUser)
-                ]);
+            // Log activity with error handling
+            try {
+                if (auth()->check()) {
+                    \App\Models\AktivitasLog::create([
+                        'user_id' => auth()->id(),
+                        'action' => 'delete',
+                        'module' => 'users',
+                        'description' => "Menghapus user: {$user->name}",
+                        'old_data' => json_encode($dataUser),
+                        'new_data' => json_encode(['deleted_at' => now()]),
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent()
+                    ]);
+                }
+            } catch (\Exception $logError) {
+                    \Log::error('Delete activity logging error: ' . $logError->getMessage());
+                    // Continue execution even if logging fails
             }
 
             return response()->json([
@@ -310,6 +364,10 @@ class UserController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('User delete exception: ' . $e->getMessage());
+            \Log::error('Exception file: ' . $e->getFile() . ':' . $e->getLine());
+            \Log::error('Exception trace: ' . $e->getTraceAsString());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
@@ -325,22 +383,28 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         try {
+            $oldStatus = $user->status_aktif;
             $user->status_aktif = !$user->status_aktif;
             $user->save();
-
             $status = $user->status_aktif ? 'diaktifkan' : 'dinonaktifkan';
 
-            // Log activity
-            if (auth()->check()) {
-                \App\Models\AktivitasLog::create([
-                    'user_id' => auth()->id(),
-                    'tabel_referensi' => 'users',
-                    'id_referensi' => $user->id,
-                    'jenis_aktivitas' => 'toggle_status',
-                    'deskripsi' => "Mengubah status user: {$user->username} menjadi $status",
-                    'data_lama' => json_encode(['status_aktif' => !$user->status_aktif]),
-                    'data_baru' => json_encode(['status_aktif' => $user->status_aktif])
-                ]);
+            // Log activity with error handling
+            try {
+                if (auth()->check()) {
+                    \App\Models\AktivitasLog::create([
+                        'user_id' => auth()->id(),
+                        'action' => 'toggle_status',
+                        'module' => 'users',
+                        'description' => "Mengubah status user: {$user->name} menjadi $status",
+                        'old_data' => json_encode(['status_aktif' => $oldStatus]),
+                        'new_data' => json_encode(['status_aktif' => $user->status_aktif]),
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent()
+                    ]);
+                }
+            } catch (\Exception $logError) {
+                \Log::error('Toggle status activity logging error: ' . $logError->getMessage());
+                // Continue execution even if logging fails
             }
 
             return response()->json([
@@ -350,6 +414,9 @@ class UserController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Toggle status exception: ' . $e->getMessage());
+            \Log::error('Exception file: ' . $e->getFile() . ':' . $e->getLine());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
@@ -365,32 +432,52 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         try {
-            $newPassword = substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'), 0, 8);
+            // Generate secure random password
+            $characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+            $newPassword = substr(str_shuffle($characters), 0, 8);
             $hashedPassword = Hash::make($newPassword);
 
+            // Update user password
             $user->password = $hashedPassword;
             $user->save();
 
-            // Log activity
-            if (auth()->check()) {
-                \App\Models\AktivitasLog::create([
-                    'user_id' => auth()->id(),
-                    'tabel_referensi' => 'users',
-                    'id_referensi' => $user->id,
-                    'jenis_aktivitas' => 'reset_password',
-                    'deskripsi' => "Reset password user: {$user->username}",
-                    'data_lama' => null,
-                    'data_baru' => json_encode(['new_password_reset' => true])
-                ]);
+            // Log activity with error handling
+            try {
+                if (auth()->check()) {
+                    \App\Models\AktivitasLog::create([
+                        'user_id' => auth()->id(),
+                        'action' => 'reset_password',
+                        'module' => 'users',
+                        'description' => "Reset password user: {$user->name}",
+                        'old_data' => null,
+                        'new_data' => json_encode(['password_reset' => true, 'user_id' => $user->id]),
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent()
+                    ]);
+                }
+            } catch (\Exception $logError) {
+                \Log::error('Reset password activity logging error: ' . $logError->getMessage());
+                // Continue execution even if logging fails
             }
 
-            return response()->json([
+            $response = [
                 'success' => true,
                 'message' => 'Password berhasil direset',
-                'data' => ['password' => $newPassword]
-            ]);
+                'data' => [
+                    'password' => $newPassword,
+                    'user_name' => $user->name,
+                    'user_email' => $user->email
+                ]
+            ];
+
+            \Log::info("Reset password response: " . json_encode($response));
+
+            return response()->json($response);
 
         } catch (\Exception $e) {
+            \Log::error('Reset password exception: ' . $e->getMessage());
+            \Log::error('Exception file: ' . $e->getFile() . ':' . $e->getLine());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()

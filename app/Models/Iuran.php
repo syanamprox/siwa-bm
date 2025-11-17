@@ -15,7 +15,7 @@ class Iuran extends Model
      *
      * @var string
      */
-    protected $table = 'iuran';
+    protected $table = 'iurans';
 
     /**
      * The attributes that are mass assignable.

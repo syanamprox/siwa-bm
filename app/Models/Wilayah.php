@@ -15,7 +15,7 @@ class Wilayah extends Model
      *
      * @var string
      */
-    protected $table = 'wilayah';
+    protected $table = 'wilayahs';
 
     /**
      * The attributes that are mass assignable.

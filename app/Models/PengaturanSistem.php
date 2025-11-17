@@ -15,7 +15,7 @@ class PengaturanSistem extends Model
      *
      * @var string
      */
-    protected $table = 'pengaturan_sistem';
+    protected $table = 'pengaturan_sistems';
 
     /**
      * The attributes that are mass assignable.

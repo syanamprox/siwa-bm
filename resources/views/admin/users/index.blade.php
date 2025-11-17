@@ -28,12 +28,12 @@
             <div class="col-md-3">
                 <select id="filterStatus" class="form-control form-control-sm">
                     <option value="">Semua Status</option>
-                    <option value="1">Aktif</option>
-                    <option value="0">Non-aktif</option>
+                    <option value="active">Aktif</option>
+                    <option value="inactive">Non-aktif</option>
                 </select>
             </div>
             <div class="col-md-4">
-                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Cari username...">
+                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Cari nama atau email...">
             </div>
             <div class="col-md-2">
                 <button class="btn btn-info btn-sm btn-block" onclick="applyFilters()">
@@ -48,7 +48,7 @@
                 <thead>
                     <tr>
                         <th>No</th>
-                        <th>Username</th>
+                        <th>Nama</th>
                         <th>Role</th>
                         <th>Status</th>
                         <th>Wilayah</th>
@@ -85,14 +85,15 @@
                 </button>
             </div>
             <form id="userForm" enctype="multipart/form-data">
+                @csrf
                 <div class="modal-body">
                     <input type="hidden" id="userId" name="user_id">
 
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="username">Username <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="username" name="username" required>
+                                <label for="name">Nama Lengkap <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" name="name" required>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -284,15 +285,25 @@ function renderUsersTable(users, startFrom) {
                 '<span class="badge badge-success">Aktif</span>' :
                 '<span class="badge badge-danger">Non-aktif</span>';
 
-            const wilayahNames = user.user_wilayah.map(uw => uw.wilayah.nama).join(', ') || '-';
-            const photo = user.foto_profile ?
-                `<img src="/${user.foto_profile}" alt="${user.username}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">` :
+            // Build wilayah names
+            let wilayahNames = '-';
+            if (user.user_wilayah && user.user_wilayah.length > 0) {
+                const wilayahNamaArray = user.user_wilayah
+                    .filter(uw => uw.wilayah)
+                    .map(uw => uw.wilayah.nama);
+                if (wilayahNamaArray.length > 0) {
+                    wilayahNames = wilayahNamaArray.join(', ');
+                }
+            }
+
+            const photo = user.avatar ?
+                `<img src="/${user.avatar}" alt="${user.name}" class="rounded-circle" style="width: 40px; height: 40px; object-fit: cover;">` :
                 '<i class="fas fa-user-circle fa-2x text-gray-400"></i>';
 
             html += `
                 <tr>
                     <td>${startFrom + index}</td>
-                    <td>${user.username}</td>
+                    <td>${user.name}</td>
                     <td><span class="badge badge-info">${roleLabel}</span></td>
                     <td>${statusBadge}</td>
                     <td>${wilayahNames}</td>
@@ -305,10 +316,10 @@ function renderUsersTable(users, startFrom) {
                             <button class="btn btn-warning" onclick="toggleStatus(${user.id})" title="Toggle Status">
                                 <i class="fas fa-power-off"></i>
                             </button>
-                            <button class="btn btn-secondary" onclick="resetPassword(${user.id}, '${user.username}')" title="Reset Password">
+                            <button class="btn btn-secondary" onclick="resetPassword(${user.id}, '${user.name}')" title="Reset Password">
                                 <i class="fas fa-key"></i>
                             </button>
-                            <button class="btn btn-danger" onclick="deleteUser(${user.id}, '${user.username}')" title="Hapus">
+                            <button class="btn btn-danger" onclick="deleteUser(${user.id}, '${user.name}')" title="Hapus">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -444,9 +455,12 @@ function editUser(userId) {
             if (data.success) {
                 const user = data.data;
 
+                // Debug: log user data
+                console.log('Edit user data:', user);
+
                 $('#userModalTitle').text('Edit User');
                 $('#userId').val(user.id);
-                $('#username').val(user.username);
+                $('#name').val(user.name);
                 $('#email').val(user.email);
                 $('#role').val(user.role);
                 $('#status_aktif').val(user.status_aktif ? '1' : '0');
@@ -456,8 +470,8 @@ function editUser(userId) {
                 $('#password').prop('required', false);
 
                 // Load current photo
-                if (user.foto_profile) {
-                    $('#photoPreview').attr('src', '/' + user.foto_profile);
+                if (user.avatar) {
+                    $('#photoPreview').attr('src', '/' + user.avatar);
                     $('#currentPhoto').show();
                 } else {
                     $('#currentPhoto').hide();
@@ -495,7 +509,19 @@ $('#userForm').on('submit', function(e) {
         formData.delete('password');
     }
 
-    const url = isEdit ? `/admin/users/${userId}` : '/admin/users';
+    // Add selected wilayah IDs manually (checkboxes are not automatically included in FormData)
+    const selectedWilayah = [];
+    $('#wilayahSelection input[type="checkbox"]:checked').each(function() {
+        selectedWilayah.push($(this).val());
+    });
+
+    // Remove existing wilayah_ids and add new ones
+    formData.delete('wilayah_ids');
+    selectedWilayah.forEach(wilayahId => {
+        formData.append('wilayah_ids[]', wilayahId);
+    });
+
+    const url = isEdit ? `/admin/api/users/${userId}` : '/admin/api/users';
     const method = isEdit ? 'POST' : 'POST';
 
     // Add method override for PUT
@@ -565,9 +591,9 @@ function toggleStatus(userId) {
 }
 
 // Reset password
-function resetPassword(userId, username) {
+function resetPassword(userId, name) {
     resetPasswordUserId = userId;
-    $('#resetUsername').text(username);
+    $('#resetUsername').text(name);
     $('#resetPasswordModal').modal('show');
 }
 
@@ -587,7 +613,8 @@ function confirmResetPassword() {
         hideLoading();
         $('#resetPasswordModal').modal('hide');
         if (data.success) {
-            showToast(`${data.message}\nPassword baru: ${data.data.password}`, 'info', 5000);
+            const message = `${data.message}\nPassword baru: ${data.data.password}`;
+            showToast(message, 'info', 5000);
         } else {
             showToast(data.message, 'error');
         }
@@ -599,9 +626,9 @@ function confirmResetPassword() {
 }
 
 // Delete user
-function deleteUser(userId, username) {
+function deleteUser(userId, name) {
     deleteUserId = userId;
-    $('#deleteUsername').text(username);
+    $('#deleteUsername').text(name);
     $('#deleteModal').modal('show');
 }
 
@@ -609,7 +636,7 @@ function deleteUser(userId, username) {
 function confirmDelete() {
     showLoading();
 
-    fetch(`/admin/users/${deleteUserId}`, {
+    fetch(`/admin/api/users/${deleteUserId}`, {
         method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')

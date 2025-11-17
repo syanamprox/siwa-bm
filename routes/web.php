@@ -45,8 +45,11 @@ Route::middleware('auth')->group(function () {
 
         // API Routes for AJAX operations
         Route::get('/api/users', [UserController::class, 'index']);
+        Route::post('/api/users', [UserController::class, 'store']);
         Route::get('/api/users/create', [UserController::class, 'create']);
         Route::get('/api/users/{user}/edit', [UserController::class, 'edit']);
+        Route::put('/api/users/{user}', [UserController::class, 'update']);
+        Route::delete('/api/users/{user}', [UserController::class, 'destroy']);
         Route::post('/api/users/{user}/toggle-status', [UserController::class, 'toggleStatus']);
         Route::post('/api/users/{user}/reset-password', [UserController::class, 'resetPassword']);
 
@@ -76,6 +79,38 @@ Route::middleware('auth')->group(function () {
         Route::post('/backup/restore', [App\Http\Controllers\BackupController::class, 'restore'])->name('backup.restore');
         Route::get('/backup/status', [App\Http\Controllers\BackupController::class, 'status'])->name('backup.status');
     });
+
+    // Warga Management Routes
+    Route::get('/warga', [WargaController::class, 'indexView'])->name('warga.index');
+    Route::resource('warga', WargaController::class)->except(['index', 'store', 'update', 'destroy']);
+
+    // API Routes for AJAX operations
+    Route::get('/api/warga', [WargaController::class, 'index']);
+    Route::get('/api/warga/create', [WargaController::class, 'create']);
+    Route::get('/api/warga/{warga}/edit', [WargaController::class, 'edit']);
+    Route::get('/api/warga/{warga}', [WargaController::class, 'show']);
+    Route::put('/api/warga/{warga}', [WargaController::class, 'update']);
+    Route::post('/api/warga', [WargaController::class, 'store']);
+    Route::delete('/api/warga/{warga}', [WargaController::class, 'destroy']);
+    Route::get('/api/warga/statistics', [WargaController::class, 'statistics']);
+    Route::post('/api/warga/export', [WargaController::class, 'export']);
+    Route::post('/api/warga/import', [WargaController::class, 'import']);
+
+    // Keluarga Management Routes
+    Route::get('/keluarga', [KeluargaController::class, 'indexView'])->name('keluarga.index');
+    Route::resource('keluarga', KeluargaController::class)->except(['index', 'store', 'update', 'destroy']);
+
+    // API Routes for AJAX operations
+    Route::get('/api/keluarga', [KeluargaController::class, 'index']);
+    Route::get('/api/keluarga/create', [KeluargaController::class, 'create']);
+    Route::get('/api/keluarga/{keluarga}/edit', [KeluargaController::class, 'edit']);
+    Route::get('/api/keluarga/{keluarga}', [KeluargaController::class, 'show']);
+    Route::put('/api/keluarga/{keluarga}', [KeluargaController::class, 'update']);
+    Route::post('/api/keluarga', [KeluargaController::class, 'store']);
+    Route::delete('/api/keluarga/{keluarga}', [KeluargaController::class, 'destroy']);
+    Route::get('/api/keluarga/statistics', [KeluargaController::class, 'statistics']);
+    Route::post('/api/keluarga/{keluarga}/add-member', [KeluargaController::class, 'addMember']);
+    Route::delete('/api/keluarga/{keluarga}/remove-member/{warga}', [KeluargaController::class, 'removeMember']);
 
     // Lurah & Admin Routes - Coming soon
     /*

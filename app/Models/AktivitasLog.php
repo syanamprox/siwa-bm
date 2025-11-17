@@ -14,7 +14,7 @@ class AktivitasLog extends Model
      *
      * @var string
      */
-    protected $table = 'aktivitas_log';
+    protected $table = 'aktivitas_logs';
 
     /**
      * The attributes that are mass assignable.
@@ -23,12 +23,11 @@ class AktivitasLog extends Model
      */
     protected $fillable = [
         'user_id',
-        'tabel_referensi',
-        'id_referensi',
-        'jenis_aktivitas',
-        'deskripsi',
-        'data_lama',
-        'data_baru',
+        'action',
+        'module',
+        'description',
+        'old_data',
+        'new_data',
         'ip_address',
         'user_agent',
     ];

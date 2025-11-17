@@ -312,9 +312,9 @@ class PublicPortalController extends Controller
             'nama_warga' => $warga->nama_lengkap,
             'nik' => substr($warga->nik, 0, 6) . '******' . substr($warga->nik, -4),
             'ringkasan_iuran' => [
-                'total_tagihan' => 'Rp ' . number_format($iuranData->where('status', 'pending')->sum('nominal'), 0, ',', '.'),
+                'total_tagihan' => 'Rp ' . number_format($iuranData->where('status', 'belum_bayar')->sum('jumlah'), 0, ',', '.'),
                 'total_dibayar' => 'Rp ' . number_format($iuranData->pluck('pembayaranIuran')->flatten()->sum('jumlah_bayar'), 0, ',', '.'),
-                'jumlah_tunggakan' => $iuranData->where('status', 'pending')->count(),
+                'jumlah_tunggakan' => $iuranData->where('status', 'belum_bayar')->count(),
             ],
             'detail_iuran' => $iuranData->map(function($iuran) {
                 $pembayaran = $iuran->pembayaranIuran->first();

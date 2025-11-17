@@ -11,17 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('jenis_iuran', function (Blueprint $table) {
+        Schema::create('pengaturan_sistems', function (Blueprint $table) {
             $table->id();
-            $table->string('nama', 50);
+            $table->string('key', 100)->unique();
+            $table->text('value')->nullable();
+            $table->string('tipe', 50)->default('text');
+            $table->string('kategori', 50)->default('umum');
             $table->text('deskripsi')->nullable();
-            $table->decimal('nominal_default', 10, 2);
-            $table->enum('periode', ['Bulanan', 'Tahunan', 'Sekali']);
-            $table->boolean('status_aktif')->default(true);
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['nama', 'status_aktif']);
+            $table->index('key');
+            $table->index('kategori');
         });
     }
 
@@ -30,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('jenis_iuran');
+        Schema::dropIfExists('pengaturan_sistems');
     }
 };
