@@ -254,16 +254,8 @@ function displayCommitDetail(commit) {
     // Process commit body for better display
     if (commit.body && commit.body.trim()) {
         var bodyLines = commit.body.split('\n');
-        var currentSection = '';
-        var sections = {
-            description: [],
-            features: [],
-            changes: [],
-            technical: [],
-            database: [],
-            uiux: [],
-            bugfixes: []
-        };
+        var descriptionHtml = '';
+        var formattedLines = [];
 
         bodyLines.forEach(function(line) {
             var trimmedLine = line.trim();
@@ -275,164 +267,56 @@ function displayCommitDetail(commit) {
                 return;
             }
 
-            // Detect section headers
-            if (trimmedLine.toLowerCase().includes('features:')) {
-                currentSection = 'features';
-                return;
-            } else if (trimmedLine.toLowerCase().includes('technical improvements:')) {
-                currentSection = 'technical';
-                return;
-            } else if (trimmedLine.toLowerCase().includes('database updates:')) {
-                currentSection = 'database';
-                return;
-            } else if (trimmedLine.toLowerCase().includes('ui/ux enhancements:')) {
-                currentSection = 'uiux';
-                return;
-            } else if (trimmedLine.toLowerCase().includes('ui/ux') ||
-                      trimmedLine.toLowerCase().includes('uiux')) {
-                currentSection = 'uiux';
-                return;
-            } else if (trimmedLine.toLowerCase().includes('bug fixes:') ||
-                      trimmedLine.toLowerCase().includes('fixes:')) {
-                currentSection = 'bugfixes';
-                return;
-            } else if (trimmedLine.toLowerCase().includes('each section now has:') ||
-                      trimmedLine.toLowerCase().includes('background colors:') ||
-                      trimmedLine.toLowerCase().includes('visual separation') ||
-                      trimmedLine.toLowerCase().includes('color coded sections:') ||
-                      trimmedLine.toLowerCase().includes('indonesian labels:') ||
-                      trimmedLine.toLowerCase().includes('conventional commits format:') ||
-                      trimmedLine.toLowerCase().includes('filter out co-authored') ||
-                      trimmedLine.toLowerCase().includes('auto-detect section') ||
-                      trimmedLine.toLowerCase().includes('icon yang sesuai') ||
-                      trimmedLine.toLowerCase().includes('file changed dihapus') ||
-                      trimmedLine.toLowerCase().includes('subject lebih detail') ||
-                      trimmedLine.toLowerCase().includes('memperbaiki parsing')) {
-                // Skip these lines as they are section headers or meta information
+            // Skip empty lines
+            if (trimmedLine === '') {
                 return;
             }
 
-            // Process line content
-            if (trimmedLine) {
-                if (trimmedLine.toLowerCase().includes('feat:') ||
-                    trimmedLine.toLowerCase().includes('fix:') ||
-                    trimmedLine.toLowerCase().includes('docs:') ||
-                    trimmedLine.toLowerCase().includes('style:') ||
-                    trimmedLine.toLowerCase().includes('refactor:') ||
-                    trimmedLine.toLowerCase().includes('test:') ||
-                    trimmedLine.toLowerCase().includes('chore:') ||
-                    trimmedLine.toLowerCase().includes('perf:')) {
-                    sections.features.push('<i class="fas fa-check-circle text-success mr-2"></i>' + trimmedLine);
-                } else if (trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
-                    var content = trimmedLine.substring(1).trim();
-                    if (content) {
-                        if (currentSection === 'features') {
-                            sections.features.push('<i class="fas fa-star text-warning mr-2"></i>' + content);
-                        } else if (currentSection === 'technical') {
-                            sections.technical.push('<i class="fas fa-cog text-primary mr-2"></i>' + content);
-                        } else if (currentSection === 'database') {
-                            sections.database.push('<i class="fas fa-database text-success mr-2"></i>' + content);
-                        } else if (currentSection === 'uiux') {
-                            sections.uiux.push('<i class="fas fa-palette text-info mr-2"></i>' + content);
-                        } else if (currentSection === 'bugfixes') {
-                            sections.bugfixes.push('<i class="fas fa-bug text-danger mr-2"></i>' + content);
+            // Process the line for display
+            if (trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
+                var content = trimmedLine.substring(1).trim();
+                if (content) {
+                    // Check if it has sub-bullets
+                    if (content.includes('*') || content.includes('–')) {
+                        // Handle nested bullets
+                        var subParts = content.split(/(?:\*|–)/);
+                        if (subParts.length > 1) {
+                            var mainPoint = subParts[0].trim();
+                            var subPoints = subParts.slice(1).filter(p => p.trim()).map(p => p.trim());
+
+                            formattedLines.push('<i class="fas fa-chevron-right text-primary mr-2"></i><strong>' + mainPoint + '</strong>');
+                            subPoints.forEach(function(subPoint) {
+                                formattedLines.push('<i class="fas fa-angle-right text-info mr-3 ml-2"></i>' + subPoint);
+                            });
                         } else {
-                            sections.changes.push('<i class="fas fa-arrow-right text-secondary mr-2"></i>' + content);
+                            formattedLines.push('<i class="fas fa-chevron-right text-primary mr-2"></i>' + content);
                         }
+                    } else {
+                        formattedLines.push('<i class="fas fa-chevron-right text-primary mr-2"></i>' + content);
                     }
-                } else if (currentSection === '') {
-                    // General description before sections
-                    sections.description.push(trimmedLine);
+                }
+            } else {
+                // Regular line (description or header)
+                if (trimmedLine.toLowerCase().includes('features:') ||
+                    trimmedLine.toLowerCase().includes('technical improvements:') ||
+                    trimmedLine.toLowerCase().includes('database updates:') ||
+                    trimmedLine.toLowerCase().includes('ui/ux enhancements:') ||
+                    trimmedLine.toLowerCase().includes('bug fixes:') ||
+                    trimmedLine.toLowerCase().includes('fixes:')) {
+                    formattedLines.push('<h6 class="text-primary font-weight-bold mt-3 mb-2">' + trimmedLine + '</h6>');
+                } else {
+                    formattedLines.push('<div class="mb-2">' + trimmedLine + '</div>');
                 }
             }
         });
 
-        // Build HTML from sections
-        if (sections.description.length > 0) {
-            descriptionHtml += `
+        if (formattedLines.length > 0) {
+            descriptionHtml = `
                 <div class="row mb-3">
                     <div class="col-md-12">
-                        <strong><i class="fas fa-info-circle mr-2"></i>Deskripsi:</strong><br>
-                        <div class="bg-light p-3 rounded border-left-primary" style="border-left: 4px solid #4e73df;">
-                            ${sections.description.join('<br>')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (sections.features.length > 0) {
-            descriptionHtml += `
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <strong><i class="fas fa-star text-warning mr-2"></i>Fitur Baru:</strong><br>
-                        <div class="bg-warning-light p-3 rounded" style="background-color: #fff3cd; border: 1px solid #ffeaa7;">
-                            ${sections.features.join('<br>')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (sections.technical.length > 0) {
-            descriptionHtml += `
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <strong><i class="fas fa-cog text-primary mr-2"></i>Peningkatan Teknis:</strong><br>
-                        <div class="bg-primary-light p-3 rounded" style="background-color: #e7f3ff; border: 1px solid #b3d9ff;">
-                            ${sections.technical.join('<br>')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (sections.database.length > 0) {
-            descriptionHtml += `
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <strong><i class="fas fa-database text-success mr-2"></i>Update Database:</strong><br>
-                        <div class="bg-success-light p-3 rounded" style="background-color: #d4edda; border: 1px solid #c3e6cb;">
-                            ${sections.database.join('<br>')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (sections.uiux.length > 0) {
-            descriptionHtml += `
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <strong><i class="fas fa-palette text-info mr-2"></i>Peningkatan UI/UX:</strong><br>
-                        <div class="bg-info-light p-3 rounded" style="background-color: #d1ecf1; border: 1px solid #bee5eb;">
-                            ${sections.uiux.join('<br>')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (sections.bugfixes.length > 0) {
-            descriptionHtml += `
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <strong><i class="fas fa-bug text-danger mr-2"></i>Perbaikan Bug:</strong><br>
-                        <div class="bg-danger-light p-3 rounded" style="background-color: #f8d7da; border: 1px solid #f5c6cb;">
-                            ${sections.bugfixes.join('<br>')}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        if (sections.changes.length > 0) {
-            descriptionHtml += `
-                <div class="row mb-3">
-                    <div class="col-md-12">
-                        <strong><i class="fas fa-list-ul text-secondary mr-2"></i>Perubahan Lainnya:</strong><br>
-                        <div class="bg-light p-3 rounded" style="background-color: #f8f9fc; border: 1px solid #e3e6f0;">
-                            ${sections.changes.join('<br>')}
+                        <strong><i class="fas fa-file-alt mr-2"></i>Detail Perubahan:</strong><br>
+                        <div class="bg-light p-3 rounded border-left-primary" style="border-left: 4px solid #4e73df; font-size: 14px; line-height: 1.6;">
+                            ${formattedLines.join('')}
                         </div>
                     </div>
                 </div>
