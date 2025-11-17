@@ -101,14 +101,46 @@ class ChangelogController extends Controller
                 ], 404);
             }
 
-            // Parse files changed
+            // Parse body and files
+            $body = '';
             $files = [];
+            $inBody = false;
+            $inFiles = false;
+
             foreach ($lines as $line) {
                 $line = trim($line);
-                if (!empty($line) && !str_starts_with($line, 'diff') && !str_starts_with($line, 'index') &&
-                    !str_starts_with($line, '---') && !str_starts_with($line, '+++') &&
-                    !str_starts_with($line, '@@') && !str_contains($line, '+') && !str_contains($line, '-')) {
-                    $files[] = $line;
+
+                if (empty($line)) {
+                    if (!$inBody) {
+                        $inBody = true;
+                    } else if ($inBody && !$inFiles) {
+                        $inFiles = true;
+                    }
+                    continue;
+                }
+
+                if (!$inBody) {
+                    // Skip header lines (already processed)
+                    continue;
+                }
+
+                if (!$inFiles) {
+                    // Still in body section
+                    if (!str_starts_with($line, 'diff') &&
+                        !str_starts_with($line, 'index') &&
+                        !str_starts_with($line, '---') &&
+                        !str_starts_with($line, '+++')) {
+                        $body .= $line . "\n";
+                    }
+                } else {
+                    // In files section
+                    if (!str_starts_with($line, 'diff') &&
+                        !str_starts_with($line, 'index') &&
+                        !str_starts_with($line, '---') &&
+                        !str_starts_with($line, '+++') &&
+                        !str_starts_with($line, '@@')) {
+                        $files[] = $line;
+                    }
                 }
             }
 
@@ -123,7 +155,7 @@ class ChangelogController extends Controller
                     'author' => $parts[1],
                     'date' => $parts[2],
                     'subject' => $parts[3],
-                    'body' => $parts[4],
+                    'body' => trim($body),
                     'files' => array_unique($files),
                     'stats' => trim($statsOutput)
                 ],
