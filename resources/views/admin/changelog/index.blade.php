@@ -256,8 +256,10 @@ function displayCommitDetail(commit) {
         var bodyLines = commit.body.split('\n');
         var descriptionHtml = '';
         var formattedLines = [];
+        var inSection = false;
+        var currentSection = '';
 
-        bodyLines.forEach(function(line) {
+        bodyLines.forEach(function(line, index) {
             var trimmedLine = line.trim();
 
             // Skip Co-Authored-By lines and generated markers
@@ -267,43 +269,47 @@ function displayCommitDetail(commit) {
                 return;
             }
 
+            // Skip lines that are just emojis or section markers
+            if (trimmedLine === '✅' || trimmedLine === '❌' || trimmedLine === '⭐' || trimmedLine === '🛠️' || trimmedLine === '📱' || trimmedLine === '🎯' || trimmedLine === '🔧' || trimmedLine === '📋' || trimmedLine === '🏗️') {
+                return;
+            }
+
+            // Handle section headers (lines ending with ':')
+            if (trimmedLine.endsWith(':')) {
+                formattedLines.push('<h6 class="text-primary font-weight-bold mt-4 mb-3">' + trimmedLine + '</h6>');
+                return;
+            }
+
+            // Handle emoji with text (like "✅ Features Implemented:")
+            if (trimmedLine.match(/^[✅❌⭐🛠️📱🎯🔧📋🏗️🔗✨🚀].*:$/)) {
+                formattedLines.push('<h6 class="text-primary font-weight-bold mt-4 mb-3">' + trimmedLine + '</h6>');
+                return;
+            }
+
             // Skip empty lines
             if (trimmedLine === '') {
                 return;
             }
 
-            // Process the line for display
+            // Process bullet points
             if (trimmedLine.startsWith('-') || trimmedLine.startsWith('*')) {
                 var content = trimmedLine.substring(1).trim();
-                if (content) {
-                    // Check if it has sub-bullets
-                    if (content.includes('*') || content.includes('–')) {
-                        // Handle nested bullets
-                        var subParts = content.split(/(?:\*|–)/);
-                        if (subParts.length > 1) {
-                            var mainPoint = subParts[0].trim();
-                            var subPoints = subParts.slice(1).filter(p => p.trim()).map(p => p.trim());
 
-                            formattedLines.push('<i class="fas fa-chevron-right text-primary mr-2"></i><strong>' + mainPoint + '</strong>');
-                            subPoints.forEach(function(subPoint) {
-                                formattedLines.push('<i class="fas fa-angle-right text-info mr-3 ml-2"></i>' + subPoint);
-                            });
-                        } else {
-                            formattedLines.push('<i class="fas fa-chevron-right text-primary mr-2"></i>' + content);
-                        }
+                if (content) {
+                    // Handle emoji bullets (like "- Complete Laravel 12 setup...")
+                    if (content.startsWith('✅') || content.startsWith('❌') || content.startsWith('⭐') || content.startsWith('🛠️') || content.startsWith('📱')) {
+                        var emoji = content.substring(0, 2);
+                        var text = content.substring(2).trim();
+                        formattedLines.push('<div class="mb-2"><span class="mr-2">' + emoji + '</span>' + text + '</div>');
                     } else {
-                        formattedLines.push('<i class="fas fa-chevron-right text-primary mr-2"></i>' + content);
+                        formattedLines.push('<div class="ml-4 mb-1">• ' + content + '</div>');
                     }
                 }
             } else {
-                // Regular line (description or header)
-                if (trimmedLine.toLowerCase().includes('features:') ||
-                    trimmedLine.toLowerCase().includes('technical improvements:') ||
-                    trimmedLine.toLowerCase().includes('database updates:') ||
-                    trimmedLine.toLowerCase().includes('ui/ux enhancements:') ||
-                    trimmedLine.toLowerCase().includes('bug fixes:') ||
-                    trimmedLine.toLowerCase().includes('fixes:')) {
-                    formattedLines.push('<h6 class="text-primary font-weight-bold mt-3 mb-2">' + trimmedLine + '</h6>');
+                // Regular line
+                // Check if it's a sub-bullet (starts with space after previous bullet)
+                if (index > 0 && bodyLines[index-1].trim().startsWith('-')) {
+                    formattedLines.push('<div class="ml-6 mb-1 text-muted">' + trimmedLine + '</div>');
                 } else {
                     formattedLines.push('<div class="mb-2">' + trimmedLine + '</div>');
                 }
