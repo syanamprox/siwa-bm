@@ -296,6 +296,13 @@
                     <span>Manajemen Wilayah</span></a>
             </li>
 
+            <!-- Changelog (Admin Only) -->
+            <li class="nav-item {{ request()->is('admin/changelog*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('changelog.index') }}">
+                    <i class="fas fa-code-branch"></i>
+                    <span>Changelog</span></a>
+            </li>
+
             <!-- Pengaturan Sistem (Admin Only) -->
             <li class="nav-item {{ request()->is('admin/pengaturan*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('pengaturan.index') }}">

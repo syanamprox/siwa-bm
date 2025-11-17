@@ -8,6 +8,7 @@ use App\Http\Controllers\KeluargaController;
 use App\Http\Controllers\IuranController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\PengaturanSistemController;
+use App\Http\Controllers\ChangelogController;
 use Illuminate\Support\Facades\Route;
 
 // Redirect root to login
@@ -63,6 +64,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/api/wilayah/{wilayah}/edit', [WilayahController::class, 'edit']);
         Route::get('/api/wilayah/tree', [WilayahController::class, 'tree']);
         Route::get('/api/wilayah/children/{parentId}', [WilayahController::class, 'getChildren']);
+
+        // Changelog Routes
+        Route::get('/changelog', [ChangelogController::class, 'indexView'])->name('changelog.index');
+        Route::get('/api/changelog', [ChangelogController::class, 'index']);
+        Route::get('/api/changelog/{hash}', [ChangelogController::class, 'show']);
+        Route::get('/api/changelog/system-info', [ChangelogController::class, 'systemInfo']);
 
         // System Settings
         Route::resource('pengaturan', PengaturanSistemController::class);
