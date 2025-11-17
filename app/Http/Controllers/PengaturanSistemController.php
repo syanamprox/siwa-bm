@@ -13,9 +13,63 @@ class PengaturanSistemController extends Controller
      */
     public function index()
     {
-        $settings = PengaturanSistem::all()->pluck('nilai', 'kunci');
+        $settings = PengaturanSistem::orderBy('key')->get();
 
         return view('admin.pengaturan.index', compact('settings'));
+    }
+
+    /**
+     * API method: Get all settings for AJAX
+     */
+    public function apiIndex()
+    {
+        $settings = PengaturanSistem::orderBy('key')->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $settings,
+            'message' => 'Data pengaturan berhasil dimuat'
+        ]);
+    }
+
+    /**
+     * API method: Get settings by group for forms
+     */
+    public function getGroupSettings()
+    {
+        $settings = PengaturanSistem::all()->pluck('value', 'key');
+
+        $groupedSettings = [
+            'user' => [
+                'max_login_attempts' => $settings['max_login_attempts'] ?? 5,
+                'password_min_length' => $settings['password_min_length'] ?? 8,
+                'session_timeout' => $settings['session_timeout'] ?? 120,
+            ],
+            'email' => [
+                'smtp_host' => $settings['smtp_host'] ?? '',
+                'smtp_port' => $settings['smtp_port'] ?? 587,
+                'email_from' => $settings['email_from'] ?? '',
+                'email_from_name' => $settings['email_from_name'] ?? 'Sistem SIWA',
+            ],
+            'app' => [
+                'app_name' => $settings['app_name'] ?? 'SIWA - Sistem Informasi Warga',
+                'app_version' => $settings['app_version'] ?? '1.0.0',
+                'timezone' => $settings['timezone'] ?? 'Asia/Jakarta',
+                'date_format' => $settings['date_format'] ?? 'd/m/Y',
+            ],
+            'security' => [
+                'require_2fa' => $settings['require_2fa'] ?? '0',
+                'log_all_activities' => $settings['log_all_activities'] ?? '1',
+                'ip_whitelist' => $settings['ip_whitelist'] ?? '0',
+                'allowed_ips' => $settings['allowed_ips'] ?? '',
+                'backup_frequency' => $settings['backup_frequency'] ?? 'monthly',
+            ]
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $groupedSettings
+        ]);
     }
 
     /**
@@ -23,7 +77,18 @@ class PengaturanSistemController extends Controller
      */
     public function create()
     {
-        return view('admin.pengaturan.create');
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'tingkat_options' => [
+                    'umum' => 'Umum',
+                    'aplikasi' => 'Aplikasi',
+                    'user' => 'User',
+                    'email' => 'Email',
+                    'keamanan' => 'Keamanan'
+                ]
+            ]
+        ]);
     }
 
     /**
@@ -32,9 +97,9 @@ class PengaturanSistemController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'kunci' => 'required|string|max:255|unique:pengaturan_sistem,kunci',
-            'nilai' => 'required|string',
-            'deskripsi' => 'nullable|string'
+            'key' => 'required|string|max:255|unique:pengaturan_sistem,key',
+            'value' => 'required|string',
+            'keterangan' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -47,20 +112,22 @@ class PengaturanSistemController extends Controller
 
         try {
             $setting = PengaturanSistem::create([
-                'kunci' => $request->kunci,
-                'nilai' => $request->nilai,
-                'deskripsi' => $request->deskripsi
+                'key' => $request->key,
+                'value' => $request->value,
+                'keterangan' => $request->keterangan
             ]);
 
             // Log activity
-            \App\Models\AktivitasLog::create([
-                'user_id' => auth()->id(),
-                'tabel_referensi' => 'pengaturan_sistem',
-                'id_referensi' => $setting->id,
-                'jenis_aktivitas' => 'create',
-                'deskripsi' => "Menambahkan pengaturan: {$setting->kunci}",
-                'data_baru' => json_encode($setting->toArray())
-            ]);
+            if (auth()->check()) {
+                \App\Models\AktivitasLog::create([
+                    'user_id' => auth()->id(),
+                    'tabel_referensi' => 'pengaturan_sistem',
+                    'id_referensi' => $setting->id,
+                    'jenis_aktivitas' => 'create',
+                    'deskripsi' => "Menambahkan pengaturan: {$setting->key}",
+                    'data_baru' => json_encode($setting->toArray())
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -110,9 +177,9 @@ class PengaturanSistemController extends Controller
         $setting = PengaturanSistem::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'kunci' => 'required|string|max:255|unique:pengaturan_sistem,kunci,'.$id,
-            'nilai' => 'required|string',
-            'deskripsi' => 'nullable|string'
+            'key' => 'required|string|max:255|unique:pengaturan_sistem,key,'.$id,
+            'value' => 'required|string',
+            'keterangan' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -127,21 +194,23 @@ class PengaturanSistemController extends Controller
             $dataLama = $setting->toArray();
 
             $setting->update([
-                'kunci' => $request->kunci,
-                'nilai' => $request->nilai,
-                'deskripsi' => $request->deskripsi
+                'key' => $request->key,
+                'value' => $request->value,
+                'keterangan' => $request->keterangan
             ]);
 
             // Log activity
-            \App\Models\AktivitasLog::create([
-                'user_id' => auth()->id(),
-                'tabel_referensi' => 'pengaturan_sistem',
-                'id_referensi' => $setting->id,
-                'jenis_aktivitas' => 'update',
-                'deskripsi' => "Mengupdate pengaturan: {$setting->kunci}",
-                'data_lama' => json_encode($dataLama),
-                'data_baru' => json_encode($setting->toArray())
-            ]);
+            if (auth()->check()) {
+                \App\Models\AktivitasLog::create([
+                    'user_id' => auth()->id(),
+                    'tabel_referensi' => 'pengaturan_sistem',
+                    'id_referensi' => $setting->id,
+                    'jenis_aktivitas' => 'update',
+                    'deskripsi' => "Mengupdate pengaturan: {$setting->key}",
+                    'data_lama' => json_encode($dataLama),
+                    'data_baru' => json_encode($setting->toArray())
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -198,8 +267,8 @@ class PengaturanSistemController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'settings' => 'required|array',
-            'settings.*.kunci' => 'required|string',
-            'settings.*.nilai' => 'required|string'
+            'settings.*.key' => 'required|string',
+            'settings.*.value' => 'required|string'
         ]);
 
         if ($validator->fails()) {
@@ -213,8 +282,8 @@ class PengaturanSistemController extends Controller
         try {
             foreach ($request->settings as $settingData) {
                 PengaturanSistem::updateOrCreate(
-                    ['kunci' => $settingData['kunci']],
-                    ['nilai' => $settingData['nilai']]
+                    ['key' => $settingData['key']],
+                    ['value' => $settingData['value']]
                 );
             }
 

@@ -303,8 +303,8 @@
             </li>
 
             <!-- Backup & Restore (Admin Only) -->
-            <li class="nav-item">
-                <a class="nav-link" href="#" onclick="confirmBackup()">
+            <li class="nav-item {{ request()->is('backup*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('backup.index') }}">
                     <i class="fas fa-database"></i>
                     <span>Backup & Restore</span></a>
             </li>

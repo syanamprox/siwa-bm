@@ -63,6 +63,18 @@ Route::middleware('auth')->group(function () {
 
         // System Settings
         Route::resource('pengaturan', PengaturanSistemController::class);
+        Route::get('/pengaturan/group', [PengaturanSistemController::class, 'getGroupSettings'])->name('pengaturan.group');
+
+        // API Routes for AJAX operations
+        Route::get('/api/pengaturan', [PengaturanSistemController::class, 'apiIndex']);
+
+        // Backup & Restore Routes
+        Route::get('/backup', [App\Http\Controllers\BackupController::class, 'index'])->name('backup.index');
+        Route::post('/backup/create', [App\Http\Controllers\BackupController::class, 'create'])->name('backup.create');
+        Route::get('/backup/download/{filename}', [App\Http\Controllers\BackupController::class, 'download'])->name('backup.download');
+        Route::delete('/backup/delete/{filename}', [App\Http\Controllers\BackupController::class, 'delete'])->name('backup.delete');
+        Route::post('/backup/restore', [App\Http\Controllers\BackupController::class, 'restore'])->name('backup.restore');
+        Route::get('/backup/status', [App\Http\Controllers\BackupController::class, 'status'])->name('backup.status');
     });
 
     // Lurah & Admin Routes - Coming soon
