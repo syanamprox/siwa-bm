@@ -350,10 +350,9 @@ function displayCommitDetail(commit) {
         </div>
         <div class="row mb-3">
             <div class="col-md-12">
-                <strong><i class="fas fa-heading mr-2"></i>Detail Perubahan:</strong><br>
+                <strong><i class="fas fa-heading mr-2"></i>Judul Perubahan:</strong><br>
                 <div class="alert alert-primary mb-0">
                     <h6 class="mb-0 font-weight-bold">${commit.subject}</h6>
-                    <small class="text-muted">Klik untuk melihat detail lengkap perubahan di bawah</small>
                 </div>
             </div>
         </div>
