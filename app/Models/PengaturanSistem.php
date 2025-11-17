@@ -60,7 +60,7 @@ class PengaturanSistem extends Model
     /**
      * Set nilai pengaturan
      */
-    public static function setValue(string $key, $value, string $keterangan = null): self
+    public static function setValue(string $key, $value, ?string $keterangan = null): self
     {
         $pengaturan = self::updateOrCreate(
             ['key' => $key],
