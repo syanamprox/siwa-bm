@@ -76,7 +76,7 @@ class Wilayah extends Model
      */
     public function users()
     {
-        return $this->belongsToMany(User::class, 'user_wilayah');
+        return $this->belongsToMany(User::class, 'user_wilayahs');
     }
 
     /**
@@ -84,11 +84,11 @@ class Wilayah extends Model
      */
     public function warga()
     {
-        if ($this->tingkat === 'rt') {
+        if ($this->tingkat === 'RT') {
             return $this->hasMany(Warga::class, 'rt_domisili', 'kode');
-        } elseif ($this->tingkat === 'rw') {
+        } elseif ($this->tingkat === 'RW') {
             return Warga::where('rw_domisili', $this->kode);
-        } elseif ($this->tingkat === 'kelurahan') {
+        } elseif ($this->tingkat === 'Kelurahan') {
             return Warga::where('kelurahan_domisili', 'like', '%' . $this->nama . '%');
         }
 
@@ -108,7 +108,7 @@ class Wilayah extends Model
      */
     public function scopeKelurahan($query)
     {
-        return $query->where('tingkat', 'kelurahan');
+        return $query->where('tingkat', 'Kelurahan');
     }
 
     /**
@@ -116,7 +116,7 @@ class Wilayah extends Model
      */
     public function scopeRw($query)
     {
-        return $query->where('tingkat', 'rw');
+        return $query->where('tingkat', 'RW');
     }
 
     /**
@@ -124,7 +124,7 @@ class Wilayah extends Model
      */
     public function scopeRt($query)
     {
-        return $query->where('tingkat', 'rt');
+        return $query->where('tingkat', 'RT');
     }
 
     /**
@@ -141,9 +141,9 @@ class Wilayah extends Model
     public function getTingkatLabelAttribute(): string
     {
         return match($this->tingkat) {
-            'kelurahan' => 'Kelurahan',
-            'rw' => 'RW',
-            'rt' => 'RT',
+            'Kelurahan' => 'Kelurahan',
+            'RW' => 'RW',
+            'RT' => 'RT',
             default => 'Unknown',
         };
     }
@@ -167,7 +167,7 @@ class Wilayah extends Model
      */
     public function isKelurahan(): bool
     {
-        return $this->tingkat === 'kelurahan';
+        return $this->tingkat === 'Kelurahan';
     }
 
     /**
@@ -175,7 +175,7 @@ class Wilayah extends Model
      */
     public function isRw(): bool
     {
-        return $this->tingkat === 'rw';
+        return $this->tingkat === 'RW';
     }
 
     /**
@@ -183,7 +183,7 @@ class Wilayah extends Model
      */
     public function isRt(): bool
     {
-        return $this->tingkat === 'rt';
+        return $this->tingkat === 'RT';
     }
 
     /**
@@ -191,8 +191,8 @@ class Wilayah extends Model
      */
     public function getAllRtAttribute()
     {
-        if ($this->tingkat === 'rw') {
-            return $this->children()->where('tingkat', 'rt')->get();
+        if ($this->tingkat === 'RW') {
+            return $this->children()->where('tingkat', 'RT')->get();
         }
 
         return collect();
@@ -204,9 +204,9 @@ class Wilayah extends Model
     public function getKodeDisplayAttribute(): string
     {
         return match($this->tingkat) {
-            'kelurahan' => $this->kode,
-            'rw' => "RW {$this->kode}",
-            'rt' => "RT {$this->kode}",
+            'Kelurahan' => $this->kode,
+            'RW' => "RW {$this->kode}",
+            'RT' => "RT {$this->kode}",
             default => $this->kode,
         };
     }

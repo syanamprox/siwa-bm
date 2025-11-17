@@ -54,7 +54,7 @@ class User extends Authenticatable
      */
     public function wilayah()
     {
-        return $this->belongsToMany(Wilayah::class, 'user_wilayah');
+        return $this->belongsToMany(Wilayah::class, 'user_wilayahs');
     }
 
     /**

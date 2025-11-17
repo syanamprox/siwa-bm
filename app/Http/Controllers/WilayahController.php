@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class WilayahController extends Controller
 {
@@ -41,8 +42,8 @@ class WilayahController extends Controller
     public function create(): JsonResponse
     {
         $parents = Wilayah::where(function($query) {
-            $query->where('tingkat', 'kelurahan')
-                  ->orWhere('tingkat', 'rw');
+            $query->where('tingkat', 'Kelurahan')
+                  ->orWhere('tingkat', 'RW');
         })->orderBy('tingkat')->orderBy('kode')->get();
 
         return response()->json([
@@ -64,10 +65,10 @@ class WilayahController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'kode' => 'required|string|max:10|unique:wilayah,kode,NULL,NULL,deleted_at,NULL',
+            'kode' => 'required|string|max:10|unique:wilayahs,kode,NULL,NULL,deleted_at,NULL',
             'nama' => 'required|string|max:100',
-            'tingkat' => ['required', Rule::in(['kelurahan', 'rw', 'rt'])],
-            'parent_id' => 'nullable|exists:wilayah,id',
+            'tingkat' => ['required', Rule::in(['Kelurahan', 'RW', 'RT'])],
+            'parent_id' => 'nullable|exists:wilayahs,id',
         ], [
             'kode.required' => 'Kode wilayah wajib diisi',
             'kode.unique' => 'Kode wilayah sudah digunakan',
@@ -89,28 +90,28 @@ class WilayahController extends Controller
             $parent = Wilayah::find($request->parent_id);
             $tingkat = $request->tingkat;
 
-            if ($tingkat === 'kelurahan') {
+            if ($tingkat === 'Kelurahan') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Kelurahan tidak boleh memiliki parent',
                 ], 422);
             }
 
-            if ($tingkat === 'rw' && $parent->tingkat !== 'kelurahan') {
+            if ($tingkat === 'RW' && $parent->tingkat !== 'Kelurahan') {
                 return response()->json([
                     'success' => false,
                     'message' => 'RW hanya memiliki parent Kelurahan',
                 ], 422);
             }
 
-            if ($tingkat === 'rt' && $parent->tingkat !== 'rw') {
+            if ($tingkat === 'RT' && $parent->tingkat !== 'RW') {
                 return response()->json([
                     'success' => false,
                     'message' => 'RT hanya memiliki parent RW',
                 ], 422);
             }
         } else {
-            if ($request->tingkat !== 'kelurahan') {
+            if ($request->tingkat !== 'Kelurahan') {
                 return response()->json([
                     'success' => false,
                     'message' => 'RW dan RT harus memiliki parent wilayah',
@@ -125,6 +126,29 @@ class WilayahController extends Controller
                 'tingkat' => $request->tingkat,
                 'parent_id' => $request->parent_id,
             ]);
+
+            // Log activity
+            try {
+                if (Auth::check()) {
+                    \App\Models\AktivitasLog::create([
+                        'user_id' => Auth::id(),
+                        'action' => 'create',
+                        'module' => 'wilayah',
+                        'description' => "Menambahkan wilayah: {$wilayah->nama} ({$wilayah->kode})",
+                        'new_data' => json_encode([
+                            'kode' => $wilayah->kode,
+                            'nama' => $wilayah->nama,
+                            'tingkat' => $wilayah->tingkat,
+                            'parent_id' => $wilayah->parent_id
+                        ]),
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent()
+                    ]);
+                }
+            } catch (\Exception $logError) {
+                \Log::error('Create wilayah activity logging error: ' . $logError->getMessage());
+                // Continue execution even if logging fails
+            }
 
             return response()->json([
                 'success' => true,
@@ -202,10 +226,10 @@ class WilayahController extends Controller
         $wilayah = Wilayah::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'kode' => 'required|string|max:10|unique:wilayah,kode,'.$id.',id,deleted_at,NULL',
+            'kode' => 'required|string|max:10|unique:wilayahs,kode,'.$id.',id,deleted_at,NULL',
             'nama' => 'required|string|max:100',
-            'tingkat' => ['required', Rule::in(['kelurahan', 'rw', 'rt'])],
-            'parent_id' => 'nullable|exists:wilayah,id',
+            'tingkat' => ['required', Rule::in(['Kelurahan', 'RW', 'RT'])],
+            'parent_id' => 'nullable|exists:wilayahs,id',
         ], [
             'kode.required' => 'Kode wilayah wajib diisi',
             'kode.unique' => 'Kode wilayah sudah digunakan',
@@ -247,28 +271,28 @@ class WilayahController extends Controller
             $parent = Wilayah::find($request->parent_id);
             $tingkat = $request->tingkat;
 
-            if ($tingkat === 'kelurahan') {
+            if ($tingkat === 'Kelurahan') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Kelurahan tidak boleh memiliki parent',
                 ], 422);
             }
 
-            if ($tingkat === 'rw' && $parent->tingkat !== 'kelurahan') {
+            if ($tingkat === 'RW' && $parent->tingkat !== 'Kelurahan') {
                 return response()->json([
                     'success' => false,
                     'message' => 'RW hanya memiliki parent Kelurahan',
                 ], 422);
             }
 
-            if ($tingkat === 'rt' && $parent->tingkat !== 'rw') {
+            if ($tingkat === 'RT' && $parent->tingkat !== 'RW') {
                 return response()->json([
                     'success' => false,
                     'message' => 'RT hanya memiliki parent RW',
                 ], 422);
             }
         } else {
-            if ($request->tingkat !== 'kelurahan') {
+            if ($request->tingkat !== 'Kelurahan') {
                 return response()->json([
                     'success' => false,
                     'message' => 'RW dan RT harus memiliki parent wilayah',
@@ -277,12 +301,39 @@ class WilayahController extends Controller
         }
 
         try {
+            // Store old data for logging
+            $oldData = $wilayah->toArray();
+
             $wilayah->update([
                 'kode' => strtoupper($request->kode),
                 'nama' => $request->nama,
                 'tingkat' => $request->tingkat,
                 'parent_id' => $request->parent_id,
             ]);
+
+            // Log activity
+            try {
+                if (Auth::check()) {
+                    \App\Models\AktivitasLog::create([
+                        'user_id' => Auth::id(),
+                        'action' => 'update',
+                        'module' => 'wilayah',
+                        'description' => "Memperbarui wilayah: {$wilayah->nama} ({$wilayah->kode})",
+                        'old_data' => json_encode($oldData),
+                        'new_data' => json_encode([
+                            'kode' => $wilayah->kode,
+                            'nama' => $wilayah->nama,
+                            'tingkat' => $wilayah->tingkat,
+                            'parent_id' => $wilayah->parent_id
+                        ]),
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent()
+                    ]);
+                }
+            } catch (\Exception $logError) {
+                \Log::error('Update wilayah activity logging error: ' . $logError->getMessage());
+                // Continue execution even if logging fails
+            }
 
             return response()->json([
                 'success' => true,
@@ -300,7 +351,7 @@ class WilayahController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id): JsonResponse
+    public function destroy(Request $request, string $id): JsonResponse
     {
         $wilayah = Wilayah::findOrFail($id);
 
@@ -323,11 +374,11 @@ class WilayahController extends Controller
         // Check if has related warga (simplified check)
         $wargaCount = 0;
         try {
-            if ($wilayah->tingkat === 'rt') {
+            if ($wilayah->tingkat === 'RT') {
                 $wargaCount = \App\Models\Warga::where('rt_domisili', $wilayah->kode)->count();
-            } elseif ($wilayah->tingkat === 'rw') {
+            } elseif ($wilayah->tingkat === 'RW') {
                 $wargaCount = \App\Models\Warga::where('rw_domisili', $wilayah->kode)->count();
-            } elseif ($wilayah->tingkat === 'kelurahan') {
+            } elseif ($wilayah->tingkat === 'Kelurahan') {
                 $wargaCount = \App\Models\Warga::where('kelurahan_domisili', 'like', '%' . $wilayah->nama . '%')->count();
             }
 
@@ -343,7 +394,28 @@ class WilayahController extends Controller
         }
 
         try {
+            // Store data for logging
+            $dataWilayah = $wilayah->toArray();
+
             $wilayah->delete();
+
+            // Log activity
+            try {
+                if (Auth::check()) {
+                    \App\Models\AktivitasLog::create([
+                        'user_id' => Auth::id(),
+                        'action' => 'delete',
+                        'module' => 'wilayah',
+                        'description' => "Menghapus wilayah: {$dataWilayah['nama']} ({$dataWilayah['kode']})",
+                        'old_data' => json_encode($dataWilayah),
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent()
+                    ]);
+                }
+            } catch (\Exception $logError) {
+                \Log::error('Delete wilayah activity logging error: ' . $logError->getMessage());
+                // Continue execution even if logging fails
+            }
 
             return response()->json([
                 'success' => true,

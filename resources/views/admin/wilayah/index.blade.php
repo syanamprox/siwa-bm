@@ -3,35 +3,15 @@
 @section('title', 'Manajemen Wilayah - SIWA')
 
 @section('content')
-<div class="container-fluid">
-
-    <!-- Page Heading -->
-    <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">
-            <i class="fas fa-map-marked-alt mr-2"></i>
-            Manajemen Wilayah
-        </h1>
-        <button type="button" class="btn btn-primary btn-user" data-toggle="modal" data-target="#addModal">
-            <i class="fas fa-plus mr-2"></i>Tambah Wilayah
-        </button>
-    </div>
-
-    <!-- Flash Messages -->
-    @if (session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle mr-2"></i>
-            {{ session('success') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
+<!-- DataTales Example -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <h6 class="m-0 font-weight-bold text-primary">Manajemen Wilayah</h6>
+        <div>
+            <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addModal">
+                <i class="fas fa-plus fa-sm"></i> Tambah Wilayah
             </button>
-        </div>
-    @endif
-
-    <!-- Data Table -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h6 class="m-0 font-weight-bold text-primary">Data Wilayah</h6>
-            <div class="dropdown no-arrow">
+            <div class="dropdown no-arrow d-inline-block ml-2">
                 <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
                 </a>
@@ -45,8 +25,51 @@
                 </div>
             </div>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
+    </div>
+    <div class="card-body">
+        <!-- Flash Messages -->
+        @if (session('success'))
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle mr-2"></i>
+                {{ session('success') }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        @endif
+        <!-- Filters -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <select id="filterTingkat" class="form-control form-control-sm">
+                    <option value="">Semua Tingkat</option>
+                    <option value="Kelurahan">Kelurahan</option>
+                    <option value="RW">RW</option>
+                    <option value="RT">RT</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select id="filterParent" class="form-control form-control-sm">
+                    <option value="">Semua Parent</option>
+                    <!-- Parent options will be loaded via AJAX -->
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Cari nama atau kode wilayah...">
+            </div>
+            <div class="col-md-2">
+                <div class="btn-group btn-block" role="group">
+                    <button class="btn btn-info btn-sm" onclick="applyFilters()">
+                        <i class="fas fa-search"></i> Cari
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="resetFilters()" title="Reset Filter">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wilayah Table -->
+        <div class="table-responsive">
                 <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
                     <thead>
                         <tr>
@@ -97,9 +120,9 @@
                                 <label for="tingkat">Tingkat <span class="text-danger">*</span></label>
                                 <select class="form-control" id="tingkat" name="tingkat" required>
                                     <option value="">-- Pilih Tingkat --</option>
-                                    <option value="kelurahan">Kelurahan</option>
-                                    <option value="rw">RW</option>
-                                    <option value="rt">RT</option>
+                                    <option value="Kelurahan">Kelurahan</option>
+                                    <option value="RW">RW</option>
+                                    <option value="RT">RT</option>
                                 </select>
                             </div>
                         </div>
@@ -170,9 +193,9 @@
                             <div class="form-group">
                                 <label for="edit_tingkat">Tingkat <span class="text-danger">*</span></label>
                                 <select class="form-control" id="edit_tingkat" name="tingkat" required>
-                                    <option value="kelurahan">Kelurahan</option>
-                                    <option value="rw">RW</option>
-                                    <option value="rt">RT</option>
+                                    <option value="Kelurahan">Kelurahan</option>
+                                    <option value="RW">RW</option>
+                                    <option value="RT">RT</option>
                                 </select>
                             </div>
                         </div>
@@ -265,6 +288,23 @@ $(document).ready(function() {
     // Handle tingkat change for edit form
     $('#edit_tingkat').change(function() {
         loadParentOptions($(this).val(), 'edit_parent_id');
+    });
+
+    // Event listeners for filters
+    $('#searchInput').on('keyup', function(e) {
+        if (e.which === 13) { // Enter key
+            applyFilters();
+        }
+    });
+
+    // Auto-apply filter when tingkat changes
+    $('#filterTingkat').change(function() {
+        applyFilters();
+    });
+
+    // Auto-apply filter when parent changes
+    $('#filterParent').change(function() {
+        applyFilters();
     });
 
     // Add form submit
@@ -377,6 +417,7 @@ function loadData() {
         success: function(response) {
             if (response.success) {
                 renderTable(response.data);
+                loadParentFilterOptions(response.data);
             }
         },
         error: function(xhr) {
@@ -386,6 +427,78 @@ function loadData() {
     });
 }
 
+function loadParentFilterOptions(data) {
+    var parentOptions = '<option value="">Semua Parent</option>';
+
+    // Add Kelurahan options for Parent filter
+    var kelurahans = data.filter(item => item.tingkat === 'Kelurahan');
+    kelurahans.forEach(function(kelurahan) {
+        parentOptions += `<option value="${kelurahan.id}">${kelurahan.nama}</option>`;
+    });
+
+    $('#filterParent').html(parentOptions);
+}
+
+function applyFilters() {
+    var tingkatFilter = $('#filterTingkat').val();
+    var parentFilter = $('#filterParent').val();
+    var searchTerm = $('#searchInput').val().toLowerCase();
+
+    $.ajax({
+        url: '/admin/api/wilayah',
+        type: 'GET',
+        success: function(response) {
+            if (response.success) {
+                var filteredData = response.data;
+
+                // Filter by tingkat
+                if (tingkatFilter) {
+                    filteredData = filteredData.filter(function(item) {
+                        return item.tingkat === tingkatFilter;
+                    });
+                }
+
+                // Filter by parent
+                if (parentFilter) {
+                    filteredData = filteredData.filter(function(item) {
+                        return item.parent_id == parentFilter;
+                    });
+                }
+
+                // Filter by search term
+                if (searchTerm) {
+                    filteredData = filteredData.filter(function(item) {
+                        return item.nama.toLowerCase().includes(searchTerm) ||
+                               item.kode.toLowerCase().includes(searchTerm);
+                    });
+                }
+
+                renderTable(filteredData);
+
+                // Show result count
+                var resultText = `Menampilkan ${filteredData.length} dari ${response.data.length} data`;
+                if (filteredData.length === 0) {
+                    showToast('Tidak ada data yang cocok dengan filter', 'warning', 3000);
+                } else {
+                    showToast(resultText, 'success', 2000);
+                }
+            }
+        },
+        error: function(xhr) {
+            var message = xhr.responseJSON?.message || 'Gagal memuat data';
+            showToast(message, 'error');
+        }
+    });
+}
+
+function resetFilters() {
+    $('#filterTingkat').val('');
+    $('#filterParent').val('');
+    $('#searchInput').val('');
+    loadData();
+    showToast('Filter telah direset', 'success', 2000);
+}
+
 function renderTable(data) {
     var html = '';
     var no = 1;
@@ -393,7 +506,7 @@ function renderTable(data) {
     // Sort by hierarchy
     data.sort(function(a, b) {
         if (a.tingkat !== b.tingkat) {
-            var levelOrder = {'kelurahan': 1, 'rw': 2, 'rt': 3};
+            var levelOrder = {'Kelurahan': 1, 'RW': 2, 'RT': 3};
             return levelOrder[a.tingkat] - levelOrder[b.tingkat];
         }
         return a.kode.localeCompare(b.kode);
@@ -402,13 +515,13 @@ function renderTable(data) {
     data.forEach(function(item) {
         var tingkatBadge = '';
         switch(item.tingkat) {
-            case 'kelurahan':
+            case 'Kelurahan':
                 tingkatBadge = '<span class="badge badge-primary">Kelurahan</span>';
                 break;
-            case 'rw':
+            case 'RW':
                 tingkatBadge = '<span class="badge badge-success">RW</span>';
                 break;
-            case 'rt':
+            case 'RT':
                 tingkatBadge = '<span class="badge badge-info">RT</span>';
                 break;
         }
@@ -447,10 +560,17 @@ function editData(id) {
                 var wilayah = response.data.wilayah;
                 var parents = response.data.parents;
 
+                console.log('Edit wilayah data:', wilayah);
+                console.log('Tingkat value:', "'" + wilayah.tingkat + "'");
+                console.log('Tingkat length:', wilayah.tingkat.length);
+
                 $('#edit_id').val(wilayah.id);
                 $('#edit_kode').val(wilayah.kode);
                 $('#edit_nama').val(wilayah.nama);
                 $('#edit_tingkat').val(wilayah.tingkat);
+
+                // Debug tingkat dropdown
+                console.log('Selected tingkat:', $('#edit_tingkat').val());
 
                 // Load parent options
                 loadParentOptions(wilayah.tingkat, 'edit_parent_id', parents, wilayah.parent_id);
@@ -471,7 +591,7 @@ function deleteData(id) {
 }
 
 function loadParentOptions(tingkat, targetId, parents = null, selectedId = null) {
-    if (tingkat === 'kelurahan') {
+    if (tingkat === 'Kelurahan') {
         $('#' + targetId).html('<option value="">-- Tidak ada Parent (Kelurahan) --</option>');
         return;
     }
@@ -496,9 +616,9 @@ function renderParentOptions(parents, targetId, tingkat, selectedId) {
     var html = '<option value="">-- Pilih Parent --</option>';
 
     parents.forEach(function(parent) {
-        if (tingkat === 'rw' && parent.tingkat === 'kelurahan') {
+        if (tingkat === 'RW' && parent.tingkat === 'Kelurahan') {
             html += `<option value="${parent.id}" ${selectedId == parent.id ? 'selected' : ''}>${parent.kode_display} - ${parent.nama}</option>`;
-        } else if (tingkat === 'rt' && parent.tingkat === 'rw') {
+        } else if (tingkat === 'RT' && parent.tingkat === 'RW') {
             html += `<option value="${parent.id}" ${selectedId == parent.id ? 'selected' : ''}>${parent.kode_display} - ${parent.nama}</option>`;
         }
     });
