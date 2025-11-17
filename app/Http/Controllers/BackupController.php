@@ -40,6 +40,7 @@ class BackupController extends Controller
                         'filename' => $file->getFilename(),
                         'path' => $file->getPathname(),
                         'size' => $this->formatBytes($file->getSize()),
+                        'size_bytes' => $file->getSize(),
                         'created_at' => Carbon::createFromTimestamp($file->getMTime())->format('Y-m-d H:i:s'),
                         'download_url' => route('backup.download', $file->getFilename())
                     ];
@@ -62,7 +63,7 @@ class BackupController extends Controller
     {
         try {
             // Generate backup filename
-            $filename = 'backup_' . date('Y-m-d_H-i-s') . '_' . str_random(8) . '.zip';
+            $filename = 'backup_' . date('Y-m-d_H-i-s') . '_' . \Illuminate\Support\Str::random(8) . '.zip';
             $backupPath = storage_path('app/backups/' . $filename);
 
             // Create backups directory if not exists

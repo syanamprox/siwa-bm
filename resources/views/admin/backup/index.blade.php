@@ -556,4 +556,4 @@ function hideLoading() {
     $('.loading-spinner').hide();
 }
 </script>
-@endsection
+@endpush
