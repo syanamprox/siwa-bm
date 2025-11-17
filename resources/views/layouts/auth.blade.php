@@ -12,8 +12,11 @@
     <title>{{ config('app.name', 'SIWA') }} - Login</title>
 
     <!-- Custom fonts for this template-->
-    <link href="{{ asset('vendor_sbadmin2/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+
+    <!-- Bootstrap CSS 4.6 (compatible with SB Admin 2) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template-->
     <link href="{{ asset('sbadmin2.css/sb-admin-2.min.css') }}" rel="stylesheet">
@@ -109,18 +112,18 @@
                     <form class="user" method="POST" action="{{ route('login') }}">
                         @csrf
 
-                        <!-- Username Field -->
+                        <!-- Email or Username Field -->
                         <div class="form-group">
                             <input type="text"
-                                   class="form-control form-control-user @error('username') is-invalid @enderror"
-                                   id="username"
-                                   name="username"
-                                   placeholder="Username"
-                                   value="{{ old('username') }}"
+                                   class="form-control form-control-user @error('login') is-invalid @enderror"
+                                   id="login"
+                                   name="login"
+                                   placeholder="Email Address atau Username"
+                                   value="{{ old('login') }}"
                                    required
                                    autofocus
                                    autocomplete="username">
-                            @error('username')
+                            @error('login')
                                 <span class="invalid-feedback" role="alert">
                                     <strong>{{ $message }}</strong>
                                 </span>
@@ -172,10 +175,10 @@
                     <div class="text-center mt-4">
                         <small class="text-info">
                             <strong>Akun Default:</strong><br>
-                            Admin: admin/admin123<br>
-                            Lurah: lurah/lurah123<br>
-                            RW: rw01/rw123<br>
-                            RT: rt01/rt123
+                            Admin: admin@siwa.local / admin - password<br>
+                            Lurah: lurah@siwa.local / lurah - password<br>
+                            RW: rw01@siwa.local / rw01 - password<br>
+                            RT: rt01@siwa.local / rt01 - password
                         </small>
                     </div>
                     @endif
@@ -184,12 +187,14 @@
         </div>
     </div>
 
-    <!-- Bootstrap core JavaScript-->
-    <script src="{{ asset('vendor_sbadmin2/vendor/jquery/jquery.min.js') }}"></script>
-    <script src="{{ asset('vendor_sbadmin2/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <!-- Bootstrap core JavaScript 4.6 (compatible with SB Admin 2) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Core plugin JavaScript-->
-    <script src="{{ asset('vendor_sbadmin2/vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
 
     <!-- Custom scripts for all pages-->
     <script src="{{ asset('sbadmin2.js/sb-admin-2.min.js') }}"></script>

@@ -89,13 +89,20 @@
                     <input type="hidden" id="userId" name="user_id">
 
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label for="username">Username <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="username" name="username" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="email">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="email" name="email" placeholder="user@example.com" required>
+                                <small class="form-text text-muted">Digunakan untuk login</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <div class="form-group">
                                 <label for="password">Password <span class="text-danger" id="passwordRequired">*</span></label>
                                 <input type="password" class="form-control" id="password" name="password" required>
@@ -222,6 +229,11 @@ let resetPasswordUserId = null;
 // Load initial data
 $(document).ready(function() {
     loadUsers();
+
+    // Reset form when modal is hidden
+    $('#userModal').on('hidden.bs.modal', function () {
+        resetUserForm();
+    });
     loadWilayahOptions();
 });
 
@@ -240,7 +252,7 @@ function loadUsers(page = 1) {
 
     showLoading();
 
-    fetch(`/api/users?${params}`)
+    fetch(`/admin/api/users?${params}`)
         .then(response => response.json())
         .then(data => {
             hideLoading();
@@ -352,9 +364,28 @@ function getRoleLabel(role) {
     return labels[role] || role;
 }
 
+// Reset user form to initial state
+function resetUserForm() {
+    $('#userForm')[0].reset();
+    $('#userId').val('');
+    $('#userModalTitle').text('Tambah User');
+
+    // Reset password requirement
+    $('#passwordRequired').show();
+    $('#password').prop('required', true);
+
+    // Clear photo preview
+    $('#currentPhoto').hide();
+    $('#photoPreview').attr('src', '');
+    $('.custom-file-label').text('Pilih foto...');
+
+    // Uncheck all wilayah checkboxes
+    $('#wilayahSelection input[type="checkbox"]').prop('checked', false);
+}
+
 // Load wilayah options for form
 function loadWilayahOptions() {
-    fetch('/api/users/create')
+    fetch('/admin/api/users/create')
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -397,17 +428,8 @@ function renderWilayahOptions(wilayahByTingkat) {
 
 // Show create modal
 function showCreateModal() {
-    $('#userModalTitle').text('Tambah User');
-    $('#userForm')[0].reset();
-    $('#userId').val('');
-    $('#passwordRequired').show();
-    $('#password').prop('required', true);
-    $('#currentPhoto').hide();
+    resetUserForm();
     $('.custom-file-label').text('Pilih foto...');
-
-    // Clear selected wilayah
-    $('#wilayahSelection input[type="checkbox"]').prop('checked', false);
-
     $('#userModal').modal('show');
 }
 
@@ -415,7 +437,7 @@ function showCreateModal() {
 function editUser(userId) {
     showLoading();
 
-    fetch(`/api/users/${userId}/edit`)
+    fetch(`/admin/api/users/${userId}/edit`)
         .then(response => response.json())
         .then(data => {
             hideLoading();
@@ -425,6 +447,7 @@ function editUser(userId) {
                 $('#userModalTitle').text('Edit User');
                 $('#userId').val(user.id);
                 $('#username').val(user.username);
+                $('#email').val(user.email);
                 $('#role').val(user.role);
                 $('#status_aktif').val(user.status_aktif ? '1' : '0');
 
@@ -472,7 +495,7 @@ $('#userForm').on('submit', function(e) {
         formData.delete('password');
     }
 
-    const url = isEdit ? `/api/users/${userId}` : '/api/users';
+    const url = isEdit ? `/admin/users/${userId}` : '/admin/users';
     const method = isEdit ? 'POST' : 'POST';
 
     // Add method override for PUT
@@ -518,7 +541,7 @@ $('#userForm').on('submit', function(e) {
 function toggleStatus(userId) {
     showLoading();
 
-    fetch(`/api/users/${userId}/toggle-status`, {
+    fetch(`/admin/api/users/${userId}/toggle-status`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
@@ -552,7 +575,7 @@ function resetPassword(userId, username) {
 function confirmResetPassword() {
     showLoading();
 
-    fetch(`/api/users/${resetPasswordUserId}/reset-password`, {
+    fetch(`/admin/api/users/${resetPasswordUserId}/reset-password`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
@@ -586,7 +609,7 @@ function deleteUser(userId, username) {
 function confirmDelete() {
     showLoading();
 
-    fetch(`/api/users/${deleteUserId}`, {
+    fetch(`/admin/users/${deleteUserId}`, {
         method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')

@@ -6,6 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WargaController;
 use App\Http\Controllers\KeluargaController;
 use App\Http\Controllers\IuranController;
+use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\PengaturanSistemController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,28 +44,38 @@ Route::middleware('auth')->group(function () {
         Route::resource('users', UserController::class)->except(['index']);
 
         // API Routes for AJAX operations
-        Route::prefix('api')->group(function () {
-            Route::get('/users', [UserController::class, 'index']);
-            Route::get('/users/create', [UserController::class, 'create']);
-            Route::get('/users/{user}/edit', [UserController::class, 'edit']);
-            Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus']);
-            Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword']);
-        });
+        Route::get('/api/users', [UserController::class, 'index']);
+        Route::get('/api/users/create', [UserController::class, 'create']);
+        Route::get('/api/users/{user}/edit', [UserController::class, 'edit']);
+        Route::post('/api/users/{user}/toggle-status', [UserController::class, 'toggleStatus']);
+        Route::post('/api/users/{user}/reset-password', [UserController::class, 'resetPassword']);
+
+        // Wilayah Management Routes
+        Route::get('/wilayah', [WilayahController::class, 'indexView'])->name('wilayah.index');
+        Route::resource('wilayah', WilayahController::class)->except(['index']);
+
+        // API Routes for AJAX operations
+        Route::get('/api/wilayah', [WilayahController::class, 'index']);
+        Route::get('/api/wilayah/create', [WilayahController::class, 'create']);
+        Route::get('/api/wilayah/{wilayah}/edit', [WilayahController::class, 'edit']);
+        Route::get('/api/wilayah/tree', [WilayahController::class, 'tree']);
+        Route::get('/api/wilayah/children/{parentId}', [WilayahController::class, 'getChildren']);
 
         // System Settings
         Route::resource('pengaturan', PengaturanSistemController::class);
-        Route::post('/backup', [App\Http\Controllers\BackupController::class, 'backup'])->name('backup.create');
-        Route::post('/restore', [App\Http\Controllers\BackupController::class, 'restore'])->name('backup.restore');
     });
 
-    // Lurah & Admin Routes
+    // Lurah & Admin Routes - Coming soon
+    /*
     Route::middleware('lurah')->prefix('lurah')->group(function () {
         Route::get('/laporan/wilayah', [App\Http\Controllers\LaporanController::class, 'wilayah'])->name('laporan.wilayah');
         Route::get('/laporan/kependudukan', [App\Http\Controllers\LaporanController::class, 'kependudukan'])->name('laporan.kependudukan');
         Route::get('/laporan/export', [App\Http\Controllers\LaporanController::class, 'export'])->name('laporan.export');
     });
+    */
 
-    // RT Routes
+    // RT Routes - Coming soon
+    /*
     Route::middleware('role:rt,rw,lurah,admin')->prefix('rt')->group(function () {
         Route::resource('warga', WargaController::class);
         Route::get('/warga/{warga}/edit-popup', [WargaController::class, 'editPopup'])->name('warga.edit-popup');
@@ -72,7 +83,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/warga/{warga}/delete', [WargaController::class, 'destroyPopup'])->name('warga.destroy-popup');
     });
 
-    // RW Routes
+    // RW Routes - Coming soon
     Route::middleware('role:rw,lurah,admin')->prefix('rw')->group(function () {
         Route::resource('keluarga', KeluargaController::class);
         Route::get('/keluarga/{keluarga}/edit-popup', [KeluargaController::class, 'editPopup'])->name('keluarga.edit-popup');
@@ -80,7 +91,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/keluarga/{keluarga}/delete', [KeluargaController::class, 'destroyPopup'])->name('keluarga.destroy-popup');
     });
 
-    // All Authenticated Users Routes
+    // All Authenticated Users Routes - Coming soon
     Route::middleware('role:rt,rw,lurah,admin')->group(function () {
         // Iuran Management
         Route::resource('iuran', IuranController::class);
@@ -92,4 +103,5 @@ Route::middleware('auth')->group(function () {
         Route::post('/iuran/{iuran}/bayar', [App\Http\Controllers\PembayaranController::class, 'bayar'])->name('iuran.bayar');
         Route::get('/pembayaran/{pembayaran}/bukti', [App\Http\Controllers\PembayaranController::class, 'showBukti'])->name('pembayaran.bukti');
     });
+    */
 });

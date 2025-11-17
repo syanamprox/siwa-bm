@@ -11,11 +11,17 @@
     <title>@yield('title', 'SIWA - Sistem Informasi Warga')</title>
 
     <!-- Custom fonts for this template-->
-    <link href="{{ asset('vendor_sbadmin2/vendor/fontawesome-free/css/all.min.css') }}" rel="stylesheet" type="text/css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+
+    <!-- Bootstrap CSS 4.6 (compatible with SB Admin 2) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Custom styles for this template-->
     <link href="{{ asset('sbadmin2.css/sb-admin-2.min.css') }}" rel="stylesheet">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
     <!-- Custom styles for this application -->
     <style>
@@ -184,9 +190,7 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @endif
 
-    <!-- jQuery for AJAX operations -->
-    <script src="{{ asset('vendor_sbadmin2/vendor/jquery/jquery.min.js') }}"></script>
-
+    
     @stack('styles')
 </head>
 
@@ -225,27 +229,27 @@
                 Manajemen Data
             </div>
 
-            <!-- Data Warga (RT level and above) -->
+            <!-- Data Warga (RT level and above) - Coming Soon -->
             @if(auth()->user()->hasRole(['rt','rw','lurah','admin']))
-            <li class="nav-item {{ request()->is('rt/warga*') ? 'active' : '' }}">
-                <a class="nav-link" href="{{ route('warga.index') }}">
+            <li class="nav-item">
+                <a class="nav-link disabled" href="#" title="Coming Soon">
                     <i class="fas fa-users"></i>
                     <span>Data Warga</span></a>
             </li>
             @endif
 
-            <!-- Data Keluarga (RW level and above) -->
+            <!-- Data Keluarga (RW level and above) - Coming Soon -->
             @if(auth()->user()->hasRole(['rw','lurah','admin']))
-            <li class="nav-item {{ request()->is('rw/keluarga*') ? 'active' : '' }}">
-                <a class="nav-link" href="{{ route('keluarga.index') }}">
+            <li class="nav-item">
+                <a class="nav-link disabled" href="#" title="Coming Soon">
                     <i class="fas fa-user-friends"></i>
                     <span>Data Keluarga</span></a>
             </li>
             @endif
 
-            <!-- Manajemen Iuran -->
-            <li class="nav-item {{ request()->is('iuran*') ? 'active' : '' }}">
-                <a class="nav-link" href="{{ route('iuran.index') }}">
+            <!-- Manajemen Iuran - Coming Soon -->
+            <li class="nav-item">
+                <a class="nav-link disabled" href="#" title="Coming Soon">
                     <i class="fas fa-dollar-sign"></i>
                     <span>Manajemen Iuran</span></a>
             </li>
@@ -258,20 +262,13 @@
                 Laporan
             </div>
 
-            <!-- Laporan (Lurah & Admin) -->
+            <!-- Laporan (Lurah & Admin) - Coming Soon -->
             @if(auth()->user()->hasRole(['lurah','admin']))
             <li class="nav-item">
-                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseLaporan" aria-expanded="true" aria-controls="collapseLaporan">
+                <a class="nav-link disabled" href="#" title="Coming Soon">
                     <i class="fas fa-chart-bar"></i>
                     <span>Laporan</span>
                 </a>
-                <div id="collapseLaporan" class="collapse" aria-labelledby="headingLaporan" data-parent="#accordionSidebar">
-                    <div class="bg-white py-2 collapse-inner rounded">
-                        <a class="collapse-item {{ request()->is('lurah/laporan/wilayah') ? 'active' : '' }}" href="{{ route('laporan.wilayah') }}">Laporan Wilayah</a>
-                        <a class="collapse-item {{ request()->is('lurah/laporan/kependudukan') ? 'active' : '' }}" href="{{ route('laporan.kependudukan') }}">Laporan Kependudukan</a>
-                        <a class="collapse-item {{ request()->is('lurah/laporan/export') ? 'active' : '' }}" href="{{ route('laporan.export') }}">Export Data</a>
-                    </div>
-                </div>
             </li>
             @endif
 
@@ -289,6 +286,13 @@
                 <a class="nav-link" href="{{ route('users.index') }}">
                     <i class="fas fa-user-shield"></i>
                     <span>Manajemen User</span></a>
+            </li>
+
+            <!-- Wilayah Management (Admin Only) -->
+            <li class="nav-item {{ request()->is('admin/wilayah*') ? 'active' : '' }}">
+                <a class="nav-link" href="{{ route('wilayah.index') }}">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span>Manajemen Wilayah</span></a>
             </li>
 
             <!-- Pengaturan Sistem (Admin Only) -->
@@ -496,11 +500,11 @@
         </div>
     </div>
 
-    <!-- Bootstrap core JavaScript-->
-    <script src="{{ asset('vendor_sbadmin2/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <!-- Bootstrap core JavaScript 4.6 (compatible with SB Admin 2) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Core plugin JavaScript-->
-    <script src="{{ asset('vendor_sbadmin2/vendor/jquery-easing/jquery.easing.min.js') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
 
     <!-- Custom scripts for all pages-->
     <script src="{{ asset('sbadmin2.js/sb-admin-2.min.js') }}"></script>
@@ -594,19 +598,7 @@
 
         // Backup confirmation
         function confirmBackup() {
-            if (confirm('Apakah Anda ingin membuat backup database sekarang?')) {
-                showLoading();
-                $.post('{{ route("backup.create") }}')
-                    .done(function(response) {
-                        hideLoading();
-                        showToast(response.message || 'Backup berhasil dibuat', 'success');
-                    })
-                    .fail(function(xhr) {
-                        hideLoading();
-                        const message = xhr.responseJSON?.message || 'Terjadi kesalahan saat membuat backup';
-                        showToast(message, 'error');
-                    });
-            }
+            showToast('Fitur backup akan segera tersedia', 'info');
         }
     </script>
 

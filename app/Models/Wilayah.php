@@ -30,6 +30,18 @@ class Wilayah extends Model
     ];
 
     /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array<int, string>
+     */
+    protected $appends = [
+        'kode_display',
+        'tingkat_label',
+        'nama_lengkap',
+        'nama_hierarki',
+    ];
+
+    /**
      * The attributes that should be cast.
      *
      * @return array<string, string>
@@ -72,8 +84,15 @@ class Wilayah extends Model
      */
     public function warga()
     {
-        return $this->hasMany(Warga::class, 'rt_domisili', 'kode', 'rt_domisili')
-            ->where('tingkat', 'rt');
+        if ($this->tingkat === 'rt') {
+            return $this->hasMany(Warga::class, 'rt_domisili', 'kode');
+        } elseif ($this->tingkat === 'rw') {
+            return Warga::where('rw_domisili', $this->kode);
+        } elseif ($this->tingkat === 'kelurahan') {
+            return Warga::where('kelurahan_domisili', 'like', '%' . $this->nama . '%');
+        }
+
+        return collect(); // Return empty collection for safety
     }
 
     /**

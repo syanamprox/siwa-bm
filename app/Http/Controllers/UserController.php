@@ -80,6 +80,7 @@ class UserController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'username' => 'required|string|max:255|unique:users,username,NULL,NULL,deleted_at,NULL',
+            'email' => 'required|email|max:255|unique:users,email,NULL,NULL,deleted_at,NULL',
             'password' => 'required|string|min:6',
             'role' => ['required', Rule::in(['admin', 'lurah', 'rw', 'rt'])],
             'status_aktif' => 'required|boolean',
@@ -100,6 +101,8 @@ class UserController extends Controller
             // Create user
             $user = User::create([
                 'username' => $request->username,
+                'name' => $this->generateNameFromUsername($request->username, $request->role),
+                'email' => $request->email,
                 'password' => Hash::make($request->password),
                 'role' => $request->role,
                 'status_aktif' => $request->boolean('status_aktif'),
@@ -122,14 +125,16 @@ class UserController extends Controller
             }
 
             // Log activity
-            \App\Models\AktivitasLog::create([
-                'user_id' => auth()->id(),
-                'tabel_referensi' => 'users',
-                'id_referensi' => $user->id,
-                'jenis_aktivitas' => 'create',
-                'deskripsi' => "Menambahkan user baru: {$user->username} dengan role {$user->role}",
-                'data_baru' => json_encode($user->toArray())
-            ]);
+            if (auth()->check()) {
+                \App\Models\AktivitasLog::create([
+                    'user_id' => auth()->id(),
+                    'tabel_referensi' => 'users',
+                    'id_referensi' => $user->id,
+                    'jenis_aktivitas' => 'create',
+                    'deskripsi' => "Menambahkan user baru: {$user->username} dengan role {$user->role}",
+                    'data_baru' => json_encode($user->toArray())
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -187,6 +192,7 @@ class UserController extends Controller
 
         $validator = Validator::make($request->all(), [
             'username' => 'required|string|max:255|unique:users,username,'.$id.',id,deleted_at,NULL',
+            'email' => 'required|email|max:255|unique:users,email,'.$id.',id,deleted_at,NULL',
             'password' => 'nullable|string|min:6',
             'role' => ['required', Rule::in(['admin', 'lurah', 'rw', 'rt'])],
             'status_aktif' => 'required|boolean',
@@ -209,6 +215,7 @@ class UserController extends Controller
 
             // Update user data
             $user->username = $request->username;
+            $user->email = $request->email;
             $user->role = $request->role;
             $user->status_aktif = $request->boolean('status_aktif');
 
@@ -240,15 +247,17 @@ class UserController extends Controller
             }
 
             // Log activity
-            \App\Models\AktivitasLog::create([
-                'user_id' => auth()->id(),
-                'tabel_referensi' => 'users',
-                'id_referensi' => $user->id,
-                'jenis_aktivitas' => 'update',
-                'deskripsi' => "Mengupdate user: {$user->username}",
-                'data_lama' => json_encode($dataLama),
-                'data_baru' => json_encode($user->load('userWilayah.wilayah')->toArray())
-            ]);
+            if (auth()->check()) {
+                \App\Models\AktivitasLog::create([
+                    'user_id' => auth()->id(),
+                    'tabel_referensi' => 'users',
+                    'id_referensi' => $user->id,
+                    'jenis_aktivitas' => 'update',
+                    'deskripsi' => "Mengupdate user: {$user->username}",
+                    'data_lama' => json_encode($dataLama),
+                    'data_baru' => json_encode($user->load('userWilayah.wilayah')->toArray())
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -284,14 +293,16 @@ class UserController extends Controller
             $user->delete();
 
             // Log activity
-            \App\Models\AktivitasLog::create([
-                'user_id' => auth()->id(),
-                'tabel_referensi' => 'users',
-                'id_referensi' => $user->id,
-                'jenis_aktivitas' => 'delete',
-                'deskripsi' => "Menghapus user: {$user->username}",
-                'data_lama' => json_encode($dataUser)
-            ]);
+            if (auth()->check()) {
+                \App\Models\AktivitasLog::create([
+                    'user_id' => auth()->id(),
+                    'tabel_referensi' => 'users',
+                    'id_referensi' => $user->id,
+                    'jenis_aktivitas' => 'delete',
+                    'deskripsi' => "Menghapus user: {$user->username}",
+                    'data_lama' => json_encode($dataUser)
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -320,15 +331,17 @@ class UserController extends Controller
             $status = $user->status_aktif ? 'diaktifkan' : 'dinonaktifkan';
 
             // Log activity
-            \App\Models\AktivitasLog::create([
-                'user_id' => auth()->id(),
-                'tabel_referensi' => 'users',
-                'id_referensi' => $user->id,
-                'jenis_aktivitas' => 'toggle_status',
-                'deskripsi' => "Mengubah status user: {$user->username} menjadi $status",
-                'data_lama' => json_encode(['status_aktif' => !$user->status_aktif]),
-                'data_baru' => json_encode(['status_aktif' => $user->status_aktif])
-            ]);
+            if (auth()->check()) {
+                \App\Models\AktivitasLog::create([
+                    'user_id' => auth()->id(),
+                    'tabel_referensi' => 'users',
+                    'id_referensi' => $user->id,
+                    'jenis_aktivitas' => 'toggle_status',
+                    'deskripsi' => "Mengubah status user: {$user->username} menjadi $status",
+                    'data_lama' => json_encode(['status_aktif' => !$user->status_aktif]),
+                    'data_baru' => json_encode(['status_aktif' => $user->status_aktif])
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -359,15 +372,17 @@ class UserController extends Controller
             $user->save();
 
             // Log activity
-            \App\Models\AktivitasLog::create([
-                'user_id' => auth()->id(),
-                'tabel_referensi' => 'users',
-                'id_referensi' => $user->id,
-                'jenis_aktivitas' => 'reset_password',
-                'deskripsi' => "Reset password user: {$user->username}",
-                'data_lama' => null,
-                'data_baru' => json_encode(['new_password_reset' => true])
-            ]);
+            if (auth()->check()) {
+                \App\Models\AktivitasLog::create([
+                    'user_id' => auth()->id(),
+                    'tabel_referensi' => 'users',
+                    'id_referensi' => $user->id,
+                    'jenis_aktivitas' => 'reset_password',
+                    'deskripsi' => "Reset password user: {$user->username}",
+                    'data_lama' => null,
+                    'data_baru' => json_encode(['new_password_reset' => true])
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -380,6 +395,29 @@ class UserController extends Controller
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Generate name from username
+     */
+    private function generateNameFromUsername($username, $role)
+    {
+        // Basic name generation based on username
+        $name = ucfirst($username);
+
+        // Add role-based suffix
+        switch ($role) {
+            case 'admin':
+                return $name . ' Administrator';
+            case 'lurah':
+                return $name . ', S.Sos';
+            case 'rw':
+                return $name . ' (RW)';
+            case 'rt':
+                return $name . ' (RT)';
+            default:
+                return $name;
         }
     }
 }
