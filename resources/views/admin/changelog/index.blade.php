@@ -288,9 +288,27 @@ function displayCommitDetail(commit) {
             } else if (trimmedLine.toLowerCase().includes('ui/ux enhancements:')) {
                 currentSection = 'uiux';
                 return;
+            } else if (trimmedLine.toLowerCase().includes('ui/ux') ||
+                      trimmedLine.toLowerCase().includes('uiux')) {
+                currentSection = 'uiux';
+                return;
             } else if (trimmedLine.toLowerCase().includes('bug fixes:') ||
                       trimmedLine.toLowerCase().includes('fixes:')) {
                 currentSection = 'bugfixes';
+                return;
+            } else if (trimmedLine.toLowerCase().includes('each section now has:') ||
+                      trimmedLine.toLowerCase().includes('background colors:') ||
+                      trimmedLine.toLowerCase().includes('visual separation') ||
+                      trimmedLine.toLowerCase().includes('color coded sections:') ||
+                      trimmedLine.toLowerCase().includes('indonesian labels:') ||
+                      trimmedLine.toLowerCase().includes('conventional commits format:') ||
+                      trimmedLine.toLowerCase().includes('filter out co-authored') ||
+                      trimmedLine.toLowerCase().includes('auto-detect section') ||
+                      trimmedLine.toLowerCase().includes('icon yang sesuai') ||
+                      trimmedLine.toLowerCase().includes('file changed dihapus') ||
+                      trimmedLine.toLowerCase().includes('subject lebih detail') ||
+                      trimmedLine.toLowerCase().includes('memperbaiki parsing')) {
+                // Skip these lines as they are section headers or meta information
                 return;
             }
 
@@ -422,84 +440,7 @@ function displayCommitDetail(commit) {
         }
     }
 
-    // Process files changed
-    if (commit.files && commit.files.length > 0) {
-        var fileCategories = {
-            controllers: [],
-            models: [],
-            views: [],
-            routes: [],
-            migrations: [],
-            others: []
-        };
-
-        commit.files.forEach(function(file) {
-            if (file.includes('Controller')) {
-                fileCategories.controllers.push(file);
-            } else if (file.includes('Models/')) {
-                fileCategories.models.push(file);
-            } else if (file.includes('.blade.php')) {
-                fileCategories.views.push(file);
-            } else if (file.includes('routes/')) {
-                fileCategories.routes.push(file);
-            } else if (file.includes('migrations/')) {
-                fileCategories.migrations.push(file);
-            } else {
-                fileCategories.others.push(file);
-            }
-        });
-
-        filesHtml = '<h6><i class="fas fa-folder-open mr-2"></i>Files Changed:</h6>';
-
-        if (fileCategories.controllers.length > 0) {
-            filesHtml += '<div class="mb-2"><strong class="text-primary">Controllers:</strong><ul class="list-unstyled ml-3">';
-            fileCategories.controllers.forEach(function(file) {
-                filesHtml += '<li><i class="fas fa-code text-primary mr-2"></i>' + file + '</li>';
-            });
-            filesHtml += '</ul></div>';
-        }
-
-        if (fileCategories.models.length > 0) {
-            filesHtml += '<div class="mb-2"><strong class="text-success">Models:</strong><ul class="list-unstyled ml-3">';
-            fileCategories.models.forEach(function(file) {
-                filesHtml += '<li><i class="fas fa-database text-success mr-2"></i>' + file + '</li>';
-            });
-            filesHtml += '</ul></div>';
-        }
-
-        if (fileCategories.views.length > 0) {
-            filesHtml += '<div class="mb-2"><strong class="text-info">Views:</strong><ul class="list-unstyled ml-3">';
-            fileCategories.views.forEach(function(file) {
-                filesHtml += '<li><i class="fas fa-eye text-info mr-2"></i>' + file + '</li>';
-            });
-            filesHtml += '</ul></div>';
-        }
-
-        if (fileCategories.routes.length > 0) {
-            filesHtml += '<div class="mb-2"><strong class="text-warning">Routes:</strong><ul class="list-unstyled ml-3">';
-            fileCategories.routes.forEach(function(file) {
-                filesHtml += '<li><i class="fas fa-route text-warning mr-2"></i>' + file + '</li>';
-            });
-            filesHtml += '</ul></div>';
-        }
-
-        if (fileCategories.migrations.length > 0) {
-            filesHtml += '<div class="mb-2"><strong class="text-danger">Migrations:</strong><ul class="list-unstyled ml-3">';
-            fileCategories.migrations.forEach(function(file) {
-                filesHtml += '<li><i class="fas fa-table text-danger mr-2"></i>' + file + '</li>';
-            });
-            filesHtml += '</ul></div>';
-        }
-
-        if (fileCategories.others.length > 0) {
-            filesHtml += '<div class="mb-2"><strong class="text-secondary">Others:</strong><ul class="list-unstyled ml-3">';
-            fileCategories.others.forEach(function(file) {
-                filesHtml += '<li><i class="fas fa-file text-secondary mr-2"></i>' + file + '</li>';
-            });
-            filesHtml += '</ul></div>';
-        }
-    }
-
+  
     var html = `
         <div class="row mb-3">
             <div class="col-md-6">
@@ -525,24 +466,14 @@ function displayCommitDetail(commit) {
         </div>
         <div class="row mb-3">
             <div class="col-md-12">
-                <strong><i class="fas fa-heading mr-2"></i>Subject:</strong><br>
+                <strong><i class="fas fa-heading mr-2"></i>Detail Perubahan:</strong><br>
                 <div class="alert alert-primary mb-0">
                     <h6 class="mb-0 font-weight-bold">${commit.subject}</h6>
+                    <small class="text-muted">Klik untuk melihat detail lengkap perubahan di bawah</small>
                 </div>
             </div>
         </div>
         ${descriptionHtml}
-        ${filesHtml}
-        ${commit.stats ? `
-        <div class="row">
-            <div class="col-md-12">
-                <strong><i class="fas fa-chart-bar mr-2"></i>Statistics:</strong><br>
-                <div class="bg-light p-3 rounded border-left-success" style="border-left: 4px solid #1cc88a; font-family: monospace; font-size: 13px;">
-                    ${commit.stats.replace(/\n/g, '<br>')}
-                </div>
-            </div>
-        </div>
-        ` : ''}
     `;
 
     $('#commitDetailContent').html(html);
