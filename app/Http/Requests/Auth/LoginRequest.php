@@ -44,21 +44,32 @@ class LoginRequest extends FormRequest
         $loginField = $this->input('login');
         $password = $this->input('password');
 
-        // Check if login field is email or username
+        // Check if login field is email or name
         $credentials = [];
         if (filter_var($loginField, FILTER_VALIDATE_EMAIL)) {
             // Login with email
             $credentials = ['email' => $loginField, 'password' => $password];
         } else {
-            // Login with username
-            $credentials = ['username' => $loginField, 'password' => $password];
+            // Login with name
+            $credentials = ['name' => $loginField, 'password' => $password];
         }
 
         if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'login' => trans('auth.failed'),
+                'login' => 'Email atau kata sandi salah. Silakan periksa kembali.',
+            ]);
+        }
+
+        // Check if user is active
+        $user = Auth::user();
+        if (!$user || !$user->status_aktif) {
+            Auth::logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'login' => 'Akun Anda tidak aktif. Silakan hubungi administrator.',
             ]);
         }
 
@@ -81,10 +92,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+            'login' => "Terlalu banyak percobaan login. Silakan coba lagi dalam " . ceil($seconds / 60) . " menit.",
         ]);
     }
 
