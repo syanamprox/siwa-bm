@@ -475,15 +475,23 @@ class WargaController extends Controller
             $wargaPerempuan = Warga::where('jenis_kelamin', 'P')->count();
 
             // Statistik by RT/RW
-            $wargaByRt = Warga::selectRaw('rt_domisili, count(*) as total')
-                ->whereNotNull('rt_domisili')
-                ->groupBy('rt_domisili')
+            $wargaByRt = Warga::with(['keluarga.wilayah'])
+                ->whereHas('keluarga')
+                ->join('keluargas', 'wargas.kk_id', '=', 'keluargas.id')
+                ->join('wilayahs', 'keluargas.rt_id', '=', 'wilayahs.id')
+                ->selectRaw('wilayahs.nama as rt_name, count(*) as total')
+                ->groupBy('wilayahs.nama')
                 ->orderBy('total', 'desc')
                 ->get();
 
-            $wargaByRw = Warga::selectRaw('rw_domisili, count(*) as total')
-                ->whereNotNull('rw_domisili')
-                ->groupBy('rw_domisili')
+            // Statistik by RW (aggregate dari RT)
+            $wargaByRw = Warga::with(['keluarga.wilayah.parent'])
+                ->whereHas('keluarga')
+                ->join('keluargas', 'wargas.kk_id', '=', 'keluargas.id')
+                ->join('wilayahs', 'keluargas.rt_id', '=', 'wilayahs.id')
+                ->join('wilayahs as rw', 'wilayahs.parent_id', '=', 'rw.id')
+                ->selectRaw('rw.nama as rw_name, count(*) as total')
+                ->groupBy('rw.nama')
                 ->orderBy('total', 'desc')
                 ->get();
 

@@ -30,6 +30,9 @@ Route::get('/api/keluarga/wilayah', [KeluargaController::class, 'getWilayah']);
 Route::get('/api/keluarga/rt-info', [KeluargaController::class, 'getRtInfo']);
 Route::get('/api/keluarga/statistics', [KeluargaController::class, 'statistics']);
 
+// Public API Routes untuk warga statistics (no auth required)
+Route::get('/api/warga/statistics', [WargaController::class, 'statistics']);
+
 // Authentication Routes (using Laravel Breeze)
 require __DIR__.'/auth.php';
 
@@ -104,7 +107,6 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/warga/{warga}', [WargaController::class, 'update']);
     Route::post('/api/warga', [WargaController::class, 'store']);
     Route::delete('/api/warga/{warga}', [WargaController::class, 'destroy']);
-    Route::get('/api/warga/statistics', [WargaController::class, 'statistics']);
     Route::post('/api/warga/export', [WargaController::class, 'export']);
     Route::post('/api/warga/import', [WargaController::class, 'import']);
 

@@ -296,6 +296,17 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="foto_kk">📷 Foto Kartu Keluarga</label>
+                                    <input type="file" class="form-control-file" id="foto_kk" name="foto_kk" accept="image/*">
+                                    <small class="form-text text-muted">Format: JPG, PNG. Max: 2MB. Upload foto Kartu Keluarga yang jelas dan lengkap</small>
+                                    <div id="fotoKkPreview" class="mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Section 1: Alamat KTP (Manual Input) -->
                         <div class="card border-left-primary mb-4">
                             <div class="card-header bg-primary text-white">
@@ -563,6 +574,35 @@
     </div>
 </div>
 
+<!-- Foto KK Modal -->
+<div class="modal fade" id="fotoKkModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-camera mr-2"></i>Foto Kartu Keluarga
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="fotoKkContent">
+                    <!-- Foto will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times mr-2"></i>Tutup
+                </button>
+                <a href="#" id="downloadFotoKk" class="btn btn-primary" target="_blank" download>
+                    <i class="fas fa-download mr-2"></i>Download
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('styles')
@@ -648,6 +688,24 @@
     font-size: 80%;
     color: #e74a3b;
 }
+
+/* Foto KK Modal Styles */
+.foto-container img {
+    transition: transform 0.3s ease;
+    cursor: zoom-in;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.foto-container img.zoomed {
+    transform: scale(1.5);
+    cursor: zoom-out;
+}
+
+.btn-group .btn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 </style>
 @endpush
 
@@ -702,6 +760,43 @@ function initializeForm() {
         addWargaRow();
     }, 100);
 }
+
+// Handle foto KK upload
+$('#foto_kk').on('change', function() {
+    var file = this.files[0];
+    if (file) {
+        // Check file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            showToast('Ukuran file terlalu besar. Maksimal 2MB', 'error');
+            $(this).val('');
+            $('#fotoKkPreview').html('');
+            return;
+        }
+
+        // Check file type
+        if (!file.type.match('image.*')) {
+            showToast('File harus berupa gambar (JPG, PNG)', 'error');
+            $(this).val('');
+            $('#fotoKkPreview').html('');
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            $('#fotoKkPreview').html(`
+                <div class="mt-2">
+                    <img src="${e.target.result}" class="img-thumbnail" style="max-height: 300px; max-width: 100%;" alt="Preview Foto KK">
+                    <div class="mt-2">
+                        <small class="text-success">
+                            <i class="fas fa-check-circle"></i> File siap diupload: ${file.name}
+                        </small>
+                    </div>
+                </div>
+            `);
+        };
+        reader.readAsDataURL(file);
+    }
+});
 
 function loadFormData() {
     $.ajax({
@@ -1290,6 +1385,9 @@ function showCreateModal() {
     // Clear warga container
     $('#wargaContainer').html('');
 
+    // Clear foto KK preview
+    $('#fotoKkPreview').html('');
+
     // Add initial warga row
     setTimeout(function() {
         addWargaRow();
@@ -1305,14 +1403,7 @@ function saveKeluarga() {
     const alamatKk = $('#alamat_kk').val();
     const rtId = $('#domisili_rt').val();
 
-    console.log('🔍 Debug: Form Values Before Submission');
-    console.log('no_kk:', noKk, '(length:', noKk.length, ')');
-    console.log('status_domisili_keluarga:', statusDomisili, '(trimmed:', statusDomisili.trim(), ')');
-    console.log('alamat_kk:', alamatKk, '(length:', alamatKk.length, ')');
-    console.log('rt_id:', rtId, '(type:', typeof rtId, ')');
-    console.log('input_mode:', $('#input_mode').val());
-    console.log('keluarga_id:', $('#keluarga_id').val());
-
+    
     // Map field names untuk controller
     var form = $('#keluargaForm')[0];
     var formData = new FormData();
@@ -1320,6 +1411,12 @@ function saveKeluarga() {
     // Basic data
     formData.append('no_kk', $('#no_kk').val().trim());
     formData.append('status_domisili_keluarga', $('#status_domisili').val().trim());
+
+    // Foto KK (jika ada)
+    var fotoKkFile = $('#foto_kk')[0].files[0];
+    if (fotoKkFile) {
+        formData.append('foto_kk', fotoKkFile);
+    }
 
     // Alamat KTP (manual input)
     formData.append('alamat_kk', $('#alamat_kk').val().trim());
@@ -1398,16 +1495,8 @@ function saveKeluarga() {
             $('#saveKeluargaBtn').prop('disabled', false);
 
             if (xhr.status === 422 && xhr.responseJSON?.errors) {
-                console.log('❌ Validation Errors Detail:', xhr.responseJSON.errors);
-
-                // Log each validation error specifically
-                Object.keys(xhr.responseJSON.errors).forEach(field => {
-                    console.log(`❌ ${field}:`, xhr.responseJSON.errors[field]);
-                });
-
                 displayValidationErrors(xhr.responseJSON.errors);
             } else {
-                console.log('❌ API Error Response:', xhr.responseJSON);
                 var message = xhr.responseJSON?.message || 'Gagal menyimpan data keluarga';
                 showToast(message, 'error');
             }
@@ -1477,6 +1566,15 @@ function renderKeluargaTable(keluargaList, pagination) {
                             <button type="button" class="btn btn-sm btn-info" onclick="viewKeluarga(${keluarga.id})" title="Lihat Detail">
                                 <i class="fas fa-eye"></i>
                             </button>
+                            ${keluarga.foto_kk && keluarga.foto_kk_url && keluarga.foto_kk_url !== 'undefined' ? `
+                                <button type="button" class="btn btn-sm btn-success" onclick="viewFotoKk('${keluarga.foto_kk_url}', 'KK ${keluarga.no_kk}')" title="Lihat Foto KK">
+                                    <i class="fas fa-camera"></i>
+                                </button>
+                            ` : `
+                                <button type="button" class="btn btn-sm btn-secondary" disabled title="Belum ada Foto KK">
+                                    <i class="fas fa-camera"></i>
+                                </button>
+                            `}
                             <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(${keluarga.id}, '${keluarga.no_kk}')" title="Hapus">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -1525,7 +1623,7 @@ function loadStatistics() {
             }
         },
         error: function(xhr) {
-            console.error('Failed to load statistics');
+            // Statistics loading failed silently
         }
     });
 }
@@ -1717,7 +1815,6 @@ function populateEditForm(keluarga) {
 }
 
 function loadEditDomisiliData(rtId) {
-    console.log('🔄 Loading edit domisili data for RT ID:', rtId);
 
     // Reset dan enable dropdowns
     $('#domisili_kelurahan').prop('disabled', false);
@@ -1734,68 +1831,52 @@ function loadEditDomisiliData(rtId) {
         url: '/api/keluarga/rt-info?rt_id=' + rtId,
         type: 'GET',
         success: function(response) {
-            console.log('📋 RT info response:', response);
 
             if (response.success && response.data.rt) {
                 const rt = response.data.rt;
                 const rw = response.data.rw;
                 const kelurahan = response.data.kelurahan;
 
-                console.log('🏠 Hierarchy:', {
-                    rt: { id: rt.id, nama: rt.nama },
-                    rw: rw ? { id: rw.id, nama: rw.nama } : null,
-                    kelurahan: kelurahan ? { id: kelurahan.id, nama: kelurahan.nama } : null
-                });
-
                 // Load kelurahan options first
                 loadKelurahanDomisili().then(() => {
-                    console.log('✅ Kelurahan options loaded');
 
                     if (kelurahan) {
                         // Select kelurahan
-                        console.log('🏛️ Selecting kelurahan:', kelurahan.id, kelurahan.nama);
                         $('#domisili_kelurahan').val(kelurahan.id);
 
                         // Trigger change event and load RW options
                         setTimeout(() => {
                             loadRwOptionsForEdit(kelurahan.id).then(() => {
-                                console.log('✅ RW options loaded for kelurahan:', kelurahan.id);
 
                                 if (rw) {
                                     // Select RW
-                                    console.log('🏘️ Selecting RW:', rw.id, rw.nama);
                                     $('#domisili_rw').val(rw.id);
                                     $('#domisili_rw').prop('disabled', false);
 
                                     // Load RT options for this RW
                                     setTimeout(() => {
                                         loadRtOptionsForEdit(rw.id).then(() => {
-                                            console.log('✅ RT options loaded for RW:', rw.id);
 
                                             // Select RT
-                                            console.log('🎯 Selecting RT:', rt.id, rt.nama);
                                             $('#domisili_rt').val(rt.id);
                                             $('#domisili_rt').prop('disabled', false);
-                                            console.log('🎉 Edit domisili data loading completed!');
                                         }).catch(error => {
-                                            console.error('❌ Failed to load RT options:', error);
+                                            showToast('Gagal memuat data RT', 'error');
                                         });
                                     }, 100);
                                 }
                             }).catch(error => {
-                                console.error('❌ Failed to load RW options:', error);
+                                showToast('Gagal memuat data RW', 'error');
                             });
                         }, 100);
                     } else {
-                        console.log('⚠️ No kelurahan in hierarchy, loading all options');
                         $('#domisili_rw').prop('disabled', false);
                         $('#domisili_rt').prop('disabled', false);
                     }
                 }).catch(error => {
-                    console.error('❌ Failed to load kelurahan options:', error);
+                    showToast('Gagal memuat data kelurahan', 'error');
                 });
             } else {
-                console.warn('⚠️ RT data not found or invalid response:', response);
                 // Fallback: load all options
                 loadKelurahanDomisili();
                 $('#domisili_rw').prop('disabled', false);
@@ -1803,8 +1884,6 @@ function loadEditDomisiliData(rtId) {
             }
         },
         error: function(xhr) {
-            console.error('❌ Failed to load RT info:', xhr.responseJSON?.message || 'Unknown error');
-            console.error('❌ XHR status:', xhr.status);
             // Fallback: load all options
             loadKelurahanDomisili();
             $('#domisili_rw').prop('disabled', false);
@@ -1937,6 +2016,69 @@ function displayValidationErrors(errors) {
         errorMessages.push(errors[field][0]);
     }
     showToast(errorMessages.join('<br>'), 'error');
+}
+
+function viewFotoKk(fotoUrl, kkTitle) {
+
+    if (!fotoUrl || fotoUrl === 'undefined' || fotoUrl === 'null') {
+        showToast('Foto KK tidak tersedia', 'warning');
+        return;
+    }
+
+    // Set modal title
+    $('#fotoKkModal .modal-title').html(`<i class="fas fa-camera mr-2"></i>${kkTitle}`);
+
+    // Set image content with better error handling
+    $('#fotoKkContent').html(`
+        <div class="foto-container">
+            <img id="fotoKkImage"
+                 src="${fotoUrl}"
+                 class="img-fluid"
+                 alt="Foto Kartu Keluarga - ${kkTitle}"
+                 style="max-width: 100%; max-height: 70vh; object-fit: contain;">
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Klik gambar untuk zoom, scroll untuk navigasi
+                </small>
+            </div>
+        </div>
+    `);
+
+    // Handle image load error
+    $('#fotoKkImage').on('error', function() {
+        $(this).attr('src', '/images/no-image.svg');
+        $(this).attr('alt', 'Gambar tidak dapat dimuat');
+        showToast('Gambar KK tidak dapat dimuat, menampilkan placeholder', 'warning');
+    });
+
+    // Set download link only if valid URL
+    if (fotoUrl.startsWith('http')) {
+        $('#downloadFotoKk').attr('href', fotoUrl).show();
+    } else {
+        $('#downloadFotoKk').hide();
+    }
+    $('#downloadFotoKk').attr('download', `Foto_KK_${kkTitle.replace(/[^a-zA-Z0-9]/g, '_')}.jpg`);
+
+    // Show modal
+    $('#fotoKkModal').modal('show');
+
+    // Add click handler for image zoom
+    $('#fotoKkContent img').on('click', function() {
+        // Create zoom effect
+        $(this).toggleClass('zoomed');
+        if ($(this).hasClass('zoomed')) {
+            $(this).css({
+                'transform': 'scale(1.5)',
+                'cursor': 'zoom-out'
+            });
+        } else {
+            $(this).css({
+                'transform': 'scale(1)',
+                'cursor': 'zoom-in'
+            });
+        }
+    });
 }
 
 </script>

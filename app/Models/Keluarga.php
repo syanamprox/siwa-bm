@@ -26,6 +26,7 @@ class Keluarga extends Model
         // Data Kartu Keluarga
         'no_kk',
         'kepala_keluarga_id',
+        'foto_kk',
 
         // Alamat KTP (Input Manual Lengkap)
         'alamat_kk',
@@ -313,5 +314,23 @@ class Keluarga extends Model
                    substr($no_kk, 12, 4);
         }
         return $no_kk;
+    }
+
+    /**
+     * Get URL untuk foto KK
+     */
+    public function getFotoKkUrlAttribute(): ?string
+    {
+        if (!$this->foto_kk) {
+            return null;
+        }
+
+        // Jika path sudah full URL, return as is
+        if (filter_var($this->foto_kk, FILTER_VALIDATE_URL)) {
+            return $this->foto_kk;
+        }
+
+        // Jika relative path, convert ke full URL
+        return asset('storage/' . $this->foto_kk);
     }
 }

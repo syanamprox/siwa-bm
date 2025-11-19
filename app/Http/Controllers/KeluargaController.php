@@ -8,6 +8,7 @@ use App\Models\Wilayah;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -52,9 +53,17 @@ class KeluargaController extends Controller
             $perPage = $request->get('per_page', 10);
             $keluarga = $query->paginate($perPage);
 
+            // Add foto_kk_url accessor to each item
+            $keluargaItems = $keluarga->items();
+            $formattedItems = collect($keluargaItems)->map(function ($item) {
+                $itemArray = $item->toArray();
+                $itemArray['foto_kk_url'] = $item->foto_kk_url; // This will trigger the accessor
+                return $itemArray;
+            });
+
             return response()->json([
                 'success' => true,
-                'data' => $keluarga->items(),
+                'data' => $formattedItems,
                 'pagination' => [
                     'current_page' => $keluarga->currentPage(),
                     'last_page' => $keluarga->lastPage(),
@@ -136,6 +145,7 @@ class KeluargaController extends Controller
             // Validate keluarga data
             $keluargaValidator = Validator::make($request->all(), [
                 'no_kk' => 'required|digits:16|unique:keluargas,no_kk',
+                'foto_kk' => 'nullable|image|mimes:jpeg,jpg,png|max:2048', // Max 2MB
 
                 // Alamat KTP (Input Manual Lengkap)
                 'alamat_kk' => 'required|string|max:500',
@@ -198,10 +208,19 @@ class KeluargaController extends Controller
 
             DB::beginTransaction();
 
+            // Handle upload foto KK
+            $fotoKkPath = null;
+            if ($request->hasFile('foto_kk')) {
+                $file = $request->file('foto_kk');
+                $fileName = 'kk_' . $request->no_kk . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $fotoKkPath = $file->storeAs('keluarga/foto_kk', $fileName, 'public');
+            }
+
             // Create keluarga (wilayah info di-load dynamically via rt_id relationship)
             $keluarga = Keluarga::create([
                 // Data Kartu Keluarga
                 'no_kk' => $request->no_kk,
+                'foto_kk' => $fotoKkPath,
 
                 // Alamat KTP (Input Manual Lengkap)
                 'alamat_kk' => $request->alamat_kk,
@@ -376,6 +395,7 @@ class KeluargaController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'no_kk' => 'required|digits:16|unique:keluargas,no_kk,' . $keluarga->id,
+                'foto_kk' => 'nullable|image|mimes:jpeg,jpg,png|max:2048', // Max 2MB
 
                 // Alamat KTP (Input Manual Lengkap)
                 'alamat_kk' => 'required|string|max:500',
@@ -414,10 +434,25 @@ class KeluargaController extends Controller
             // Store old data for logging
             $oldData = $keluarga->toArray();
 
+            // Handle upload foto KK jika ada file baru
+            $fotoKkPath = $keluarga->foto_kk; // Keep existing file if no new upload
+            if ($request->hasFile('foto_kk')) {
+                // Delete old file if exists
+                if ($keluarga->foto_kk && Storage::disk('public')->exists($keluarga->foto_kk)) {
+                    Storage::disk('public')->delete($keluarga->foto_kk);
+                }
+
+                // Upload new file
+                $file = $request->file('foto_kk');
+                $fileName = 'kk_' . $request->no_kk . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $fotoKkPath = $file->storeAs('keluarga/foto_kk', $fileName, 'public');
+            }
+
             // Update keluarga data (wilayah info di-load dynamically via rt_id relationship)
             $keluarga->update([
                 // Data Kartu Keluarga
                 'no_kk' => $request->no_kk,
+                'foto_kk' => $fotoKkPath,
 
                 // Alamat KTP (Input Manual Lengkap)
                 'alamat_kk' => $request->alamat_kk,
