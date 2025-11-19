@@ -25,6 +25,11 @@ Route::prefix('portal')->group(function () {
     Route::get('/captcha', [App\Http\Controllers\PublicPortalController::class, 'generateCaptcha'])->name('portal.captcha');
 });
 
+// Public API Routes untuk wilayah data (no auth required)
+Route::get('/api/keluarga/wilayah', [KeluargaController::class, 'getWilayah']);
+Route::get('/api/keluarga/rt-info', [KeluargaController::class, 'getRtInfo']);
+Route::get('/api/keluarga/statistics', [KeluargaController::class, 'statistics']);
+
 // Authentication Routes (using Laravel Breeze)
 require __DIR__.'/auth.php';
 
@@ -118,6 +123,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/keluarga/statistics', [KeluargaController::class, 'statistics']);
     Route::post('/api/keluarga/{keluarga}/add-member', [KeluargaController::class, 'addMember']);
     Route::delete('/api/keluarga/{keluarga}/remove-member/{warga}', [KeluargaController::class, 'removeMember']);
+
+    // Note: API Routes for cascading dropdown moved to public section above
 
     // Lurah & Admin Routes - Coming soon
     /*

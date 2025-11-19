@@ -164,23 +164,104 @@ updated_by     BIGINT      ✗           Foreign key ke users
 
 **Data Structure:**
 ```
+# ALAMAT KTP (Input Manual Lengkap)
 Field                      Type         Required    Validation
 ---------------------------------------------------------------
 no_kk                      VARCHAR(16)  ✓           Unique, format 16 digit
 kepala_keluarga_id         BIGINT       ✗           Foreign key ke warga
-alamat_kk                  TEXT         ✓
-rt_kk                      VARCHAR(10)  ✓
-rw_kk                      VARCHAR(10)  ✓
-kelurahan_kk               VARCHAR(100) ✓
-kecamatan_kk               VARCHAR(100) ✓
-kabupaten_kk               VARCHAR(100) ✓
-provinsi_kk                VARCHAR(100) ✓
+alamat_kk                  TEXT         ✓           Alamat lengkap sesuai KK
+rt_kk                      VARCHAR(10)  ✓           RT sesuai KK
+rw_kk                      VARCHAR(10)  ✓           RW sesuai KK
+kelurahan_kk               VARCHAR(100) ✓           Kelurahan sesuai KK
+kecamatan_kk               VARCHAR(100) ✓           Kecamatan sesuai KK
+kabupaten_kk               VARCHAR(100) ✓           Kabupaten sesuai KK
+provinsi_kk                VARCHAR(100) ✓           Provinsi sesuai KK
+
+# ALAMAT DOMISILI (Koneksi Sistem Wilayah)
+alamat_domisili            TEXT         ✗           Alamat jalan saja untuk domisili
+rt_id                      BIGINT       ✓           Foreign key ke wilayahs.id (tingkat=RT)
+rt_domisili                VARCHAR(10)  ✓           Auto-generate dari rt_id
+rw_domisili                VARCHAR(10)  ✓           Auto-generate dari rt_id
+kelurahan_domisili         VARCHAR(100) ✓           Auto-generate dari rt_id
+kecamatan_domisili         VARCHAR(100) ✓           Auto-generate dari rt_id
+kabupaten_domisili         VARCHAR(100) ✓           Auto-generate dari rt_id
+provinsi_domisili          VARCHAR(100) ✓           Auto-generate dari rt_id
+
+# STATUS & KETERANGAN
 status_domisili_keluarga   ENUM         ✓           Tetap,Non Domisili,Luar,Sementara
 tanggal_mulai_domisili_keluarga DATE   ✗
 keterangan_status          TEXT         ✗
 ```
 
-### 3.2 Family Member Management
+### 3.2 Keluarga Form Input System
+
+**Dual Address Input Form Layout:**
+
+**Section 1 - Data KK**
+```
+Field                  Input Type    Description
+--------------------------------------------------
+No. KK                 Text 16 digit Format standard KK
+```
+
+**Section 2 - Alamat KTP (Input Manual Lengkap)**
+```
+Field                  Input Type    Required    Description
+------------------------------------------------------------------
+Alamat Lengkap KK      Textarea      ✓          Alamat sesuai dokumen KK
+RT KTP                 Text          ✓          RT sesuai KK (manual)
+RW KTP                 Text          ✓          RW sesuai KK (manual)
+Kelurahan KTP          Text          ✓          Kelurahan sesuai KK (manual)
+Kecamatan KTP          Text          ✓          Kecamatan sesuai KK (manual)
+Kabupaten KTP          Text          ✓          Kabupaten sesuai KK (manual)
+Provinsi KTP           Text          ✓          Provinsi sesuai KK (manual)
+```
+
+**Section 3 - Alamat Domisili (rt_id only - Dynamic Loading)**
+```
+Field                  Input Type    Required    Description
+------------------------------------------------------------------
+Alamat Domisili        Text          ✗          Alamat jalan saja
+Pilih RT Domisili      Dropdown      ✓          229 RT data dari sistem
+↓ Dynamic Loading via rt_id relationship:
+RT/RW/Kelurahan/etc    Display-only  ✓          Load otomatis dari wilayah table
+Note: Hanya rt_id yang disimpan di database, data lain di-load secara dinamis
+```
+
+**Section 4 - Status & Keterangan**
+```
+Field                  Input Type    Required    Description
+------------------------------------------------------------------
+Status Domisili        Select        ✓          Tetap/Non Domisili/Luar/Sementara
+Tanggal Mulai          Date          ✗          Tanggal mulai domisili
+Keterangan             Textarea      ✗          Keterangan tambahan
+```
+
+**Section 5 - Multi Input Warga**
+```
+- Add Warga Button: Tambah form warga dinamis
+- Min 1 Kepala Keluarga (required validation)
+- Warga Fields: NIK, Nama, Tempat/Tgl Lahir, Jenis Kelamin, Agama,
+               Pendidikan, Pekerjaan, Status Perkawinan, No Telepon, Email, Hubungan Keluarga
+- Auto-complete untuk existing warga (jika pindah KK)
+- Bulk validation untuk NIK duplication
+```
+
+**Form Behavior & Validation:**
+- **Real-time Validation**: NIK uniqueness, format 16 digit
+- **Status Logic**:
+  - Jika "Tetap": Alamat KTP = Alamat Domisili (auto-fill suggestion)
+  - Jika "Non Domisili": Alamat KTP di sini, domisili di luar
+  - Jika "Luar": Alamat KTP di luar, domisili di sini
+  - Jika "Sementara": Kontrak/Ngontrak
+- **RT Selection**: Dropdown berdasarkan data wilayah yang sudah ada (278 records)
+- **Dynamic Loading**: RT selection → load alamat domisili secara real-time via relationship
+- **Storage Efficiency**: Hanya rt_id yang disimpan, tidak ada redundant data
+- **Real-time Sync**: Perubahan data wilayah langsung refleksi ke semua keluarga
+- **Multi-warga**: Dynamic form untuk input beberapa warga sekaligus
+- **Kepala Keluarga**: Mandatory validation (minimal 1 Kepala Keluarga)
+
+### 3.3 Family Member Management
 
 **Anggota Keluarga Operations:**
 - Add member: search warga existing atau create new
@@ -193,7 +274,7 @@ keterangan_status          TEXT         ✗
 - Quick navigation antar anggota keluarga
 - Export KK data dengan semua anggota
 
-### 3.3 KK Features
+### 3.4 KK Features
 
 **KK Operations:**
 - Create new KK dengan automatic head assignment
@@ -208,9 +289,9 @@ keterangan_status          TEXT         ✗
 
 ---
 
-## 4. Dashboard & Laporan (Dashboard & Reports)
+## 5. Dashboard & Laporan (Dashboard & Reports)
 
-### 4.1 Dashboard Overview
+### 5.1 Dashboard Overview
 
 **Real-time Statistics:**
 ```

@@ -67,7 +67,7 @@ class Iuran extends Model
      */
     public function keluarga()
     {
-        return $this->belongsTo(Keluarga::class, 'kk_id');
+        return $this->belongsTo(Keluarga::class, 'keluarga_id');
     }
 
     /**

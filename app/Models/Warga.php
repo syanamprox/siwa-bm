@@ -23,20 +23,13 @@ class Warga extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        // Data KTP
+        // Data KTP (tanpa alamat duplikasi)
         'nik',
         'nama_lengkap',
         'tempat_lahir',
         'tanggal_lahir',
         'jenis_kelamin',
         'golongan_darah',
-        'alamat_ktp',
-        'rt_ktp',
-        'rw_ktp',
-        'kelurahan_ktp',
-        'kecamatan_ktp',
-        'kabupaten_ktp',
-        'provinsi_ktp',
         'agama',
         'status_perkawinan',
         'pekerjaan',
@@ -44,15 +37,19 @@ class Warga extends Model
         'pendidikan_terakhir',
         'foto_ktp',
 
-        // Data Keluarga
+        // Relasi Keluarga
         'kk_id',
         'hubungan_keluarga',
 
-        // Kontak Personal
+        // Kontak
         'no_telepon',
         'email',
 
-        // Tracking
+        // Data Orang Tua
+        'nama_ayah',
+        'nama_ibu',
+
+        // Audit
         'created_by',
         'updated_by',
     ];

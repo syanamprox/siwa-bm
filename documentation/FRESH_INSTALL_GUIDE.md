@@ -42,8 +42,8 @@ php artisan migrate
 INFO Running migrations.
 2025_11_17_073721_create_users_table .......................... 403.75ms DONE
 2025_11_17_073730_create_wilayahs_table ...................... 567.78ms DONE
-2025_11_17_073739_create_wargas_table .............................. 1s DONE
-2025_11_17_073740_create_keluargas_table ........................... 1s DONE
+2025_11_17_134605_create_clean_wargas_table .......................... 1s DONE
+2025_11_17_134708_create_clean_keluargas_table ..................... 1s DONE
 ...
 (16 migrations completed)
 ```
@@ -83,14 +83,12 @@ Database\Seeders\WilayahSeeder ..................................... RUNNING
 Database\Seeders\WilayahSeeder .................................. 52 ms DONE
 
 Database\Seeders\KeluargaSeeder .................................... RUNNING
-✅ Keluarga data seeded successfully!
-👨‍👩‍👧‍👦 Total: 5 keluarga
-Database\Seeders\KeluargaSeeder ................................. 47 ms DONE
+✅ KeluargaSeeder cleared - ready for manual input through keluarga system
+Database\Seeders\KeluargaSeeder ................................. 0 ms DONE
 
 Database\Seeders\WargaSeeder ....................................... RUNNING
-✅ Warga data seeded successfully!
-👥 Total: 5 warga
-Database\Seeders\WargaSeeder .................................... 99 ms DONE
+✅ WargaSeeder cleared - ready for manual input through keluarga system
+Database\Seeders\WargaSeeder ..................................... 0 ms DONE
 
 Database\Seeders\PengaturanSistemSeeder ............................ RUNNING
 ✅ Pengaturan Sistem data seeded successfully!
@@ -124,9 +122,9 @@ echo '💰 Jenis Iuran: ' . App\Models\JenisIuran::count() . PHP_EOL;
 ```
 🔍 Database Verification:
 👥 Users: 7
-📍 Wilayah: 129
-👨‍👩‍👧‍👦 Keluarga: 5
-👤 Warga: 5
+📍 Wilayah: 278 (5 Kelurahan + 44 RW + 229 RT)
+👨‍👩‍👧‍👦 Keluarga: 0 (cleared for manual input)
+👤 Warga: 0 (cleared for manual input)
 ⚙️ Pengaturan: 12
 💰 Jenis Iuran: 6
 ```

@@ -46,9 +46,13 @@ Sistem Informasi Warga (SIWA) adalah aplikasi berbasis web yang dibanggunakan un
   - Kepala Keluarga (referensi ke data warga)
   - Anggota Keluarga (relasi ke tabel warga)
 - **Data Alamat Keluarga (Level Keluarga)**:
-  - Alamat KK lengkap
-  - RT, RW, Kelurahan domisili
-  - Kecamatan, Kabupaten, Provinsi
+  - **Alamat KTP (Input Manual Lengkap)**:
+    - Alamat KK lengkap (jalan sampai negara) - sesuai dokumen KK
+    - RT KTP, RW KTP, Kelurahan KTP, Kecamatan KTP, Kabupaten KTP, Provinsi KTP
+  - **Alamat Domisili (Koneksi Sistem Wilayah)**:
+    - Alamat domisili (input jalan saja)
+    - RT ID (dropdown pilih dari sistem wilayah)
+    - Auto-generate RT, RW, Kelurahan, Kecamatan, Kabupaten, Provinsi domisili dari rt_id
 - **Status Domisili Keluarga**:
   - Tetap (Alamat Sini, Domisili Sini)
   - Non Domisili (Alamat Sini, Domisili Luar)
@@ -182,14 +186,21 @@ Sistem Informasi Warga (SIWA) adalah aplikasi berbasis web yang dibanggunakan un
 
 ### 3. Core Data Tables - dengan Soft Deletes
 - **wargas** - {id, nik, nama_lengkap, tempat_lahir, tanggal_lahir, jenis_kelamin,
-  golongan_darah, alamat_ktp, rt_ktp, rw_ktp, kelurahan_ktp, kecamatan_ktp,
-  kabupaten_ktp, provinsi_ktp, agama, status_perkawinan, pekerjaan, kewarganegaraan,
+  golongan_darah, agama, status_perkawinan, pekerjaan, kewarganegaraan,
   pendidikan_terakhir, foto_ktp, kk_id, hubungan_keluarga, no_telepon, email,
   created_by, updated_by, created_at, updated_at, deleted_at}
-- **keluargas** - {id, no_kk, kepala_keluarga_id, alamat_kk, rt_kk, rw_kk,
-  kelurahan_kk, kecamatan_kk, kabupaten_kk, provinsi_kk, status_domisili_keluarga,
+  - **Alamat tidak duplikasi**: Data alamat diambil dari keluarga_id linkage
+- **keluargas** - {id, no_kk, kepala_keluarga_id, alamat_kk, rt_kk, rw_kk, kelurahan_kk, kecamatan_kk,
+  kabupaten_kk, provinsi_kk, alamat_domisili, rt_id, status_domisili_keluarga,
   tanggal_mulai_domisili_keluarga, keterangan_status, created_at, updated_at, deleted_at}
-  - Status Domisili enum: ['Tetap', 'Non Domisili', 'Luar', 'Sementara']
+  - **Alamat KTP (Manual Input)**:
+    - alamat_kk: Alamat lengkap sesuai KK (jalan sampai negara)
+    - rt_kk, rw_kk, kelurahan_kk, kecamatan_kk, kabupaten_kk, provinsi_kk: Input manual sesuai KK
+  - **Alamat Domisili (rt_id only - Dynamic Loading)**:
+    - alamat_domisili: Alamat jalan saja untuk domisili
+    - rt_id: Foreign key ke wilayahs.id (tingkat=RT) - hanya ini yang disimpan
+    - rt, rw, kelurahan, kecamatan, kabupaten, provinsi domisili: Di-load dynamically via rt_id relationship
+  - **Status Domisili enum**: ['Tetap', 'Non Domisili', 'Luar', 'Sementara']
 
 ### 4. Transaction Tables - dengan Soft Deletes
 - **iurans** - {id, keluarga_id, jenis_iuran_id, jumlah, status, tanggal_jatuh_tempo,
@@ -207,16 +218,45 @@ Sistem Informasi Warga (SIWA) adalah aplikasi berbasis web yang dibanggunakan un
 ## Relasi Utama
 - **keluargas** → **wargas** (satu keluarga memiliki banyak warga)
 - **wargas** → **keluargas** (setiap warga terhubung ke satu keluarga)
-- **keluargas** → **iurans** → **pembayaran_iurans**
+- **keluargas** → **wilayahs** (melalui rt_id foreign key ke master data wilayah)
 - **wilayahs** (hierarchical structure untuk RT/RW/Kelurahan)
+  - Kelurahan → RW → RT (parent-child relationship)
+- **keluargas** → **iurans** → **pembayaran_iurans**
 - **pengaturan_sistems** (system configuration)
+
+## Wilayah ↔ Keluarga Linking Strategy
+- **Dual Address System**:
+  - **Alamat KTP**: Input manual lengkap (sesuai dokumen KK)
+    - alamat_kk: Textarea untuk alamat lengkap
+    - rt_kk, rw_kk, kelurahan_kk, kecamatan_kk, kabupaten_kk, provinsi_kk: Input individual
+  - **Alamat Domisili**: Koneksi sistem wilayah via rt_id
+    - alamat_domisili: Input jalan saja
+    - rt_id: Dropdown pilih RT dari 229 data yang tersedia
+    - Dynamic loading: rt, rw, kelurahan, kecamatan, kabupaten, provinsi di-load otomatis via relationship
+- **Single Source of Truth**: Hanya rt_id yang disimpan, data wilayah lain di-load dynamically
+- **Data Integrity**: Foreign key constraint pada rt_id memastikan data wilayah valid
+- **Storage Efficiency**: Hemat 200+ bytes per record dengan menghilangkan redundant data
+- **Query Performance**: Hubungan efisien untuk reporting dan filtering domisili
+- **Real-time Sync**: Perubahan data wilayah langsung refleksi ke semua keluarga
+- **Flexibility**: Dukungan alamat KTP berbeda dengan domisili (status Non Domisili/Luar)
+- **Status Domisili Logic**:
+  - Tetap: Alamat KTP = Alamat Domisili
+  - Non Domisili: Alamat KTP di sini, Domisili di luar
+  - Luar: Alamat KTP di luar, Domisili di sini
+  - Sementara: Kontrak/Ngontrak
 
 ## Key Design Changes (Updated Structure)
 1. **Alamat & Status Domisili** dipindah dari warga ke keluarga level
-2. **Soft Deletes** di semua tabel utama untuk data integrity
-3. **Audit Trail** dengan created_by & updated_by fields
-4. **Hierarchical Wilayah** dengan parent_id relationship
-5. **Status Domisili** 4 jenis: Tetap, Non Domisili, Luar, Sementara
+2. **Dual Address System**: Alamat KTP (manual) vs Alamat Domisili (sistem wilayah)
+3. **Soft Deletes** di semua tabel utama untuk data integrity
+4. **Audit Trail** dengan created_by & updated_by fields
+5. **Hierarchical Wilayah** dengan parent_id relationship
+6. **Status Domisili** 4 jenis: Tetap, Non Domisili, Luar, Sementara
+7. **Wilayah-Keluarga Linking**: rt_id foreign key dengan dynamic loading (hanya rt_id yang disimpan)
+8. **Data Separation**: Alamat KTP input manual lengkap, Alamat Domisili konek sistem wilayah
+9. **Single Source of Truth**: Warga tanpa duplikasi alamat, semua data alamat di keluarga level
+10. **Storage Optimization**: Tidak ada redundant data domisili, hemat 200+ bytes per record
+11. **Real-time Sync**: Perubahan data wilayah otomatis refleksi ke semua keluarga records
 
 Total: **10 tabel** dengan optimasi performa dan foreign key constraints.
 
@@ -263,7 +303,19 @@ Total: **10 tabel** dengan optimasi performa dan foreign key constraints.
 - Proper foreign key relationships established
 - Real Bendul Merisi data seeded
 - Migration & seeder system complete
-- Ready for CRUD implementation
+
+⚠️ **IN PROGRESS**: Keluarga & Warga Multi-Input System
+- Multi-person keluarga + warga input functionality
+- Foreign key linking to wilayahs table
+- Modal-based CRUD with validation
+- Status: Need rollback & rebuild based on updated brief
+
+## Next Implementation Steps
+1. **Rollback Migration**: Remove incorrect keluargas/wargas modifications
+2. **Rebuild Tables**: Create migrations based on updated brief
+3. **Implement Linking**: rt_id foreign key with auto-generate alamat fields
+4. **Update Forms**: Single RT selection dropdown with cascading display
+5. **CRUD Integration**: Complete keluarga + multi-warga input system
 
 ---
 *Dokumen ini akan terus diperbarui sesuai dengan perkembangan proyek.*

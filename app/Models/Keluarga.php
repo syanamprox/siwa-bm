@@ -23,8 +23,11 @@ class Keluarga extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        // Data Kartu Keluarga
         'no_kk',
         'kepala_keluarga_id',
+
+        // Alamat KTP (Input Manual Lengkap)
         'alamat_kk',
         'rt_kk',
         'rw_kk',
@@ -32,6 +35,12 @@ class Keluarga extends Model
         'kecamatan_kk',
         'kabupaten_kk',
         'provinsi_kk',
+
+        // Alamat Domisili (Koneksi Sistem Wilayah)
+        'alamat_domisili', // Alamat jalan saja
+        'rt_id', // Foreign key ke wilayahs table
+
+        // Status & Keterangan
         'status_domisili_keluarga',
         'tanggal_mulai_domisili_keluarga',
         'keterangan_status',
@@ -69,11 +78,21 @@ class Keluarga extends Model
     }
 
     /**
+     * Relasi ke wilayah (RT)
+     */
+    public function wilayah()
+    {
+        return $this->belongsTo(Wilayah::class, 'rt_id');
+    }
+
+    // Note: Boot method tidak diperlukan lagi karena alamat domisili di-load dynamically via rt_id relationship
+
+    /**
      * Relasi ke iuran
      */
     public function iuran()
     {
-        return $this->hasMany(Iuran::class, 'kk_id');
+        return $this->hasMany(Iuran::class, 'keluarga_id');
     }
 
     /**
@@ -158,7 +177,7 @@ class Keluarga extends Model
     {
         $warga->update([
             'kk_id' => null,
-            'hubungan_keluarga' => null
+            'hubungan_keluarga' => 'Lainnya' // Use default enum value instead of null
         ]);
     }
 
@@ -217,11 +236,68 @@ class Keluarga extends Model
     }
 
     /**
-     * Get alamat lengkap keluarga
+     * Get alamat lengkap KK (sesuai KTP)
+     */
+    public function getAlamatLengkapKkAttribute(): string
+    {
+        return "{$this->alamat_kk}, RT {$this->rt_kk}/RW {$this->rw_kk}, {$this->kelurahan_kk}, {$this->kecamatan_kk}, {$this->kabupaten_kk}, {$this->provinsi_kk}";
+    }
+
+    /**
+     * Get alamat lengkap domisili (dynamic load via rt_id relationship)
+     */
+    public function getAlamatLengkapDomisiliAttribute(): string
+    {
+        if (!$this->rt_id || !$this->wilayah) {
+            return $this->alamat_domisili ?? '-';
+        }
+
+        $rt = $this->wilayah;
+        $rw = $rt ? $rt->parent : null;
+        $kelurahan = $rw ? $rw->parent : null;
+
+        return "{$this->alamat_domisili}, RT {$rt->kode}/RW {$rw?->kode}, "
+             . "{$kelurahan?->nama}, Wonocolo, Surabaya, Jawa Timur";
+    }
+
+    /**
+     * Get RT domisili (dynamic via rt_id)
+     */
+    public function getRtDomisiliAttribute(): string
+    {
+        return $this->wilayah?->kode ?? '';
+    }
+
+    /**
+     * Get RW domisili (dynamic via rt_id)
+     */
+    public function getRwDomisiliAttribute(): string
+    {
+        return $this->wilayah?->parent?->kode ?? '';
+    }
+
+    /**
+     * Get Kelurahan domisili (dynamic via rt_id)
+     */
+    public function getKelurahanDomisiliAttribute(): string
+    {
+        return $this->wilayah?->parent?->parent?->nama ?? '';
+    }
+
+    /**
+     * Get Kecamatan domisili (fixed based on data structure)
+     */
+    public function getKecamatanDomisiliAttribute(): string
+    {
+        return 'Wonocolo'; // Fixed based on actual data structure
+    }
+
+    /**
+     * Get alamat lengkap keluarga (backward compatibility - uses KK address)
      */
     public function getAlamatLengkapAttribute(): string
     {
-        return "{$this->alamat_kk}, RT {$this->rt_kk}/RW {$this->rw_kk}, {$this->kelurahan_kk}, {$this->kecamatan_kk}, {$this->kabupaten_kk}, {$this->provinsi_kk}";
+        return $this->getAlamatLengkapKkAttribute();
     }
 
     /**

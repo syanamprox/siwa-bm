@@ -3,6 +3,9 @@
 .env
 .env.backup
 .env.production
+
+# Database seeders with sensitive data
+database/seeders/MisfaFamilySeeder.php
 .phpactor.json
 .phpunit.result.cache
 /.fleet
