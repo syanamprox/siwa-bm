@@ -138,35 +138,30 @@ class WargaController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                // Data KTP (required fields)
-                'nik' => 'required|digits:16|unique:warga,nik',
+                // Data Pribadi
+                'nik' => 'required|digits:16|unique:wargas,nik',
                 'nama_lengkap' => 'required|string|max:255',
                 'tempat_lahir' => 'required|string|max:100',
                 'tanggal_lahir' => 'required|date|before:today',
                 'jenis_kelamin' => 'required|in:L,P',
-                'golongan_darah' => 'nullable|in:A,B,AB,O',
-                'alamat_ktp' => 'required|string|max:500',
-                'rt_ktp' => 'required|string|max:10',
-                'rw_ktp' => 'required|string|max:10',
-                'kelurahan_ktp' => 'required|string|max:100',
-                'kecamatan_ktp' => 'required|string|max:100',
-                'kabupaten_ktp' => 'required|string|max:100',
-                'provinsi_ktp' => 'required|string|max:100',
+                'golongan_darah' => 'nullable|in:A,B,AB,O,A+,B+,AB+,O+,A-,B-,AB-,O-,Tidak Tahu',
+
+                // Data Orang Tua
+                'nama_ayah' => 'nullable|string|max:255',
+                'nama_ibu' => 'nullable|string|max:255',
+
+                // Data Kontak
+                'no_telepon' => 'nullable|string|max:20',
+                'email' => 'nullable|email|max:255',
+
+                // Data Lainnya
                 'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
                 'status_perkawinan' => 'required|in:Belum Kawin,Kawin,Cerai Hidup,Cerai Mati',
                 'pekerjaan' => 'required|string|max:100',
+                'pendidikan_terakhir' => 'required|in:Tidak Sekolah,SD/sederajat,SMP/sederajat,SMA/sederajat,D1,D2,D3,D4/S1,S2,S3',
                 'kewarganegaraan' => 'required|in:WNI,WNA',
-                'pendidikan_terakhir' => 'required|in:Tidak/Sekolah,SD,SMP,SMA,D1/D2/D3,S1,S2,S3',
+                'hubungan_keluarga' => 'required|string|max:50',
                 'foto_ktp' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-
-                // Data Domisili
-                'kk_id' => 'nullable|exists:keluarga,id',
-                'hubungan_keluarga' => 'nullable|required_if:kk_id,!=,null|string|max:50',
-                'alamat_domisili' => 'nullable|string|max:500',
-                'rt_domisili' => 'nullable|string|max:10',
-                'rw_domisili' => 'nullable|string|max:10',
-                'kelurahan_domisili' => 'nullable|string|max:100',
-                'no_telepon' => 'nullable|string|max:20',
                 'email' => 'nullable|email|max:255',
                 'status_domisili' => 'nullable|in:Tetap,Non Domisili,Luar,Sementara',
                 'tanggal_mulai_domisili' => 'nullable|date',
@@ -190,29 +185,39 @@ class WargaController extends Controller
                 $fotoKtpPath = $file->storeAs('uploads/ktp', $filename, 'public');
             }
 
-            $wargaData = $request->all();
-            $wargaData['foto_ktp'] = $fotoKtpPath;
-            $wargaData['created_by'] = auth()->id();
-
-            // Set domisili sama dengan KTP jika tidak diisi
-            if (empty($wargaData['alamat_domisili'])) {
-                $wargaData['alamat_domisili'] = $wargaData['alamat_ktp'];
-                $wargaData['rt_domisili'] = $wargaData['rt_ktp'];
-                $wargaData['rw_domisili'] = $wargaData['rw_ktp'];
-                $wargaData['kelurahan_domisili'] = $wargaData['kelurahan_ktp'];
-                $wargaData['status_domisili'] = 'Tetap';
-            }
+            // Only use fundamental warga fields
+            $wargaData = [
+                'nik' => $request->nik,
+                'nama_lengkap' => $request->nama_lengkap,
+                'tempat_lahir' => $request->tempat_lahir,
+                'tanggal_lahir' => $request->tanggal_lahir,
+                'jenis_kelamin' => $request->jenis_kelamin,
+                'golongan_darah' => $request->golongan_darah,
+                'nama_ayah' => $request->nama_ayah,
+                'nama_ibu' => $request->nama_ibu,
+                'no_telepon' => $request->no_telepon,
+                'email' => $request->email,
+                'agama' => $request->agama,
+                'status_perkawinan' => $request->status_perkawinan,
+                'pekerjaan' => $request->pekerjaan,
+                'pendidikan_terakhir' => $request->pendidikan_terakhir,
+                'kewarganegaraan' => $request->kewarganegaraan,
+                'hubungan_keluarga' => $request->hubungan_keluarga,
+                'foto_ktp' => $fotoKtpPath,
+                'created_by' => auth()->id(),
+            ];
 
             $warga = Warga::create($wargaData);
 
             // Log activity
             \App\Models\AktivitasLog::create([
                 'user_id' => auth()->id(),
-                'tabel_referensi' => 'warga',
-                'id_referensi' => $warga->id,
-                'jenis_aktivitas' => 'create',
-                'deskripsi' => "Menambah data warga: {$warga->nama_lengkap} (NIK: {$warga->nik})",
-                'data_baru' => json_encode($warga->toArray())
+                'action' => 'create',
+                'module' => 'warga',
+                'description' => "Menambah data warga: {$warga->nama_lengkap} (NIK: {$warga->nik})",
+                'new_data' => json_encode($warga->toArray()),
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
             ]);
 
             DB::commit();
@@ -239,7 +244,14 @@ class WargaController extends Controller
     public function show(Warga $warga): JsonResponse
     {
         try {
-            $warga->load(['keluarga', 'keluarga.anggotaKeluarga', 'createdBy', 'updatedBy']);
+            // Load warga with keluarga relationships
+            $warga->load([
+                'keluarga',
+                'keluarga.anggotaKeluarga',
+                'keluarga.wilayah', // Load wilayah untuk alamat KK
+                'createdBy',
+                'updatedBy'
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -297,33 +309,30 @@ class WargaController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                // Data KTP (required fields)
-                'nik' => 'required|digits:16|unique:warga,nik,' . $warga->id,
+                // Data Pribadi
+                'nik' => 'required|digits:16|unique:wargas,nik,' . $warga->id,
                 'nama_lengkap' => 'required|string|max:255',
                 'tempat_lahir' => 'required|string|max:100',
                 'tanggal_lahir' => 'required|date|before:today',
                 'jenis_kelamin' => 'required|in:L,P',
-                'golongan_darah' => 'nullable|in:A,B,AB,O',
-                'alamat_ktp' => 'required|string|max:500',
-                'rt_ktp' => 'required|string|max:10',
-                'rw_ktp' => 'required|string|max:10',
-                'kelurahan_ktp' => 'required|string|max:100',
-                'kecamatan_ktp' => 'required|string|max:100',
-                'kabupaten_ktp' => 'required|string|max:100',
-                'provinsi_ktp' => 'required|string|max:100',
+                'golongan_darah' => 'nullable|in:A,B,AB,O,A+,B+,AB+,O+,A-,B-,AB-,O-,Tidak Tahu',
+
+                // Data Orang Tua
+                'nama_ayah' => 'nullable|string|max:255',
+                'nama_ibu' => 'nullable|string|max:255',
+
+                // Data Kontak
+                'no_telepon' => 'nullable|string|max:20',
+                'email' => 'nullable|email|max:255',
+
+                // Data Lainnya
                 'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
                 'status_perkawinan' => 'required|in:Belum Kawin,Kawin,Cerai Hidup,Cerai Mati',
                 'pekerjaan' => 'required|string|max:100',
+                'pendidikan_terakhir' => 'required|in:Tidak Sekolah,SD/sederajat,SMP/sederajat,SMA/sederajat,D1,D2,D3,D4/S1,S2,S3',
                 'kewarganegaraan' => 'required|in:WNI,WNA',
-                'pendidikan_terakhir' => 'required|in:Tidak/Sekolah,SD,SMP,SMA,D1/D2/D3,S1,S2,S3',
+                'hubungan_keluarga' => 'required|string|max:50',
                 'foto_ktp' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-
-                // Data Domisili
-                'kk_id' => 'nullable|exists:keluarga,id',
-                'hubungan_keluarga' => 'nullable|required_if:kk_id,!=,null|string|max:50',
-                'alamat_domisili' => 'nullable|string|max:500',
-                'rt_domisili' => 'nullable|string|max:10',
-                'rw_domisili' => 'nullable|string|max:10',
                 'kelurahan_domisili' => 'nullable|string|max:100',
                 'no_telepon' => 'nullable|string|max:20',
                 'email' => 'nullable|email|max:255',
@@ -357,30 +366,40 @@ class WargaController extends Controller
                 $fotoKtpPath = $file->storeAs('uploads/ktp', $filename, 'public');
             }
 
-            $wargaData = $request->all();
-            $wargaData['foto_ktp'] = $fotoKtpPath;
-            $wargaData['updated_by'] = auth()->id();
-
-            // Set domisili sama dengan KTP jika tidak diisi
-            if (empty($wargaData['alamat_domisili'])) {
-                $wargaData['alamat_domisili'] = $wargaData['alamat_ktp'];
-                $wargaData['rt_domisili'] = $wargaData['rt_ktp'];
-                $wargaData['rw_domisili'] = $wargaData['rw_ktp'];
-                $wargaData['kelurahan_domisili'] = $wargaData['kelurahan_ktp'];
-                $wargaData['status_domisili'] = 'Tetap';
-            }
+            // Only update fundamental warga fields
+            $wargaData = [
+                'nik' => $request->nik,
+                'nama_lengkap' => $request->nama_lengkap,
+                'tempat_lahir' => $request->tempat_lahir,
+                'tanggal_lahir' => $request->tanggal_lahir,
+                'jenis_kelamin' => $request->jenis_kelamin,
+                'golongan_darah' => $request->golongan_darah,
+                'nama_ayah' => $request->nama_ayah,
+                'nama_ibu' => $request->nama_ibu,
+                'no_telepon' => $request->no_telepon,
+                'email' => $request->email,
+                'agama' => $request->agama,
+                'status_perkawinan' => $request->status_perkawinan,
+                'pekerjaan' => $request->pekerjaan,
+                'pendidikan_terakhir' => $request->pendidikan_terakhir,
+                'kewarganegaraan' => $request->kewarganegaraan,
+                'hubungan_keluarga' => $request->hubungan_keluarga,
+                'foto_ktp' => $fotoKtpPath,
+                'updated_by' => auth()->id(),
+            ];
 
             $warga->update($wargaData);
 
             // Log activity
             \App\Models\AktivitasLog::create([
                 'user_id' => auth()->id(),
-                'tabel_referensi' => 'warga',
-                'id_referensi' => $warga->id,
-                'jenis_aktivitas' => 'update',
-                'deskripsi' => "Mengupdate data warga: {$warga->nama_lengkap} (NIK: {$warga->nik})",
-                'data_lama' => json_encode($oldData),
-                'data_baru' => json_encode($warga->fresh()->toArray())
+                'action' => 'update',
+                'module' => 'warga',
+                'description' => "Mengupdate data warga: {$warga->nama_lengkap} (NIK: {$warga->nik})",
+                'old_data' => json_encode($oldData),
+                'new_data' => json_encode($warga->fresh()->toArray()),
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
             ]);
 
             DB::commit();
@@ -407,16 +426,8 @@ class WargaController extends Controller
     public function destroy(Warga $warga): JsonResponse
     {
         try {
-            // Check dependencies
-            if ($warga->iuran()->exists()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Warga tidak dapat dihapus karena memiliki data iuran terkait'
-                ], 422);
-            }
-
-            // Check if warga is kepala keluarga
-            if ($warga->keluarga()->exists() || $warga->isKepalaKeluarga()) {
+            // Check if warga is kepala keluarga (hubungan = Kepala Keluarga)
+            if ($warga->hubungan_keluarga === 'Kepala Keluarga') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Warga tidak dapat dihapus karena merupakan kepala keluarga'
@@ -438,11 +449,12 @@ class WargaController extends Controller
             // Log activity
             \App\Models\AktivitasLog::create([
                 'user_id' => auth()->id(),
-                'tabel_referensi' => 'warga',
-                'id_referensi' => $warga->id,
-                'jenis_aktivitas' => 'delete',
-                'deskripsi' => "Menghapus data warga: {$warga->nama_lengkap} (NIK: {$warga->nik})",
-                'data_lama' => json_encode($wargaData)
+                'action' => 'delete',
+                'module' => 'warga',
+                'description' => "Menghapus data warga: {$warga->nama_lengkap} (NIK: {$warga->nik})",
+                'old_data' => json_encode($wargaData),
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
             ]);
 
             DB::commit();

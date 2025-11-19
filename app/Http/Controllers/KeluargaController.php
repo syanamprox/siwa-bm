@@ -833,6 +833,11 @@ class KeluargaController extends Controller
             $level = $request->get('level'); // kelurahan, rw, rt
             $parentId = $request->get('parent_id'); // untuk get children
 
+            // Auto-match parameters
+            $rtName = $request->get('rt_name');
+            $rwName = $request->get('rw_name');
+            $kelurahanName = $request->get('kelurahan_name');
+
             $query = Wilayah::query();
 
             if ($level) {
@@ -845,6 +850,28 @@ class KeluargaController extends Controller
                 // For top level (kelurahan), get records with no parent
                 if ($level === 'kelurahan') {
                     $query->whereNull('parent_id');
+                }
+            }
+
+            // Auto-match logic for RT level
+            if ($level === 'rt' && $rtName && $rwName && $kelurahanName) {
+                // First find kelurahan
+                $kelurahan = Wilayah::where('tingkat', 'Kelurahan')
+                    ->where('nama', 'like', '%' . $kelurahanName . '%')
+                    ->first();
+
+                if ($kelurahan) {
+                    // Then find RW under that kelurahan
+                    $rw = Wilayah::where('tingkat', 'Rw')
+                        ->where('parent_id', $kelurahan->id)
+                        ->where('nama', 'like', '%' . $rwName . '%')
+                        ->first();
+
+                    if ($rw) {
+                        // Finally find RT under that RW
+                        $query->where('parent_id', $rw->id)
+                            ->where('nama', 'like', '%' . $rtName . '%');
+                    }
                 }
             }
 

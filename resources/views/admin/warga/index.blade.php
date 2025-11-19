@@ -11,8 +11,8 @@
             <i class="fas fa-users mr-2"></i>Data Warga
         </h1>
         <div class="btn-group">
-            <button type="button" class="btn btn-primary btn-user" onclick="showCreateModal()">
-                <i class="fas fa-plus mr-2"></i>Tambah Warga
+            <button type="button" class="btn btn-warning btn-user" onclick="redirectToKeluarga()">
+                <i class="fas fa-home mr-2"></i>Tambah Warga (via Keluarga)
             </button>
             <button type="button" class="btn btn-info btn-user" onclick="showImportModal()">
                 <i class="fas fa-file-import mr-2"></i>Import
@@ -20,6 +20,20 @@
             <button type="button" class="btn btn-success btn-user" onclick="exportData()">
                 <i class="fas fa-file-export mr-2"></i>Export
             </button>
+        </div>
+    </div>
+
+    <!-- Info Card -->
+    <div class="alert alert-info mb-4" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-info-circle mr-3" style="font-size: 1.5rem;"></i>
+            <div>
+                <strong>Workflow Management Warga:</strong>
+                <div class="mt-1">
+                    <small>📝 <strong>Tambah Warga Baru:</strong> Gunakan menu <strong>Data Keluarga</strong> → "Tambah Keluarga" → input data KK + tambah anggota keluarga</small><br>
+                    <small>👥 <strong>Existing Warga:</strong> Edit, hapus, atau lihat detail warga langsung di menu ini</small>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -110,52 +124,25 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-filter mr-2"></i>Pencarian dan Filter
+                <i class="fas fa-search mr-2"></i>Pencarian dan Filter
             </h6>
         </div>
         <div class="card-body">
             <form id="filterForm">
-                <div class="row">
-                    <div class="col-md-3">
-                        <label for="search">Cari Warga</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="search" name="search" placeholder="NIK atau Nama">
-                            <div class="input-group-append">
-                                <button class="btn btn-outline-secondary" type="button" onclick="applyFilters()">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </div>
+                <div class="row align-items-end">
+                    <!-- Search Input -->
+                    <div class="col-md-6">
+                        <label for="search">🔍 Cari Warga</label>
+                        <input type="text" class="form-control" id="search" name="search" placeholder="NIK, Nama, No. KK, atau Alamat (auto-cari)">
                     </div>
-                    <div class="col-md-2">
-                        <label for="rt">RT</label>
-                        <input type="text" class="form-control" id="rt" name="rt" placeholder="RT">
-                    </div>
-                    <div class="col-md-2">
-                        <label for="rw">RW</label>
-                        <input type="text" class="form-control" id="rw" name="rw" placeholder="RW">
-                    </div>
-                    <div class="col-md-2">
-                        <label for="jenis_kelamin">Jenis Kelamin</label>
+                    <!-- Jenis Kelamin -->
+                    <div class="col-md-6">
+                        <label for="jenis_kelamin">⚧️ Jenis Kelamin</label>
                         <select class="form-control" id="jenis_kelamin" name="jenis_kelamin">
                             <option value="">Semua</option>
                             <option value="L">Laki-laki</option>
                             <option value="P">Perempuan</option>
                         </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label for="status_kk">Status KK</label>
-                        <select class="form-control" id="status_kk" name="status_kk">
-                            <option value="">Semua</option>
-                            <option value="punya_kk">Punya KK</option>
-                            <option value="tanpa_kk">Tanpa KK</option>
-                        </select>
-                    </div>
-                    <div class="col-md-1">
-                        <label>&nbsp;</label><br>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="resetFilters()">
-                            <i class="fas fa-redo mr-1"></i>Reset
-                        </button>
                     </div>
                 </div>
             </form>
@@ -237,7 +224,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="wargaModalTitle">
-                    <i class="fas fa-user-plus mr-2"></i>Tambah Data Warga
+                    <i class="fas fa-user-edit mr-2"></i>Edit Data Warga
                 </h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
@@ -249,197 +236,11 @@
                     <input type="hidden" id="warga_id" name="warga_id">
 
                     <!-- Section 1: Data Pribadi -->
-                    <div class="card mb-4">
+                    <div class="card mb-3">
                         <div class="card-header bg-primary text-white">
                             <h6 class="mb-0"><i class="fas fa-user mr-2"></i>Data Pribadi</h6>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="nik">NIK <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="nik" name="nik" maxlength="16" required>
-                                        <small class="form-text text-muted">16 digit angka</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="nama_lengkap">Nama Lengkap <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="nama_lengkap" name="nama_lengkap" required>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="jenis_kelamin">Jenis Kelamin <span class="text-danger">*</span></label>
-                                        <select class="form-control" id="jenis_kelamin" name="jenis_kelamin" required>
-                                            <option value="">Pilih Jenis Kelamin</option>
-                                            <option value="L">👨 Laki-laki</option>
-                                            <option value="P">👩 Perempuan</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="tempat_lahir">Tempat Lahir <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="tempat_lahir" name="tempat_lahir" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="tanggal_lahir">Tanggal Lahir <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" id="tanggal_lahir" name="tanggal_lahir" required>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="form-group mb-3">
-                                        <label for="agama">Agama <span class="text-danger">*</span></label>
-                                        <select class="form-control" id="agama" name="agama" required>
-                                            <option value="">Pilih Agama</option>
-                                            <option value="Islam">🕌 Islam</option>
-                                            <option value="Kristen">✝️ Kristen</option>
-                                            <option value="Katolik">⛪ Katolik</option>
-                                            <option value="Hindu">🕉️ Hindu</option>
-                                            <option value="Buddha">☸️ Buddha</option>
-                                            <option value="Konghucu">☯️ Konghucu</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group mb-3">
-                                        <label for="pendidikan">Pendidikan Terakhir</label>
-                                        <select class="form-control" id="pendidikan" name="pendidikan_terakhir">
-                                            <option value="">Pilih Pendidikan</option>
-                                            <option value="Tidak Sekolah">📝 Tidak Sekolah</option>
-                                            <option value="SD/sederajat">📖 SD/sederajat</option>
-                                            <option value="SMP/sederajat">📚 SMP/sederajat</option>
-                                            <option value="SMA/sederajat">📚 SMA/sederajat</option>
-                                            <option value="D1">🎓 D1</option>
-                                            <option value="D2">🎓 D2</option>
-                                            <option value="D3">🎓 D3</option>
-                                            <option value="D4/S1">🎓 D4/S1</option>
-                                            <option value="S2">🎓 S2</option>
-                                            <option value="S3">🎓 S3</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group mb-3">
-                                        <label for="pekerjaan">Pekerjaan</label>
-                                        <select class="form-control" id="pekerjaan" name="pekerjaan">
-                                            <option value="">Pilih Pekerjaan</option>
-                                            <option value="Belum/Tidak Bekerja">🔄 Belum/Tidak Bekerja</option>
-                                            <option value="Mengurus Rumah Tangga">🏠 Mengurus Rumah Tangga</option>
-                                            <option value="Pelajar/Mahasiswa">🎒 Pelajar/Mahasiswa</option>
-                                            <option value="Pensiunan">👴 Pensiunan</option>
-                                            <option value="Pegawai Negeri Sipil">👮 Pegawai Negeri Sipil</option>
-                                            <option value="TNI/Polisi">🚔 TNI/Polisi</option>
-                                            <option value="Guru/Dosen">👨‍🏫 Guru/Dosen</option>
-                                            <option value="Pegawai Swasta">💼 Pegawai Swasta</option>
-                                            <option value="Wiraswasta">🏪 Wiraswasta</option>
-                                            <option value="Petani/Pekebun">🌾 Petani/Pekebun</option>
-                                            <option value="Peternak">🐄 Peternak</option>
-                                            <option value="Nelayan/Perikanan">🎣 Nelayan/Perikanan</option>
-                                            <option value="Industri">🏭 Industri</option>
-                                            <option value="Konstruksi">🏗️ Konstruksi</option>
-                                            <option value="Transportasi">🚛 Transportasi</option>
-                                            <option value="Karyawan Honorer">👷 Karyawan Honorer</option>
-                                            <option value="Tenaga Kesehatan">👨‍⚕️ Tenaga Kesehatan</option>
-                                            <option value="Lainnya">📋 Lainnya</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group mb-3">
-                                        <label for="status_kawin">Status Perkawinan</label>
-                                        <select class="form-control" id="status_kawin" name="status_perkawinan">
-                                            <option value="">Pilih Status</option>
-                                            <option value="Belum Kawin">💔 Belum Kawin</option>
-                                            <option value="Kawin">💑 Kawin</option>
-                                            <option value="Cerai Hidup">💔 Cerai Hidup</option>
-                                            <option value="Cerai Mati">⚰️ Cerai Mati</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="golongan_darah">Golongan Darah</label>
-                                        <select class="form-control" id="golongan_darah" name="golongan_darah">
-                                            <option value="">Pilih Golongan Darah</option>
-                                            <option value="A">🔴 A</option>
-                                            <option value="B">🔵 B</option>
-                                            <option value="AB">🟣 AB</option>
-                                            <option value="O">⚪ O</option>
-                                            <option value="A+">🔴 A+</option>
-                                            <option value="B+">🔵 B+</option>
-                                            <option value="AB+">🟣 AB+</option>
-                                            <option value="O+">⚪ O+</option>
-                                            <option value="Tidak Tahu">❓ Tidak Tahu</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="kewarganegaraan">Kewarganegaraan</label>
-                                        <select class="form-control" id="kewarganegaraan" name="kewarganegaraan">
-                                            <option value="WNI">🇮🇩 WNI</option>
-                                            <option value="WNA">🌍 WNA</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="foto_ktp">Foto KTP</label>
-                                        <input type="file" class="form-control-file" id="foto_ktp" name="foto_ktp" accept="image/*">
-                                        <small class="form-text text-muted">Format: JPG, PNG. Max: 2MB</small>
-                                        <div id="fotoPreview" class="mt-2"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Section 2: Data Orang Tua -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-warning text-dark">
-                            <h6 class="mb-0"><i class="fas fa-users mr-2"></i>Data Orang Tua</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="nama_ayah">Nama Ayah</label>
-                                        <input type="text" class="form-control" id="nama_ayah" name="nama_ayah" placeholder="Nama ayah kandung">
-                                        <small class="form-text text-muted">Nama ayah kandung</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="nama_ibu">Nama Ibu</label>
-                                        <input type="text" class="form-control" id="nama_ibu" name="nama_ibu" placeholder="Nama ibu kandung">
-                                        <small class="form-text text-muted">Nama ibu kandung</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Section 3: Data Alamat KTP -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-info text-white">
-                            <h6 class="mb-0"><i class="fas fa-id-card mr-2"></i>Data Alamat KTP</h6>
-                        </div>
-                        <div class="card-body">
-                            <input type="hidden" id="warga_id" name="warga_id">
-
+                        <div class="card-body py-3">
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
@@ -457,22 +258,7 @@
                             </div>
 
                             <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="tempat_lahir">📍 Tempat Lahir <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="tempat_lahir" name="tempat_lahir" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="tanggal_lahir">📅 Tanggal Lahir <span class="text-danger">*</span></label>
-                                        <input type="date" class="form-control" id="tanggal_lahir" name="tanggal_lahir" required>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-group mb-3">
                                         <label for="jenis_kelamin">⚧️ Jenis Kelamin <span class="text-danger">*</span></label>
                                         <select class="form-control" id="jenis_kelamin" name="jenis_kelamin" required>
@@ -482,110 +268,124 @@
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <div class="form-group mb-3">
+                                        <label for="tempat_lahir">📍 Tempat Lahir <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="tempat_lahir" name="tempat_lahir" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group mb-3">
+                                        <label for="tanggal_lahir">📅 Tanggal Lahir <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" id="tanggal_lahir" name="tanggal_lahir" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
                                     <div class="form-group mb-3">
                                         <label for="golongan_darah">🩸 Golongan Darah</label>
                                         <select class="form-control" id="golongan_darah" name="golongan_darah">
                                             <option value="">Pilih</option>
+                                            <option value="A">A</option>
+                                            <option value="B">B</option>
+                                            <option value="AB">AB</option>
+                                            <option value="O">O</option>
                                             <option value="A+">A+</option>
-                                            <option value="A-">A-</option>
                                             <option value="B+">B+</option>
-                                            <option value="B-">B-</option>
                                             <option value="AB+">AB+</option>
-                                            <option value="AB-">AB-</option>
                                             <option value="O+">O+</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B-">B-</option>
+                                            <option value="AB-">AB-</option>
                                             <option value="O-">O-</option>
                                             <option value="Tidak Tahu">Tidak Tahu</option>
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="agama">🙏 Agama <span class="text-danger">*</span></label>
-                                        <select class="form-control" id="agama" name="agama" required>
-                                            <option value="">Pilih</option>
-                                        </select>
-                                    </div>
-                                </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="form-group mb-3">
-                                <label for="alamat_ktp">🏠 Alamat KTP <span class="text-danger">*</span></label>
-                                <textarea class="form-control" id="alamat_ktp" name="alamat_ktp" rows="2" required></textarea>
-                            </div>
-
+                    <!-- Section 2: Data Orang Tua -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0"><i class="fas fa-users mr-2"></i>Data Orang Tua</h6>
+                        </div>
+                        <div class="card-body py-3">
                             <div class="row">
-                                <div class="col-md-3">
+                                <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="rt_ktp">🏘️ RT <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="rt_ktp" name="rt_ktp" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-group mb-3">
-                                        <label for="rw_ktp">🏘️ RW <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="rw_ktp" name="rw_ktp" required>
+                                        <label for="nama_ayah">👨 Nama Ayah</label>
+                                        <input type="text" class="form-control" id="nama_ayah" name="nama_ayah" placeholder="Nama ayah kandung">
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="kelurahan_ktp">🏛️ Kelurahan <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="kelurahan_ktp" name="kelurahan_ktp" required>
+                                        <label for="nama_ibu">👩 Nama Ibu</label>
+                                        <input type="text" class="form-control" id="nama_ibu" name="nama_ibu" placeholder="Nama ibu kandung">
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
+                    <!-- Section 3: Data Kontak -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-success text-white">
+                            <h6 class="mb-0"><i class="fas fa-phone mr-2"></i>Data Kontak</h6>
+                        </div>
+                        <div class="card-body py-3">
                             <div class="row">
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="kecamatan_ktp">🏛️ Kecamatan <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="kecamatan_ktp" name="kecamatan_ktp" value="Wonocolo" required>
-                                        <small class="form-text text-muted">Default: Wonocolo</small>
+                                        <label for="no_telepon">📱 No. Telepon</label>
+                                        <input type="text" class="form-control" id="no_telepon" name="no_telepon" placeholder="Nomor telepon aktif">
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
                                     <div class="form-group mb-3">
-                                        <label for="kabupaten_ktp">🏙️ Kabupaten <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="kabupaten_ktp" name="kabupaten_ktp" value="Surabaya" required>
-                                        <small class="form-text text-muted">Default: Surabaya</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="provinsi_ktp">🗺️ Provinsi <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="provinsi_ktp" name="provinsi_ktp" value="Jawa Timur" required>
-                                        <small class="form-text text-muted">Default: Jawa Timur</small>
+                                        <label for="email">📧 Email</label>
+                                        <input type="email" class="form-control" id="email" name="email" placeholder="Alamat email">
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="row">
+                    <!-- Section 4: Data Lainnya -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0"><i class="fas fa-info-circle mr-2"></i>Data Lainnya</h6>
+                        </div>
+                        <div class="card-body py-4">
+                            <!-- Row 1: Data Demografi -->
+                            <div class="row mb-4">
+                                <div class="col-md-4">
+                                    <div class="form-group mb-3">
+                                        <label for="agama">⛪ Agama <span class="text-danger">*</span></label>
+                                        <select class="form-control" id="agama" name="agama" required>
+                                            <option value="">Pilih Agama</option>
+                                            <option value="Islam">Islam</option>
+                                            <option value="Kristen">Kristen</option>
+                                            <option value="Katolik">Katolik</option>
+                                            <option value="Hindu">Hindu</option>
+                                            <option value="Buddha">Buddha</option>
+                                            <option value="Konghucu">Konghucu</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <div class="col-md-4">
                                     <div class="form-group mb-3">
                                         <label for="status_perkawinan">💑 Status Perkawinan <span class="text-danger">*</span></label>
                                         <select class="form-control" id="status_perkawinan" name="status_perkawinan" required>
-                                            <option value="">Pilih</option>
+                                            <option value="">Pilih Status</option>
+                                            <option value="Belum Kawin">Belum Kawin</option>
+                                            <option value="Kawin">Kawin</option>
+                                            <option value="Cerai Hidup">Cerai Hidup</option>
+                                            <option value="Cerai Mati">Cerai Mati</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="pekerjaan">💼 Pekerjaan <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control" id="pekerjaan" name="pekerjaan" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group mb-3">
-                                        <label for="pendidikan_terakhir">🎓 Pendidikan Terakhir <span class="text-danger">*</span></label>
-                                        <select class="form-control" id="pendidikan_terakhir" name="pendidikan_terakhir" required>
-                                            <option value="">Pilih</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6">
                                     <div class="form-group mb-3">
                                         <label for="kewarganegaraan">🇮🇩 Kewarganegaraan <span class="text-danger">*</span></label>
                                         <select class="form-control" id="kewarganegaraan" name="kewarganegaraan" required>
@@ -595,7 +395,84 @@
                                         </select>
                                     </div>
                                 </div>
+                            </div>
+
+                            <!-- Row 2: Data Pendidikan & Pekerjaan -->
+                            <div class="row mb-4">
                                 <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="pekerjaan">💼 Pekerjaan <span class="text-danger">*</span></label>
+                                        <select class="form-control" id="pekerjaan" name="pekerjaan" required>
+                                            <option value="">Pilih Pekerjaan</option>
+                                            <option value="Belum/Tidak Bekerja">Belum/Tidak Bekerja</option>
+                                            <option value="Mengurus Rumah Tangga">Mengurus Rumah Tangga</option>
+                                            <option value="Pelajar/Mahasiswa">Pelajar/Mahasiswa</option>
+                                            <option value="Pensiunan">Pensiunan</option>
+                                            <option value="Pegawai Negeri Sipil">Pegawai Negeri Sipil</option>
+                                            <option value="TNI/Polisi">TNI/Polisi</option>
+                                            <option value="Guru/Dosen">Guru/Dosen</option>
+                                            <option value="Pegawai Swasta">Pegawai Swasta</option>
+                                            <option value="Wiraswasta">Wiraswasta</option>
+                                            <option value="Petani/Pekebun">Petani/Pekebun</option>
+                                            <option value="Peternak">Peternak</option>
+                                            <option value="Nelayan/Perikanan">Nelayan/Perikanan</option>
+                                            <option value="Industri">Industri</option>
+                                            <option value="Konstruksi">Konstruksi</option>
+                                            <option value="Transportasi">Transportasi</option>
+                                            <option value="Tenaga Kesehatan">Tenaga Kesehatan</option>
+                                            <option value="Lainnya">Lainnya</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="pendidikan_terakhir">🎓 Pendidikan Terakhir <span class="text-danger">*</span></label>
+                                        <select class="form-control" id="pendidikan_terakhir" name="pendidikan_terakhir" required>
+                                            <option value="">Pilih Pendidikan</option>
+                                            <option value="Tidak Sekolah">📝 Tidak Sekolah</option>
+                                            <option value="SD/sederajat">📖 SD/sederajat</option>
+                                            <option value="SMP/sederajat">📚 SMP/sederajat</option>
+                                            <option value="SMA/sederajat">📚 SMA/sederajat</option>
+                                            <option value="D1">🎓 D1</option>
+                                            <option value="D2">🎓 D2</option>
+                                            <option value="D3">🎓 D3</option>
+                                            <option value="D4/S1">🎓 D4/S1</option>
+                                            <option value="S2">🎓 S2</option>
+                                            <option value="S3">🎓 S3</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Hubungan Keluarga -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-3">
+                                        <label for="hubungan_keluarga">👥 Hubungan Keluarga <span class="text-danger">*</span></label>
+                                        <select class="form-control" id="hubungan_keluarga" name="hubungan_keluarga" required>
+                                            <option value="">Pilih Hubungan</option>
+                                            <option value="Kepala Keluarga">Kepala Keluarga</option>
+                                            <option value="Suami">Suami</option>
+                                            <option value="Istri">Istri</option>
+                                            <option value="Anak">Anak</option>
+                                            <option value="Menantu">Menantu</option>
+                                            <option value="Cucu">Cucu</option>
+                                            <option value="Orang Tua">Orang Tua</option>
+                                            <option value="Mertua">Mertua</option>
+                                            <option value="Famili Lain">Famili Lain</option>
+                                            <option value="Pembantu">Pembantu</option>
+                                            <option value="Lainnya">Lainnya</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- Empty for balance -->
+                                </div>
+                            </div>
+
+                            <!-- Row 4: Foto KTP -->
+                            <div class="row">
+                                <div class="col-md-12">
                                     <div class="form-group mb-3">
                                         <label for="foto_ktp">📷 Foto KTP</label>
                                         <input type="file" class="form-control-file" id="foto_ktp" name="foto_ktp" accept="image/*">
@@ -607,129 +484,6 @@
                         </div>
                     </div>
 
-                    <!-- Section 4: Data Kontak -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-success text-white">
-                            <h6 class="mb-0"><i class="fas fa-phone mr-2"></i>Data Kontak</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="telepon">📱 Telepon <span class="text-danger">*</span></label>
-                                        <input type="tel" class="form-control" id="telepon" name="telepon" required>
-                                        <small class="form-text text-muted">Nomor telepon aktif</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group mb-3">
-                                        <label for="email">📧 Email</label>
-                                        <input type="email" class="form-control" id="email" name="email">
-                                        <small class="form-text text-muted">Opsional</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Section 5: Data Domisili -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-warning text-dark">
-                            <h6 class="mb-0"><i class="fas fa-home mr-2"></i>Data Domisili</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="form-group mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="sama_dengan_ktp" name="sama_dengan_ktp" checked>
-                                            <label class="form-check-label" for="sama_dengan_ktp">
-                                                ✅ Alamat domisili sama dengan alamat KTP
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="alamatDomisiliFields" style="display: none;">
-                                <div class="form-group mb-3">
-                                    <label for="alamat_domisili">🏠 Alamat Domisili</label>
-                                    <textarea class="form-control" id="alamat_domisili" name="alamat_domisili" rows="2"></textarea>
-                                </div>
-
-                                <!-- Cascading Dropdown for Domisili -->
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="form-group mb-3">
-                                            <label for="domisili_kelurahan">🏛️ Kelurahan Domisili</label>
-                                            <select class="form-control" id="domisili_kelurahan" name="domisili_kelurahan" disabled>
-                                                <option value="">Pilih Kelurahan</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group mb-3">
-                                            <label for="domisili_rw">🏘️ RW Domisili</label>
-                                            <select class="form-control" id="domisili_rw" name="domisili_rw" disabled>
-                                                <option value="">Pilih RW</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group mb-3">
-                                            <label for="domisili_rt">🏘️ RT Domisili</label>
-                                            <select class="form-control" id="domisili_rt" name="domisili_rt" disabled>
-                                                <option value="">Pilih RT</option>
-                                            </select>
-                                            <input type="hidden" id="rt_id" name="rt_id">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Section 6: Data Keluarga -->
-                    <div class="card mb-4">
-                        <div class="card-header bg-secondary text-white">
-                            <h6 class="mb-0"><i class="fas fa-users mr-2"></i>Data Keluarga</h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="form-group mb-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="tanpa_keluarga" name="tanpa_keluarga" checked>
-                                            <label class="form-check-label" for="tanpa_keluarga">
-                                                🚫 Tidak memiliki KK/bersendirian
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="keluargaFields" style="display: none;">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group mb-3">
-                                            <label for="kk_id">🆔 Nomor KK</label>
-                                            <select class="form-control" id="kk_id" name="kk_id">
-                                                <option value="">Pilih KK</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group mb-3">
-                                            <label for="hubungan_keluarga">👨‍👩‍👧‍👦 Hubungan dalam Keluarga</label>
-                                            <select class="form-control" id="hubungan_keluarga" name="hubungan_keluarga">
-                                                <option value="">Pilih</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">
@@ -806,6 +560,74 @@
     </div>
 </div>
 
+@push('styles')
+<style>
+/* Search input enhancements */
+#search:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+#search.is-valid {
+    border-color: #1cc88a;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%231cc88a' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center;
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem);
+    padding-right: calc(1.5em + 0.75rem);
+}
+
+#search.is-valid:focus {
+    border-color: #1cc88a;
+    box-shadow: 0 0 0 0.2rem rgba(28, 200, 138, 0.25);
+}
+
+/* Filter dropdown improvements */
+select.form-control {
+    transition: all 0.15s ease-in-out;
+}
+
+select.form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+/* Button group improvements */
+.btn-group .btn {
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Loading indicator for table */
+.table-loading {
+    opacity: 0.6;
+    position: relative;
+}
+
+.table-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #4e73df;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+@endpush
+
 @endsection
 
 @push('scripts')
@@ -815,13 +637,52 @@ $(document).ready(function() {
     loadStatistics();
     loadFormData();
 
-    // Handle checkbox changes
-    $('#sama_dengan_ktp').change(function() {
-        $('#alamatDomisiliFields').toggle(!this.checked);
+    
+    $('#tanpa_keluarga').change(function() {
+        if ($(this).is(':checked')) {
+            // Centang: Buat KK baru, hide KK selection
+            $('#keluargaFields').hide();
+            $('#kk_id').val('');
+            $('#hubungan_keluarga').val('');
+        } else {
+            // Tidak centang: Pilih KK yang ada
+            $('#keluargaFields').show();
+        }
     });
 
-    $('#tanpa_keluarga').change(function() {
-        $('#keluargaFields').toggle(!this.checked);
+    // Search auto-trigger with debouncing
+    let searchTimeout;
+    $('#search').on('input keyup', function() {
+        var searchValue = $(this).val();
+
+        // Clear existing timeout
+        clearTimeout(searchTimeout);
+
+        // Add searching indicator
+        if (searchValue.length > 0) {
+            $(this).addClass('is-valid');
+        } else {
+            $(this).removeClass('is-valid');
+        }
+
+        // Set new timeout (500ms delay)
+        searchTimeout = setTimeout(function() {
+            applyFilters();
+        }, 500);
+    });
+
+    // Filter form submission on Enter key
+    $('#search').on('keypress', function(e) {
+        if (e.which === 13) { // Enter key
+            e.preventDefault();
+            clearTimeout(searchTimeout); // Clear pending timeout
+            applyFilters();
+        }
+    });
+
+    // Filter changes on dropdown change
+    $('#jenis_kelamin').on('change', function() {
+        applyFilters();
     });
 
     // Form submission
@@ -900,6 +761,9 @@ function renderWargaTable(wargaList, pagination) {
             var umur = warga.tanggal_lahir ? calculateAge(warga.tanggal_lahir) : '-';
             var kkInfo = warga.keluarga ? warga.keluarga.no_kk : 'Tanpa KK';
 
+            // Add foto_ktp_url for button access
+            warga.foto_ktp_url = warga.foto_ktp ? '/storage/' + warga.foto_ktp : null;
+
             html += `
                 <tr>
                     <td>${no}</td>
@@ -907,13 +771,16 @@ function renderWargaTable(wargaList, pagination) {
                     <td><strong>${warga.nama_lengkap}</strong></td>
                     <td><span class="badge ${warga.jenis_kelamin === 'L' ? 'badge-info' : 'badge-warning'}">${warga.jenis_kelamin_label || warga.jenis_kelamin}</span></td>
                     <td>${umur}</td>
-                    <td><small>${warga.alamat_domisili_lengkap || warga.alamat_domisili}</small></td>
+                    <td><small>${warga.keluarga ? warga.keluarga.alamat_kk || 'Tidak ada alamat KK' : 'Tidak ada KK'}</small></td>
                     <td>${warga.no_telepon || '-'}</td>
                     <td><small>${kkInfo}</small></td>
                     <td>
                         <div class="btn-group" role="group">
                             <button type="button" class="btn btn-sm btn-info" onclick="viewWarga(${warga.id})" title="Lihat Detail">
                                 <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-info ${warga.foto_ktp ? '' : 'disabled'}" onclick="${warga.foto_ktp ? `showFotoModal('${warga.foto_ktp_url || ('/storage/' + warga.foto_ktp)}', '${warga.nama_lengkap}')` : 'return false;'}" title="${warga.foto_ktp ? 'Lihat Foto KTP' : 'Tidak ada Foto KTP'}">
+                                <i class="fas fa-camera"></i>
                             </button>
                             <button type="button" class="btn btn-sm btn-warning" onclick="editWarga(${warga.id})" title="Edit">
                                 <i class="fas fa-edit"></i>
@@ -1024,16 +891,6 @@ function populateSelectOptions(data) {
     $('#kk_id').html(kkHtml);
 }
 
-function showCreateModal() {
-    $('#wargaModalTitle').html('<i class="fas fa-user-plus mr-2"></i>Tambah Data Warga');
-    $('#saveWargaBtn').html('<i class="fas fa-save mr-2"></i>Simpan');
-    $('#wargaForm')[0].reset();
-    $('#warga_id').val('');
-    $('#fotoPreview').html('');
-    $('#sama_dengan_ktp').prop('checked', true).change();
-    $('#tanpa_keluarga').prop('checked', true).change();
-    $('#wargaModal').modal('show');
-}
 
 function editWarga(id) {
     showLoading();
@@ -1049,53 +906,100 @@ function editWarga(id) {
                 $('#wargaModalTitle').html('<i class="fas fa-user-edit mr-2"></i>Edit Data Warga');
                 $('#saveWargaBtn').html('<i class="fas fa-save mr-2"></i>Update');
 
-                // Fill form data
-                $('#warga_id').val(warga.id);
-                $('#nik').val(warga.nik);
-                $('#nama_lengkap').val(warga.nama_lengkap);
-                $('#tempat_lahir').val(warga.tempat_lahir);
-                $('#tanggal_lahir').val(warga.tanggal_lahir);
-                $('#jenis_kelamin').val(warga.jenis_kelamin);
-                $('#golongan_darah').val(warga.golongan_darah);
-                $('#alamat_ktp').val(warga.alamat_ktp);
-                $('#rt_ktp').val(warga.rt_ktp);
-                $('#rw_ktp').val(warga.rw_ktp);
-                $('#kelurahan_ktp').val(warga.kelurahan_ktp);
-                $('#kecamatan_ktp').val(warga.kecamatan_ktp);
-                $('#kabupaten_ktp').val(warga.kabupaten_ktp);
-                $('#provinsi_ktp').val(warga.provinsi_ktp);
-                $('#agama').val(warga.agama);
-                $('#status_perkawinan').val(warga.status_perkawinan);
-                $('#pekerjaan').val(warga.pekerjaan);
-                $('#kewarganegaraan').val(warga.kewarganegaraan);
-                $('#pendidikan_terakhir').val(warga.pendidikan_terakhir);
+                // Fill form data - only fields that exist in warga table - target elements within wargaModal
+                $('#wargaModal #warga_id').val(warga.id);
+                $('#wargaModal #nik').val(warga.nik);
+                $('#wargaModal #nama_lengkap').val(warga.nama_lengkap);
+                $('#wargaModal #tempat_lahir').val(warga.tempat_lahir);
 
-                // Domisili data
-                var isDomisiliSama = warga.isDomisiliSamaKtp;
-                $('#sama_dengan_ktp').prop('checked', isDomisiliSama).change();
-                if (!isDomisiliSama) {
-                    $('#alamat_domisili').val(warga.alamat_domisili);
-                    $('#rt_domisili').val(warga.rt_domisili);
-                    $('#rw_domisili').val(warga.rw_domisili);
-                    $('#kelurahan_domisili').val(warga.kelurahan_domisili);
+                // Debug critical fields
+                console.log('=== Warga Data Debug ===');
+                console.log('ID:', warga.id);
+                console.log('Nama:', warga.nama_lengkap);
+                console.log('Tanggal lahir data:', warga.tanggal_lahir);
+                console.log('Tanggal lahir type:', typeof warga.tanggal_lahir);
+                console.log('Pendidikan terakhir data:', warga.pendidikan_terakhir);
+                console.log('Jenis kelamin data:', warga.jenis_kelamin);
+                console.log('=========================');
+
+                // Format tanggal untuk input type="date" (YYYY-MM-DD)
+                if (warga.tanggal_lahir) {
+                    var tanggal = new Date(warga.tanggal_lahir);
+                    var formattedDate = tanggal.getFullYear() + '-' +
+                                      String(tanggal.getMonth() + 1).padStart(2, '0') + '-' +
+                                      String(tanggal.getDate()).padStart(2, '0');
+                    console.log('Formatted date:', formattedDate);
+                    $('#wargaModal #tanggal_lahir').val(formattedDate);
+                } else {
+                    $('#wargaModal #tanggal_lahir').val('');
                 }
 
-                $('#no_telepon').val(warga.no_telepon);
-                $('#email').val(warga.email);
-                $('#status_domisili').val(warga.status_domisili);
-                $('#tanggal_mulai_domisili').val(warga.tanggal_mulai_domisili);
+                $('#wargaModal #golongan_darah').val(warga.golongan_darah);
 
-                // Keluarga data
-                var hasKK = warga.kk_id !== null;
-                $('#tanpa_keluarga').prop('checked', !hasKK).change();
-                if (hasKK) {
-                    $('#kk_id').val(warga.kk_id);
-                    $('#hubungan_keluarga').val(warga.hubungan_keluarga);
+                // Populate dropdowns dynamically if empty
+                if ($('#wargaModal #jenis_kelamin option').length <= 1) {
+                    $('#wargaModal #jenis_kelamin').html('<option value="">Pilih</option><option value="L">Laki-laki</option><option value="P">Perempuan</option>');
                 }
+                $('#wargaModal #jenis_kelamin').val(warga.jenis_kelamin);
+
+                if ($('#wargaModal #agama option').length <= 1) {
+                    $('#wargaModal #agama').html('<option value="">Pilih Agama</option><option value="Islam">Islam</option><option value="Kristen">Kristen</option><option value="Katolik">Katolik</option><option value="Hindu">Hindu</option><option value="Buddha">Buddha</option><option value="Konghucu">Konghucu</option>');
+                }
+                $('#wargaModal #agama').val(warga.agama);
+
+                if ($('#wargaModal #status_perkawinan option').length <= 1) {
+                    $('#wargaModal #status_perkawinan').html('<option value="">Pilih Status</option><option value="Belum Kawin">Belum Kawin</option><option value="Kawin">Kawin</option><option value="Cerai Hidup">Cerai Hidup</option><option value="Cerai Mati">Cerai Mati</option>');
+                }
+                $('#wargaModal #status_perkawinan').val(warga.status_perkawinan);
+
+                if ($('#wargaModal #pekerjaan option').length <= 1) {
+                    $('#wargaModal #pekerjaan').html('<option value="">Pilih Pekerjaan</option><option value="Belum/Tidak Bekerja">Belum/Tidak Bekerja</option><option value="Mengurus Rumah Tangga">Mengurus Rumah Tangga</option><option value="Pelajar/Mahasiswa">Pelajar/Mahasiswa</option><option value="Pensiunan">Pensiunan</option><option value="Pegawai Negeri Sipil">Pegawai Negeri Sipil</option><option value="TNI/Polisi">TNI/Polisi</option><option value="Guru/Dosen">Guru/Dosen</option><option value="Pegawai Swasta">Pegawai Swasta</option><option value="Wiraswasta">Wiraswasta</option><option value="Petani/Pekebun">Petani/Pekebun</option><option value="Peternak">Peternak</option><option value="Nelayan/Perikanan">Nelayan/Perikanan</option><option value="Industri">Industri</option><option value="Konstruksi">Konstruksi</option><option value="Transportasi">Transportasi</option><option value="Tenaga Kesehatan">Tenaga Kesehatan</option><option value="Lainnya">Lainnya</option>');
+                }
+                $('#wargaModal #pekerjaan').val(warga.pekerjaan);
+
+                // Debug pendidikan_terakhir
+                console.log('Pendidikan terakhir data:', warga.pendidikan_terakhir);
+                console.log('Pendidikan options length:', $('#wargaModal #pendidikan_terakhir option').length);
+
+                // Always update pendidikan options to match keluarga form
+                var pendidikanOptions = '<option value="">Pilih Pendidikan</option>' +
+                                     '<option value="Tidak Sekolah">📝 Tidak Sekolah</option>' +
+                                     '<option value="SD/sederajat">📖 SD/sederajat</option>' +
+                                     '<option value="SMP/sederajat">📚 SMP/sederajat</option>' +
+                                     '<option value="SMA/sederajat">📚 SMA/sederajat</option>' +
+                                     '<option value="D1">🎓 D1</option>' +
+                                     '<option value="D2">🎓 D2</option>' +
+                                     '<option value="D3">🎓 D3</option>' +
+                                     '<option value="D4/S1">🎓 D4/S1</option>' +
+                                     '<option value="S2">🎓 S2</option>' +
+                                     '<option value="S3">🎓 S3</option>';
+                $('#wargaModal #pendidikan_terakhir').html(pendidikanOptions);
+
+                console.log('Available options:', $('#wargaModal #pendidikan_terakhir').html());
+                $('#wargaModal #pendidikan_terakhir').val(warga.pendidikan_terakhir);
+                console.log('After setting value:', $('#wargaModal #pendidikan_terakhir').val());
+
+                if ($('#wargaModal #kewarganegaraan option').length <= 1) {
+                    $('#wargaModal #kewarganegaraan').html('<option value="">Pilih</option><option value="WNI">WNI</option><option value="WNA">WNA</option>');
+                }
+                $('#wargaModal #kewarganegaraan').val(warga.kewarganegaraan);
+
+                if ($('#wargaModal #hubungan_keluarga option').length <= 1) {
+                    $('#wargaModal #hubungan_keluarga').html('<option value="">Pilih Hubungan</option><option value="Kepala Keluarga">Kepala Keluarga</option><option value="Suami">Suami</option><option value="Istri">Istri</option><option value="Anak">Anak</option><option value="Menantu">Menantu</option><option value="Cucu">Cucu</option><option value="Orang Tua">Orang Tua</option><option value="Mertua">Mertua</option><option value="Famili Lain">Famili Lain</option><option value="Pembantu">Pembantu</option><option value="Lainnya">Lainnya</option>');
+                }
+                $('#wargaModal #hubungan_keluarga').val(warga.hubungan_keluarga || '');
+
+                // Orang Tua data
+                $('#wargaModal #nama_ayah').val(warga.nama_ayah || '');
+                $('#wargaModal #nama_ibu').val(warga.nama_ibu || '');
+
+                // Kontak data
+                $('#wargaModal #no_telepon').val(warga.no_telepon || '');
+                $('#wargaModal #email').val(warga.email || '');
 
                 // Show foto if exists
                 if (warga.foto_ktp_url) {
-                    $('#fotoPreview').html('<img src="' + warga.foto_ktp_url + '" class="img-thumbnail" style="max-height: 200px;">');
+                    $('#wargaModal #fotoPreview').html('<img src="' + warga.foto_ktp_url + '" class="img-thumbnail" style="max-height: 200px;">');
                 }
 
                 $('#wargaModal').modal('show');
@@ -1115,8 +1019,10 @@ function saveWarga() {
     var form = $('#wargaForm')[0];
     var formData = new FormData(form);
     var wargaId = $('#warga_id').val();
-    var url = wargaId ? '/api/warga/' + wargaId : '/api/warga';
-    var method = wargaId ? 'PUT' : 'POST';
+
+    // Always update (no create functionality)
+    var url = '/api/warga/' + wargaId;
+    formData.append('_method', 'PUT');
 
     // Handle domisili sama dengan KTP
     if ($('#sama_dengan_ktp').is(':checked')) {
@@ -1134,7 +1040,7 @@ function saveWarga() {
 
     $.ajax({
         url: url,
-        type: method,
+        type: 'POST',
         data: formData,
         processData: false,
         contentType: false,
@@ -1184,6 +1090,16 @@ function viewWarga(id) {
             if (response.success) {
                 var warga = response.data;
 
+                // Append foto_ktp_url accessor
+                warga.foto_ktp_url = warga.foto_ktp ? '/storage/' + warga.foto_ktp : null;
+
+                // Debug foto KTP
+                console.log('=== Warga Debug ===');
+                console.log('Warga object:', warga);
+                console.log('foto_ktp_url:', warga.foto_ktp_url);
+                console.log('foto_ktp:', warga.foto_ktp);
+                console.log('===================');
+
                 var content = `
                     <div class="row">
                         <div class="col-md-6">
@@ -1199,18 +1115,32 @@ function viewWarga(id) {
                                 <tr><td>Pekerjaan</td><td>${warga.pekerjaan}</td></tr>
                                 <tr><td>Pendidikan Terakhir</td><td>${warga.pendidikan_terakhir}</td></tr>
                                 <tr><td>Kewarganegaraan</td><td>${warga.kewarganegaraan_label || warga.kewarganegaraan}</td></tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6><i class="fas fa-home mr-2"></i>Data Domisili</h6>
-                            <table class="table table-sm">
-                                <tr><td>Alamat</td><td>${warga.alamat_domisili}</td></tr>
-                                <tr><td>RT/RW</td><td>${warga.rt_domisili}/${warga.rw_domisili}</td></tr>
-                                <tr><td>Kelurahan</td><td>${warga.kelurahan_domisili}</td></tr>
                                 <tr><td>No. Telepon</td><td>${warga.no_telepon || '-'}</td></tr>
                                 <tr><td>Email</td><td>${warga.email || '-'}</td></tr>
-                                <tr><td>Status Domisili</td><td>${warga.status_domisili_label || warga.status_domisili}</td></tr>
-                                <tr><td>Tanggal Mulai Domisili</td><td>${warga.tanggal_mulai_domisili || '-'}</td></tr>
+                              </table>
+                        </div>
+                        <div class="col-md-6">
+                            <!-- Alamat KK -->
+                            <h6><i class="fas fa-id-card mr-2 text-primary"></i>Alamat KK</h6>
+                            <table class="table table-sm mb-4">
+                                <tr><td width="120">Alamat</td><td>${warga.keluarga ? warga.keluarga.alamat_kk || '-' : '-'}</td></tr>
+                                <tr><td>RT</td><td>${warga.keluarga ? warga.keluarga.rt_kk || '-' : '-'}</td></tr>
+                                <tr><td>RW</td><td>${warga.keluarga ? warga.keluarga.rw_kk || '-' : '-'}</td></tr>
+                                <tr><td>Kelurahan</td><td>${warga.keluarga ? warga.keluarga.kelurahan_kk || '-' : '-'}</td></tr>
+                                <tr><td>Kecamatan</td><td>${warga.keluarga ? warga.keluarga.kecamatan_kk || '-' : '-'}</td></tr>
+                                <tr><td>Kabupaten</td><td>${warga.keluarga ? warga.keluarga.kabupaten_kk || '-' : '-'}</td></tr>
+                                <tr><td>Provinsi</td><td>${warga.keluarga ? warga.keluarga.provinsi_kk || '-' : '-'}</td></tr>
+                            </table>
+
+                            <!-- Alamat Domisili -->
+                            <h6><i class="fas fa-map-marker-alt mr-2 text-warning"></i>Alamat Domisili</h6>
+                            <table class="table table-sm">
+                                <tr><td width="120">Alamat</td><td>${warga.keluarga ? warga.keluarga.alamat_domisili || '-' : '-'}</td></tr>
+                                <tr><td>RT</td><td>${warga.keluarga && warga.keluarga.wilayah ? warga.keluarga.wilayah.nama || '-' : '-'}</td></tr>
+                                <tr><td>RW</td><td>${warga.keluarga && warga.keluarga.wilayah && warga.keluarga.wilayah.parent ? warga.keluarga.wilayah.parent.nama || '-' : '-'}</td></tr>
+                                <tr><td>Kelurahan</td><td>${warga.keluarga && warga.keluarga.wilayah && warga.keluarga.wilayah.parent && warga.keluarga.wilayah.parent.parent ? warga.keluarga.wilayah.parent.parent.nama || '-' : '-'}</td></tr>
+                                <tr><td>Status</td><td>${warga.keluarga ? warga.keluarga.status_domisili_keluarga || '-' : '-'}</td></tr>
+                                <tr><td>Tanggal Mulai</td><td>${warga.keluarga && warga.keluarga.tanggal_mulai_domisili_keluarga ? formatTanggalIndo(warga.keluarga.tanggal_mulai_domisili_keluarga) : '-'}</td></tr>
                             </table>
                         </div>
                     </div>
@@ -1223,9 +1153,6 @@ function viewWarga(id) {
                                 <tr><td>Hubungan</td><td>${warga.hubungan_keluarga || '-'}</td></tr>
                             </table>
                         </div>
-                        <div class="col-md-6">
-                            <h6><i class="fas fa-camera mr-2"></i>Foto KTP</h6>
-                            ${warga.foto_ktp_url ? `<img src="${warga.foto_ktp_url}" class="img-thumbnail" style="max-width: 200px;">` : '<p>Tidak ada foto</p>'}
                         </div>
                     </div>
 
@@ -1297,14 +1224,15 @@ function applyFilters() {
     loadWarga(1);
 }
 
-function resetFilters() {
-    $('#filterForm')[0].reset();
-    loadWarga(1);
-}
 
 function refreshData() {
     loadWarga();
     loadStatistics();
+}
+
+function redirectToKeluarga() {
+    // Direct redirect to keluarga module
+    window.location.href = '/keluarga';
 }
 
 function showImportModal() {
@@ -1330,6 +1258,22 @@ function calculateAge(birthDate) {
     }
 
     return age + ' th';
+}
+
+function formatTanggalIndo(tanggal) {
+    if (!tanggal) return '-';
+
+    const months = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    const date = new Date(tanggal);
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return day + ' ' + month + ' ' + year;
 }
 
 function displayValidationErrors(errors) {
@@ -1401,22 +1345,96 @@ function loadRtOptionsForEdit(rwId) {
     });
 }
 
-// Handle same as KTP checkbox
+// Handle same as KTP checkbox with auto-match
 $('#sama_dengan_ktp').change(function() {
     var isChecked = $(this).is(':checked');
+
     if (isChecked) {
-        $('#alamatDomisiliFields').hide();
-        $('#domisili_kelurahan').prop('disabled', true);
-        $('#domisili_rw').prop('disabled', true);
-        $('#domisili_rt').prop('disabled', true);
-        $('#rt_id').val('');
+        // Auto-match alamat KTP ke sistem wilayah
+        autoMatchAlamatKtpToWilayah();
     } else {
+        // Show manual dropdown selection
         $('#alamatDomisiliFields').show();
         loadKelurahanDomisili().then(function() {
             $('#domisili_kelurahan').prop('disabled', false);
         });
     }
 });
+
+// Function untuk auto-match alamat KTP ke sistem wilayah
+function autoMatchAlamatKtpToWilayah() {
+    // Check if address fields exist (warga form doesn't have these fields)
+    if (!$('#rt_kk').length || !$('#rw_kk').length || !$('#kelurahan_kk').length) {
+        showToast('⚠️ Fitur auto-match hanya tersedia di form keluarga', 'info');
+        return;
+    }
+
+    var rtKtp = $('#rt_kk').val();
+    var rwKtp = $('#rw_kk').val();
+    var kelurahanKtp = $('#kelurahan_kk').val();
+
+    // Add null checks
+    if (!rtKtp || !rtKtp.trim || !rwKtp || !rwKtp.trim || !kelurahanKtp || !kelurahanKtp.trim) {
+        showToast('⚠️ Data alamat tidak valid', 'warning');
+        return;
+    }
+
+    rtKtp = rtKtp.trim();
+    rwKtp = rwKtp.trim();
+    kelurahanKtp = kelurahanKtp.trim();
+
+    // Hide domisili fields saat matching
+    $('#alamatDomisiliFields').hide();
+
+    if (!rtKtp || !rwKtp || !kelurahanKtp) {
+        showToast('⚠️ Lengkapi data alamat KTP terlebih dahulu untuk auto-match', 'warning');
+        $('#rt_id').val('');
+        return;
+    }
+
+    // Show loading
+    showToast('🔍 Mencocokkan alamat KTP dengan sistem wilayah...', 'info');
+
+    // Cari di tabel wilayahs
+    $.ajax({
+        url: '/api/keluarga/wilayah',
+        type: 'GET',
+        data: {
+            level: 'rt',
+            rt_name: rtKtp,
+            rw_name: rwKtp,
+            kelurahan_name: kelurahanKtp
+        },
+        success: function(response) {
+            if (response.success && response.data.length > 0) {
+                // Found match
+                var rtData = response.data[0];
+                $('#rt_id').val(rtData.id);
+                showToast('✅ Alamat KTP cocok dengan sistem wilayah: ' + rtData.nama_lengkap || rtData.nama, 'success');
+            } else {
+                // No match found
+                $('#rt_id').val('');
+                showToast('⚠️ Alamat KTP tidak ditemukan di sistem wilayah. Silakan pilih manual atau cek penulisan data.', 'warning');
+
+                // Show dropdown for manual selection
+                $('#alamatDomisiliFields').show();
+                loadKelurahanDomisili().then(function() {
+                    $('#domisili_kelurahan').prop('disabled', false);
+                });
+            }
+        },
+        error: function(xhr) {
+            $('#rt_id').val('');
+            showToast('❌ Gagal mencocokkan alamat dengan sistem wilayah', 'error');
+
+            // Show dropdown for manual selection
+            $('#alamatDomisiliFields').show();
+            loadKelurahanDomisili().then(function() {
+                $('#domisili_kelurahan').prop('disabled', false);
+            });
+        }
+    });
+}
 
 // Handle kelurahan change
 $('#domisili_kelurahan').change(function() {
@@ -1455,5 +1473,52 @@ $('#domisili_rt').change(function() {
         $('#rt_id').val('');
     }
 });
+
+// Foto KTP Modal
+function showFotoModal(fotoUrl, namaWarga) {
+    var modalHtml = `
+        <div class="modal fade" id="fotoKtpModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="fas fa-camera mr-2"></i>Foto KTP - ${namaWarga}
+                        </h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <img src="${fotoUrl}" class="img-fluid" alt="Foto KTP" style="max-height: 500px;">
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="button" class="btn btn-primary" onclick="downloadFoto('${fotoUrl}', '${namaWarga}')" title="Download Foto">
+                            <i class="fas fa-download mr-2"></i>Download
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remove existing modal if any
+    $('#fotoKtpModal').remove();
+
+    // Add modal to body and show
+    $('body').append(modalHtml);
+    $('#fotoKtpModal').modal('show');
+}
+
+// Download foto function
+function downloadFoto(url, nama) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `KTP_${nama.replace(/\s+/g, '_')}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
 </script>
 @endpush

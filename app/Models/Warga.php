@@ -93,14 +93,7 @@ class Warga extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
-    /**
-     * Relasi ke iuran
-     */
-    public function iuran()
-    {
-        return $this->hasMany(Iuran::class, 'warga_id');
-    }
-
+    
     /**
      * Scope berdasarkan NIK
      */
@@ -174,13 +167,17 @@ class Warga extends Model
     }
 
     /**
-     * Search warga berdasarkan NIK atau nama
+     * Search warga berdasarkan NIK, nama, No. KK, atau alamat KK
      */
     public function scopeSearch($query, $keyword)
     {
         return $query->where(function($q) use ($keyword) {
             $q->where('nik', 'like', "%{$keyword}%")
-              ->orWhere('nama_lengkap', 'like', "%{$keyword}%");
+              ->orWhere('nama_lengkap', 'like', "%{$keyword}%")
+              ->orWhereHas('keluarga', function($subQuery) use ($keyword) {
+                  $subQuery->where('no_kk', 'like', "%{$keyword}%")
+                           ->orWhere('alamat_kk', 'like', "%{$keyword}%");
+              });
         });
     }
 
