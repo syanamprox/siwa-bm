@@ -1615,6 +1615,9 @@ function renderKeluargaTable(keluargaList, pagination) {
                             <button type="button" class="btn btn-sm btn-info" onclick="viewKeluarga(${keluarga.id})" title="Lihat Detail">
                                 <i class="fas fa-eye"></i>
                             </button>
+                            <button type="button" class="btn btn-sm btn-success" onclick="manageIuran(${keluarga.id}, '${keluarga.no_kk}')" title="Kelola Iuran">
+                                <i class="fas fa-coins"></i>
+                            </button>
                             ${keluarga.foto_kk && keluarga.foto_kk_url && keluarga.foto_kk_url !== 'undefined' ? `
                                 <button type="button" class="btn btn-sm btn-success" onclick="viewFotoKk('${keluarga.foto_kk_url}', 'KK ${keluarga.no_kk}')" title="Lihat Foto KK">
                                     <i class="fas fa-camera"></i>
@@ -2120,6 +2123,11 @@ function displayValidationErrors(errors) {
         errorMessages.push(errors[field][0]);
     }
     showToast(errorMessages.join('<br>'), 'error');
+}
+
+function manageIuran(keluargaId, noKk) {
+    // Redirect to keluarga iuran management page
+    window.location.href = `/admin/keluarga/${keluargaId}/iuran`;
 }
 
 function viewFotoKk(fotoUrl, kkTitle) {

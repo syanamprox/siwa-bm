@@ -295,21 +295,53 @@ class JenisIuran extends Model
 // app/Http/Controllers/KeluargaIuranController.php
 class KeluargaIuranController extends Controller
 {
-    // Index: Show all iuran connections for a family
+    /**
+     * Display overview of all keluarga-iuran connections across all families
+     */
+    public function overview()
+    {
+        $connections = KeluargaIuran::with(['keluarga', 'jenisIuran'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(25);
+
+        $summary = [
+            'total_connections' => KeluargaIuran::count(),
+            'active_connections' => KeluargaIuran::where('status_aktif', true)->count(),
+            'families_with_iuran' => KeluargaIuran::pluck('keluarga_id')->unique()->count(),
+            'total_custom_nominals' => KeluargaIuran::whereNotNull('nominal_custom')->count()
+        ];
+
+        return view('admin.keluarga_iuran.overview', compact('connections', 'summary'));
+    }
+
+    /**
+     * Index: Show all iuran connections for a specific family
+     * URL: /admin/keluarga/{keluarga}/iuran
+     */
     public function index(Keluarga $keluarga)
     {
-        $connections = $keluarga->keluargaIuran()->with('jenisIuran')->get();
-        $availableIurans = JenisIuran::where('status_aktif', true)->get();
+        $connections = $keluarga->keluargaIuran()
+            ->with('jenisIuran')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $availableIurans = JenisIuran::where('is_aktif', true)
+            ->whereNotIn('id', $connections->pluck('jenis_iuran_id'))
+            ->get();
 
         return view('admin.keluarga_iuran.index', compact('keluarga', 'connections', 'availableIurans'));
     }
 
-    // Store: Connect family to iuran type
-    public function store(Request $request, Keluarga $keluarga)
+    /**
+     * Store: Connect family to iuran type (AJAX support)
+     * URL: POST /admin/keluarga/{keluarga}/iuran
+     */
+    public function store(Request $request, Keluarga $keluarga): JsonResponse
     {
         $validated = $request->validate([
             'jenis_iuran_id' => 'required|exists:jenis_iurans,id',
             'nominal_custom' => 'nullable|numeric|min:0',
+            'status_aktif' => 'boolean',
             'alasan_custom' => 'nullable|string|max:255'
         ]);
 
@@ -319,42 +351,101 @@ class KeluargaIuranController extends Controller
             ->exists();
 
         if ($exists) {
-            return back()->with('error', 'Koneksi iuran sudah ada');
+            return response()->json([
+                'success' => false,
+                'message' => 'Koneksi iuran sudah ada untuk keluarga ini'
+            ], 422);
         }
 
-        $keluarga->keluargaIuran()->attach($validated['jenis_iuran_id'], [
+        $connection = $keluarga->keluargaIuran()->create([
+            'jenis_iuran_id' => $validated['jenis_iuran_id'],
             'nominal_custom' => $validated['nominal_custom'],
-            'status_aktif' => true,
+            'status_aktif' => $validated['status_aktif'] ?? true,
             'alasan_custom' => $validated['alasan_custom'],
             'created_by' => auth()->id()
         ]);
 
-        return back()->with('success', 'Koneksi iuran berhasil ditambahkan');
+        return response()->json([
+            'success' => true,
+            'message' => 'Koneksi iuran berhasil ditambahkan',
+            'data' => $connection->load('jenisIuran')
+        ]);
     }
 
-    // Update: Modify connection
-    public function update(Request $request, Keluarga $keluarga, JenisIuran $jenisIuran)
+    /**
+     * Update: Modify connection (AJAX support)
+     * URL: PUT /admin/keluarga/{keluarga}/iuran/{jenisIuran}
+     */
+    public function update(Request $request, Keluarga $keluarga, JenisIuran $jenisIuran): JsonResponse
     {
+        $connection = $keluarga->keluargaIuran()
+            ->where('jenis_iuran_id', $jenisIuran->id)
+            ->firstOrFail();
+
         $validated = $request->validate([
             'nominal_custom' => 'nullable|numeric|min:0',
             'status_aktif' => 'required|boolean',
             'alasan_custom' => 'nullable|string|max:255'
         ]);
 
-        $keluarga->keluargaIuran()->updateExistingPivot($jenisIuran->id, [
-            'nominal_custom' => $validated['nominal_custom'],
-            'status_aktif' => $validated['status_aktif'],
-            'alasan_custom' => $validated['alasan_custom']
-        ]);
+        $connection->update($validated);
 
-        return back()->with('success', 'Koneksi iuran berhasil diperbarui');
+        return response()->json([
+            'success' => true,
+            'message' => 'Koneksi iuran berhasil diperbarui',
+            'data' => $connection->load('jenisIuran')
+        ]);
     }
 
-    // Destroy: Remove connection
-    public function destroy(Keluarga $keluarga, JenisIuran $jenisIuran)
+    /**
+     * Destroy: Remove connection (AJAX support)
+     * URL: DELETE /admin/keluarga/{keluarga}/iuran/{jenisIuran}
+     */
+    public function destroy(Keluarga $keluarga, JenisIuran $jenisIuran): JsonResponse
     {
-        $keluarga->keluargaIuran()->detach($jenisIuran->id);
-        return back()->with('success', 'Koneksi iuran berhasil dihapus');
+        $connection = $keluarga->keluargaIuran()
+            ->where('jenis_iuran_id', $jenisIuran->id)
+            ->firstOrFail();
+
+        $connection->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Koneksi iuran berhasil dihapus'
+        ]);
+    }
+
+    /**
+     * API: Get available jenis iuran for a family
+     */
+    public function getAvailableJenisIuran(Keluarga $keluarga): JsonResponse
+    {
+        $existingConnections = $keluarga->keluargaIuran()->pluck('jenis_iuran_id');
+
+        $availableIurans = JenisIuran::where('is_aktif', true)
+            ->whereNotIn('id', $existingConnections)
+            ->get(['id', 'nama', 'kode', 'jumlah', 'periode']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $availableIurans
+        ]);
+    }
+
+    /**
+     * API: Get active connections for a family
+     */
+    public function getActiveConnections(Keluarga $keluarga): JsonResponse
+    {
+        $connections = $keluarga->keluargaIuran()
+            ->where('status_aktif', true)
+            ->with('jenisIuran')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $connections
+        ]);
     }
 }
 ```
@@ -714,13 +805,20 @@ class PembayaranIuranController extends Controller
 
 #### **5.1 Add Iuran Routes**
 ```php
-// routes/web.php - Add these routes
+// routes/web.php - Add these routes in admin middleware group
 
-// Keluarga-Iuran Connection Management
-Route::get('/keluarga/{keluarga}/iuran', [KeluargaIuranController::class, 'index'])->name('keluarga.iuran.index');
-Route::post('/keluarga/{keluarga}/iuran', [KeluargaIuranController::class, 'store'])->name('keluarga.iuran.store');
-Route::put('/keluarga/{keluarga}/iuran/{jenisIuran}', [KeluargaIuranController::class, 'update'])->name('keluarga.iuran.update');
-Route::delete('/keluarga/{keluarga}/iuran/{jenisIuran}', [KeluargaIuranController::class, 'destroy'])->name('keluarga.iuran.destroy');
+// Keluarga-Iuran Overview (Global View)
+Route::get('/keluarga-iuran/overview', [KeluargaIuranController::class, 'overview'])->name('keluarga_iuran.overview');
+
+// Keluarga-Iuran Connection Management (Per-Keluarga CRUD)
+Route::get('/keluarga/{keluarga}/iuran', [KeluargaIuranController::class, 'index'])->name('keluarga_iuran.index');
+Route::post('/keluarga/{keluarga}/iuran', [KeluargaIuranController::class, 'store'])->name('keluarga_iuran.store');
+Route::put('/keluarga/{keluarga}/iuran/{jenisIuran}', [KeluargaIuranController::class, 'update'])->name('keluarga_iuran.update');
+Route::delete('/keluarga/{keluarga}/iuran/{jenisIuran}', [KeluargaIuranController::class, 'destroy'])->name('keluarga_iuran.destroy');
+
+// API Routes for Keluarga-Iuran operations
+Route::get('/api/keluarga-iuran/{keluargaId}/available', [KeluargaIuranController::class, 'getAvailableJenisIuran'])->name('api.keluarga_iuran.available');
+Route::get('/api/keluarga-iuran/{keluargaId}/active', [KeluargaIuranController::class, 'getActiveConnections'])->name('api.keluarga_iuran.active');
 
 // Iuran Generation
 Route::get('/iuran/generate', [IuranGenerationController::class, 'create'])->name('iuran.generate.create');
@@ -733,6 +831,22 @@ Route::post('/pembayaran-iuran', [PembayaranIuranController::class, 'store'])->n
 // Iuran Reports
 Route::get('/iuran/laporan', [IuranLaporanController::class, 'index'])->name('iuran.laporan');
 Route::get('/iuran/laporan/export', [IuranLaporanController::class, 'export'])->name('iuran.laporan.export');
+```
+
+#### **5.2 Navigation Integration**
+```php
+// Add navigation link to sidebar (resources/views/layouts/app.blade.php)
+<li class="nav-item">
+    <a class="nav-link" href="{{ route('keluarga_iuran.overview') }}">
+        <i class="fas fa-link"></i>
+        <span>Koneksi Iuran</span>
+    </a>
+</li>
+
+// Add "Kelola Iuran" button in keluarga module (resources/views/admin/keluarga/index.blade.php)
+<a href="{{ route('keluarga_iuran.index', $keluarga) }}" class="btn btn-outline-primary btn-sm">
+    <i class="fas fa-link me-1"></i>Kelola Iuran
+</a>
 ```
 
 ---
