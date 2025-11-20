@@ -8,15 +8,11 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
+                    <h5 class="mb-0 text-white">
                         <i class="fas fa-eye me-2"></i>
                         Detail Tagihan Iuran
                     </h5>
                     <div>
-                        <a href="{{ route('iuran.edit', $iuran->id) }}" class="btn btn-warning">
-                            <i class="fas fa-edit me-1"></i>
-                            Edit
-                        </a>
                         <a href="{{ route('iuran.index') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-1"></i>
                             Kembali
@@ -26,173 +22,223 @@
                 <div class="card-body">
                     <!-- Informasi Tagihan -->
                     <div class="row mb-4">
-                        <div class="col-md-6">
-                            <h6 class="text-muted">Informasi Tagihan</h6>
-                            <table class="table table-borderless">
-                                <tr>
-                                    <td style="width: 150px;"><strong>No. KK:</strong></td>
-                                    <td>{{ $iuran->keluarga->no_kk }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Kepala Keluarga:</strong></td>
-                                    <td>{{ $iuran->keluarga->kepalaKeluarga->nama_lengkap }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Jenis Iuran:</strong></td>
-                                    <td>{{ $iuran->jenisIuran->nama }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Periode:</strong></td>
-                                    <td>{{ \Carbon\Carbon::parse($iuran->periode_bulan . '-01')->format('F Y') }}</td>
-                                </tr>
-                            </table>
+                        <!-- Informasi Keluarga -->
+                        <div class="col-md-4">
+                            <div class="card border-left-primary">
+                                <div class="card-body">
+                                    <h6 class="text-primary">
+                                        <i class="fas fa-users me-2"></i>Informasi Keluarga
+                                    </h6>
+                                    <table class="table table-borderless table-sm">
+                                        <tr>
+                                            <td class="text-muted" style="width: 120px;">No. KK:</td>
+                                            <td><strong>{{ $iuran->keluarga->no_kk }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Kepala Keluarga:</td>
+                                            <td><strong>{{ $iuran->keluarga->kepalaKeluarga->nama_lengkap }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Jenis Iuran:</td>
+                                            <td><strong>{{ $iuran->jenisIuran->nama }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Periode:</td>
+                                            <td><strong>{{ \Carbon\Carbon::parse($iuran->periode_bulan . '-01')->format('F Y') }}</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <h6 class="text-muted">Status & Pembayaran</h6>
-                            <table class="table table-borderless">
-                                <tr>
-                                    <td style="width: 150px;"><strong>Status:</strong></td>
-                                    <td>
-                                        @switch($iuran->status)
-                                            @case('belum_bayar')
-                                                <span class="badge bg-warning">Belum Bayar</span>
-                                                @break
-                                            @case('sebagian')
-                                                <span class="badge bg-info">Sebagian</span>
-                                                @break
-                                            @case('lunas')
-                                                <span class="badge bg-success">Lunas</span>
-                                                @break
-                                            @case('batal')
-                                                <span class="badge bg-secondary">Batal</span>
-                                                @break
-                                        @endswitch
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Nominal:</strong></td>
-                                    <td>Rp {{ number_format($iuran->nominal, 0, ',', '.') }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Denda Terlambat:</strong></td>
-                                    <td>Rp {{ number_format($iuran->denda_terlambatan, 0, ',', '.') }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Jatuh Tempo:</strong></td>
-                                    <td>{{ $iuran->jatuh_tempo ? $iuran->jatuh_tempo->format('d M Y') : '-' }}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
 
-                    <!-- Total Tagihan -->
-                    <div class="alert alert-info mb-4">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <strong>Total Tagihan:</strong><br>
-                                <span class="h4">Rp {{ number_format($iuran->nominal + $iuran->denda_terlambatan, 0, ',', '.') }}</span>
+                        <!-- Status Tagihan -->
+                        <div class="col-md-4">
+                            <div class="card border-left-warning">
+                                <div class="card-body">
+                                    <h6 class="text-warning">
+                                        <i class="fas fa-info-circle me-2"></i>Status Tagihan
+                                    </h6>
+                                    <table class="table table-borderless table-sm">
+                                        <tr>
+                                            <td class="text-muted" style="width: 120px;">Status:</td>
+                                            <td>
+                                                @switch($iuran->status)
+                                                    @case('belum_bayar')
+                                                        <span class="badge bg-warning text-white">Belum Bayar</span>
+                                                        @break
+                                                    @case('sebagian')
+                                                        <span class="badge bg-info text-white">Sebagian</span>
+                                                        @break
+                                                    @case('lunas')
+                                                        <span class="badge bg-success text-white">Lunas</span>
+                                                        @break
+                                                    @case('batal')
+                                                        <span class="badge bg-secondary text-white">Batal</span>
+                                                        @break
+                                                @endswitch
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Nominal:</td>
+                                            <td><strong class="text-primary">Rp {{ number_format($iuran->nominal, 0, ',', '.') }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Denda Terlambat:</td>
+                                            <td><strong class="text-danger">Rp {{ number_format($iuran->denda_terlambatan, 0, ',', '.') }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Jatuh Tempo:</td>
+                                            <td><strong>{{ $iuran->jatuh_tempo ? $iuran->jatuh_tempo->format('d M Y') : '-' }}</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <strong>Dibayar:</strong><br>
-                                <span class="h4">Rp {{ number_format($iuran->total_pembayaran, 0, ',', '.') }}</span>
-                            </div>
-                            <div class="col-md-4">
-                                <strong>Sisa:</strong><br>
-                                <span class="h4">Rp {{ number_format(max(0, ($iuran->nominal + $iuran->denda_terlambatan) - $iuran->total_pembayaran), 0, ',', '.') }}</span>
+                        </div>
+
+                        <!-- Total Pembayaran -->
+                        <div class="col-md-4">
+                            <div class="card border-left-success">
+                                <div class="card-body">
+                                    <h6 class="text-success">
+                                        <i class="fas fa-calculator me-2"></i>Total Pembayaran
+                                    </h6>
+                                    <table class="table table-borderless table-sm">
+                                        <tr>
+                                            <td class="text-muted" style="width: 120px;">Total Tagihan:</td>
+                                            <td><strong class="h5 text-success">Rp {{ number_format($iuran->nominal + $iuran->denda_terlambatan, 0, ',', '.') }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Sudah Dibayar:</td>
+                                            <td><strong class="h5 text-primary">Rp {{ number_format($iuran->total_pembayaran, 0, ',', '.') }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Sisa Tagihan:</td>
+                                            <td><strong class="h5 text-danger">Rp {{ number_format(max(0, ($iuran->nominal + $iuran->denda_terlambatan) - $iuran->total_pembayaran), 0, ',', '.') }}</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Keterangan -->
                     @if($iuran->keterangan)
-                    <div class="mb-4">
-                        <h6 class="text-muted">Keterangan</h6>
-                        <p>{{ $iuran->keterangan }}</p>
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card border-left-info">
+                                <div class="card-body">
+                                    <h6 class="text-info">
+                                        <i class="fas fa-comment me-2"></i>Keterangan
+                                    </h6>
+                                    <p class="mb-0">{{ $iuran->keterangan }}</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     @endif
 
                     <!-- Informasi Pembuat -->
-                    <div class="row">
+                    <div class="row mb-4">
                         <div class="col-md-6">
-                            <h6 class="text-muted">Informasi Pembuat</h6>
-                            <table class="table table-borderless">
-                                <tr>
-                                    <td style="width: 150px;"><strong>Dibuat oleh:</strong></td>
-                                    <td>{{ $iuran->createdBy->name ?? 'System' }}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Tanggal Dibuat:</strong></td>
-                                    <td>{{ $iuran->created_at->format('d M Y H:i') }}</td>
-                                </tr>
-                            </table>
+                            <div class="card border-left-secondary">
+                                <div class="card-body">
+                                    <h6 class="text-secondary">
+                                        <i class="fas fa-user-plus me-2"></i>Informasi Pembuat
+                                    </h6>
+                                    <table class="table table-borderless table-sm">
+                                        <tr>
+                                            <td class="text-muted" style="width: 130px;">Dibuat oleh:</td>
+                                            <td><strong>{{ $iuran->createdBy->name ?? 'System' }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">Tanggal Dibuat:</td>
+                                            <td><strong>{{ $iuran->created_at->format('d M Y H:i') }}</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-muted">Informasi Update</h6>
-                            <table class="table table-borderless">
-                                <tr>
-                                    <td style="width: 150px;"><strong>Terakhir Update:</strong></td>
-                                    <td>{{ $iuran->updated_at->format('d M Y H:i') }}</td>
-                                </tr>
-                            </table>
+                            <div class="card border-left-dark">
+                                <div class="card-body">
+                                    <h6 class="text-dark">
+                                        <i class="fas fa-clock me-2"></i>Informasi Update
+                                    </h6>
+                                    <table class="table table-borderless table-sm">
+                                        <tr>
+                                            <td class="text-muted" style="width: 130px;">Terakhir Update:</td>
+                                            <td><strong>{{ $iuran->updated_at->format('d M Y H:i') }}</strong></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Riwayat Pembayaran -->
-                    @if($iuran->pembayaran && $iuran->pembayaran->count() > 0)
-                    <div class="mt-4">
-                        <h6 class="text-muted">Riwayat Pembayaran</h6>
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>No.</th>
-                                        <th>Tanggal</th>
-                                        <th>Jumlah</th>
-                                        <th>Metode</th>
-                                        <th>Keterangan</th>
-                                        <th>Dibuat oleh</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($iuran->pembayaran as $index => $pembayaran)
-                                    <tr>
-                                        <td>{{ $index + 1 }}</td>
-                                        <td>{{ $pembayaran->created_at->format('d M Y H:i') }}</td>
-                                        <td>Rp {{ number_format($pembayaran->jumlah_bayar, 0, ',', '.') }}</td>
-                                        <td>
-                                            @switch($pembayaran->metode_pembayaran)
-                                                @case('cash')
-                                                    <span class="badge bg-primary">Cash</span>
-                                                    @break
-                                                @case('transfer')
-                                                    <span class="badge bg-info">Transfer</span>
-                                                    @break
-                                                @case('qris')
-                                                    <span class="badge bg-success">QRIS</span>
-                                                    @break
-                                                @case('ewallet')
-                                                    <span class="badge bg-warning">E-Wallet</span>
-                                                    @break
-                                                @default
-                                                    <span class="badge bg-secondary">{{ $pembayaran->metode_pembayaran }}</span>
-                                            @endswitch
-                                        </td>
-                                        <td>{{ $pembayaran->keterangan ?? '-' }}</td>
-                                        <td>{{ $pembayaran->createdBy->name ?? 'System' }}</td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card border-left-success">
+                                <div class="card-header bg-success text-white">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-history me-2"></i>Riwayat Pembayaran
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    @if($iuran->pembayaran && $iuran->pembayaran->count() > 0)
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>No.</th>
+                                                        <th>Tanggal</th>
+                                                        <th>Jumlah</th>
+                                                        <th>Metode</th>
+                                                        <th>Keterangan</th>
+                                                        <th>Dibuat oleh</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach($iuran->pembayaran as $index => $pembayaran)
+                                                    <tr>
+                                                        <td><span class="badge bg-dark text-white">{{ $index + 1 }}</span></td>
+                                                        <td>{{ $pembayaran->created_at->format('d M Y H:i') }}</td>
+                                                        <td><strong class="text-success">Rp {{ number_format($pembayaran->jumlah_bayar, 0, ',', '.') }}</strong></td>
+                                                        <td>
+                                                            @switch($pembayaran->metode_pembayaran)
+                                                                @case('cash')
+                                                                    <span class="badge bg-primary text-white">Cash</span>
+                                                                    @break
+                                                                @case('transfer')
+                                                                    <span class="badge bg-info text-white">Transfer</span>
+                                                                    @break
+                                                                @case('qris')
+                                                                    <span class="badge bg-success text-white">QRIS</span>
+                                                                    @break
+                                                                @case('ewallet')
+                                                                    <span class="badge bg-warning text-white">E-Wallet</span>
+                                                                    @break
+                                                                @default
+                                                                    <span class="badge bg-secondary text-white">{{ $pembayaran->metode_pembayaran }}</span>
+                                                            @endswitch
+                                                        </td>
+                                                        <td>{{ $pembayaran->keterangan ?? '-' }}</td>
+                                                        <td><strong>{{ $pembayaran->createdBy->name ?? 'System' }}</strong></td>
+                                                    </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    @else
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            Belum ada pembayaran untuk tagihan ini.
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    @else
-                    <div class="mt-4">
-                        <div class="alert alert-warning">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Belum ada pembayaran untuk tagihan ini.
-                        </div>
-                    </div>
-                    @endif
                 </div>
             </div>
         </div>

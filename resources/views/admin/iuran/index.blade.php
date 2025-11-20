@@ -13,11 +13,11 @@
                         Manajemen Iuran
                     </h5>
                     <div>
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#generateBulkModal">
+                        <a href="{{ route('iuran.generate') }}" class="btn btn-success">
                             <i class="fas fa-magic me-1"></i>
-                            Generate Bulk
-                        </button>
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+                            Generate Iuran
+                        </a>
+                        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#createModal">
                             <i class="fas fa-plus me-1"></i>
                             Tambah Iuran
                         </button>
@@ -91,31 +91,21 @@
                     <!-- Search and Filter -->
                     <form id="filterForm" class="mb-3">
                         <div class="row g-3">
-                            <div class="col-md-4">
+                            <div class="col-md-5">
                                 <input type="text" class="form-control" id="search" name="search" placeholder="Cari No. KK, Nama, atau Jenis Iuran...">
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <input type="month" class="form-control" id="periode" name="periode" placeholder="Periode">
                             </div>
                             <div class="col-md-2">
-                                <select class="form-select" id="status" name="status">
+                                <select class="form-control" id="status" name="status">
                                     <option value="">Semua Status</option>
                                     <option value="belum_bayar">Belum Bayar</option>
-                                    <option value="sebagian">Sebagian</option>
                                     <option value="lunas">Lunas</option>
-                                    <option value="batal">Batal</option>
                                 </select>
                             </div>
                             <div class="col-md-2">
-                                <select class="form-select" id="keluarga_id" name="keluarga_id">
-                                    <option value="">Semua Keluarga</option>
-                                    @foreach($keluargas as $keluarga)
-                                        <option value="{{ $keluarga->id }}">{{ $keluarga->no_kk }} - {{ $keluarga->nama_kepala_keluarga }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <button type="button" class="btn btn-outline-secondary" id="resetFilters">
+                                <button type="button" class="btn btn-outline-secondary w-100" id="resetFilters">
                                     <i class="fas fa-redo me-1"></i>
                                     Reset
                                 </button>
@@ -162,8 +152,10 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Tambah Tagihan Iuran</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title">Tambah Iuran Manual</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <form id="createForm">
                 @csrf
@@ -171,17 +163,20 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Keluarga <span class="text-danger">*</span></label>
-                            <select class="form-select" id="kk_id" name="kk_id" required>
+                            <select class="form-control" id="kk_id" name="kk_id" required>
                                 <option value="">Pilih Keluarga</option>
                                 @foreach($keluargas as $keluarga)
-                                    <option value="{{ $keluarga->id }}" data-nomor="{{ $keluarga->no_kk }}">{{ $keluarga->no_kk }} - {{ $keluarga->nama_kepala_keluarga }}</option>
+                                    <option value="{{ $keluarga->id }}" data-nomor="{{ $keluarga->no_kk }}">{{ $keluarga->no_kk }} - {{ $keluarga->kepalaKeluarga->nama_lengkap ?? '-' }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Jenis Iuran <span class="text-danger">*</span></label>
-                            <select class="form-select" id="jenis_iuran_id" name="jenis_iuran_id" required>
-                                <option value="">Pilih Keluarga dulu</option>
+                            <select class="form-control" id="jenis_iuran_id" name="jenis_iuran_id" required>
+                                <option value="">Pilih Jenis Iuran</option>
+                                @foreach($jenisIurans as $jenisIuran)
+                                    <option value="{{ $jenisIuran->id }}">{{ $jenisIuran->nama }} - Rp {{ number_format($jenisIuran->jumlah, 0, ',', '.') }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -194,11 +189,8 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Status <span class="text-danger">*</span></label>
-                            <select class="form-select" id="status" name="status" required>
-                                <option value="belum_bayar">Belum Bayar</option>
-                                <option value="sebagian">Sebagian</option>
-                                <option value="lunas">Lunas</option>
-                                <option value="batal">Batal</option>
+                            <select class="form-control" id="status" name="status" required>
+                                <option value="belum_bayar" selected>Belum Bayar</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -212,7 +204,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save me-1"></i>
                         Simpan
@@ -223,78 +215,6 @@
     </div>
 </div>
 
-<!-- Edit Modal -->
-<div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Tagihan Iuran</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="editForm">
-                @csrf
-                @method('PUT')
-                <input type="hidden" id="edit_id" name="id">
-                <div class="modal-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Keluarga <span class="text-danger">*</span></label>
-                            <select class="form-select" id="edit_kk_id" name="kk_id" required>
-                                @foreach($keluargas as $keluarga)
-                                    <option value="{{ $keluarga->id }}">{{ $keluarga->no_kk }} - {{ $keluarga->nama_kepala_keluarga }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Jenis Iuran <span class="text-danger">*</span></label>
-                            <select class="form-select" id="edit_jenis_iuran_id" name="jenis_iuran_id" required>
-                                @foreach($jenisIurans as $jenisIuran)
-                                    <option value="{{ $jenisIuran->id }}">{{ $jenisIuran->nama }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Periode <span class="text-danger">*</span></label>
-                            <input type="month" class="form-control" id="edit_periode_bulan" name="periode_bulan" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Nominal <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="edit_nominal" name="nominal" min="0" step="0.01" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Status <span class="text-danger">*</span></label>
-                            <select class="form-select" id="edit_status" name="status" required>
-                                <option value="belum_bayar">Belum Bayar</option>
-                                <option value="sebagian">Sebagian</option>
-                                <option value="lunas">Lunas</option>
-                                <option value="batal">Batal</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Denda Terlambat</label>
-                            <input type="number" class="form-control" id="edit_denda_terlambatan" name="denda_terlambatan" min="0" step="0.01" value="0">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Jatuh Tempo</label>
-                            <input type="date" class="form-control" id="edit_jatuh_tempo" name="jatuh_tempo">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Keterangan</label>
-                            <textarea class="form-control" id="edit_keterangan" name="keterangan" rows="2"></textarea>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i>
-                        Update
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 <!-- Generate Bulk Modal -->
 <div class="modal fade" id="generateBulkModal" tabindex="-1">
@@ -302,7 +222,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Generate Tagihan Bulk</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <form id="generateBulkForm">
                 @csrf
@@ -334,7 +256,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-magic me-1"></i>
                         Generate
@@ -351,7 +273,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Hapus Tagihan Iuran</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body">
                 <p>Apakah Anda yakin ingin menghapus tagihan iuran ini?</p>
@@ -361,7 +285,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                 <form id="deleteForm" method="POST" style="display: inline;">
                     @csrf
                     @method('DELETE')
@@ -381,7 +305,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Proses Pembayaran Iuran</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <form id="paymentForm">
                 @csrf
@@ -399,56 +325,27 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
-                            <select class="form-select" id="metode_pembayaran" name="metode_pembayaran" required>
+                            <select class="form-control" id="metode_pembayaran" name="metode_pembayaran" required>
                                 <option value="">Pilih Metode</option>
-                                <option value="tunai">Tunai</option>
+                                <option value="cash" selected>Tunai</option>
                                 <option value="transfer">Transfer Bank</option>
                                 <option value="qris">QRIS</option>
-                                <option value="gopay">GoPay</option>
-                                <option value="ovo">OVO</option>
-                                <option value="dana">DANA</option>
-                                <option value="shopeepay">ShopeePay</option>
-                                <option value="linkaja">LinkAja</option>
-                                <option value="ewallet">E-Wallet Lainnya</option>
+                                <option value="ewallet">E-Wallet</option>
                             </select>
                         </div>
-                        <div class="col-md-6" id="bankDetailsGroup" style="display: none;">
-                            <label class="form-label">Nama Bank</label>
-                            <select class="form-select" id="nama_bank" name="nama_bank">
-                                <option value="">Pilih Bank</option>
-                                <option value="bca">BCA</option>
-                                <option value="bni">BNI</option>
-                                <option value="bri">BRI</option>
-                                <option value="mandiri">Mandiri</option>
-                                <option value="bsi">BSI</option>
-                                <option value="lainnya">Lainnya</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6" id="nomorRekeningGroup" style="display: none;">
-                            <label class="form-label">Nomor Rekening/Referensi</label>
-                            <input type="text" class="form-control" id="nomor_rekening" name="nomor_rekening">
-                        </div>
-                        <div class="col-md-6" id="namaPengirimGroup" style="display: none;">
-                            <label class="form-label">Nama Pengirim</label>
-                            <input type="text" class="form-control" id="nama_pengirim" name="nama_pengirim">
-                        </div>
-                        <div class="col-md-6" id="waktuPembayaranGroup" style="display: none;">
-                            <label class="form-label">Waktu Pembayaran</label>
-                            <input type="datetime-local" class="form-control" id="waktu_pembayaran" name="waktu_pembayaran">
+                        <div class="col-12">
+                            <label class="form-label">Nomor Referensi</label>
+                            <input type="text" class="form-control" id="nomor_referensi" name="nomor_referensi" placeholder="Nomor referensi transaksi (opsional)">
+                            <small class="text-muted">Isi dengan nomor referensi jika menggunakan transfer atau e-wallet</small>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Keterangan</label>
-                            <textarea class="form-control" id="keterangan_pembayaran" name="keterangan" rows="2" placeholder="Catatan tambahan (opsional)"></textarea>
-                        </div>
-                        <div class="col-12" id="buktiPembayaranGroup" style="display: none;">
-                            <label class="form-label">Bukti Pembayaran</label>
-                            <input type="file" class="form-control" id="bukti_pembayaran" name="bukti_pembayaran" accept="image/*,.pdf">
-                            <small class="text-muted">Format: JPG, PNG, atau PDF. Maksimal 2MB</small>
+                            <textarea class="form-control" id="keterangan" name="keterangan" rows="2" placeholder="Catatan tambahan (opsional)"></textarea>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Batal</button>
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-credit-card me-1"></i>
                         Proses Pembayaran
@@ -465,7 +362,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Riwayat Pembayaran</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body">
                 <div class="table-responsive">
@@ -475,10 +374,9 @@
                                 <th>Tanggal</th>
                                 <th>Jumlah</th>
                                 <th>Metode</th>
-                                <th>Status</th>
                                 <th>Dibuat Oleh</th>
                                 <th>Keterangan</th>
-                                <th>Bukti</th>
+                                <th>Nomor Referensi</th>
                             </tr>
                         </thead>
                         <tbody id="paymentHistoryTable">
@@ -490,6 +388,131 @@
         </div>
     </div>
 </div>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2"></i> Detail Tagihan Iuran
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Informasi Keluarga dan Tagihan -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card border-left-primary">
+                            <div class="card-body">
+                                <h6 class="text-primary">
+                                    <i class="fas fa-users me-2"></i> Informasi Keluarga
+                                </h6>
+                                <table class="table table-borderless table-sm">
+                                    <tr>
+                                        <td class="text-muted" style="width: 120px;">No. KK:</td>
+                                        <td><strong id="detail_no_kk">-</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Kepala Keluarga:</td>
+                                        <td><strong id="detail_kepala_keluarga">-</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Jenis Iuran:</td>
+                                        <td><strong id="detail_jenis_iuran">-</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Periode:</td>
+                                        <td><strong id="detail_periode">-</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-left-warning">
+                            <div class="card-body">
+                                <h6 class="text-warning">
+                                    <i class="fas fa-info-circle me-2"></i> Status & Tagihan
+                                </h6>
+                                <table class="table table-borderless table-sm">
+                                    <tr>
+                                        <td class="text-muted" style="width: 120px;">Status:</td>
+                                        <td id="detail_status">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Nominal:</td>
+                                        <td><strong class="text-primary" id="detail_nominal">-</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Denda:</td>
+                                        <td><strong class="text-danger" id="detail_denda">-</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Jatuh Tempo:</td>
+                                        <td><strong id="detail_jatuh_tempo">-</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+               
+                <!-- Keterangan -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card border-left-info">
+                            <div class="card-body">
+                                <h6 class="text-info">
+                                    <i class="fas fa-comment me-2"></i> Keterangan
+                                </h6>
+                                <p class="mb-0" id="detail_keterangan">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card border-left-secondary">
+                            <div class="card-body">
+                                <h6 class="text-secondary">
+                                    <i class="fas fa-user-plus me-2"></i> Informasi Pembuat
+                                </h6>
+                                <p class="mb-1"><small class="text-muted">Dibuat oleh:</small> <strong id="detail_dibuat_oleh">-</strong></p>
+                                <p class="mb-0"><small class="text-muted">Tanggal:</small> <strong id="detail_tanggal_dibuat">-</strong></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Riwayat Pembayaran -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-left-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-history me-2"></i> Riwayat Pembayaran
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="detail_payment_history">
+                                    <!-- Payment history will be loaded via AJAX -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('styles')
@@ -517,86 +540,364 @@
 
 @push('scripts')
 <script>
+
+// Global variable for tracking current page
+let currentPage = 1;
+
+// Global functions for onclick handlers (must be outside document.ready)
+function showPaymentModal(id) {
+    console.log('💳 showPaymentModal called with id:', id);
+
+    // Find the iuran data from the current page or fetch it
+    $.get('/admin/api/iuran/' + id)
+        .done(function(response) {
+            if (response.success) {
+                const iuran = response.data;
+
+                $('#payment_iuran_id').val(id);
+                $('#paymentInfo').html(`
+                    <strong>No. KK:</strong> ${iuran.keluarga?.no_kk || '-'}<br>
+                    <strong>Kepala Keluarga:</strong> ${iuran.keluarga?.kepala_keluarga?.nama_lengkap || '-'}<br>
+                    <strong>Jenis Iuran:</strong> ${iuran.jenis_iuran?.nama || '-'}<br>
+                    <strong>Periode:</strong> ${iuran.periode_bulan || '-'}<br>
+                    <strong>Total Tagihan:</strong> Rp ${Number(iuran.nominal || 0).toLocaleString('id-ID')}
+                `);
+
+                // Set max payment amount
+                const totalTagihan = iuran.nominal - (iuran.total_dibayar || 0);
+                $('#jumlah_bayar').attr('max', totalTagihan);
+                $('#jumlah_bayar').val(totalTagihan);
+
+                $('#paymentModal').modal('show');
+            } else {
+                alert('Gagal memuat data pembayaran');
+            }
+        })
+        .fail(function() {
+            alert('Error mengambil data iuran');
+        });
+}
+
+function showIuranDetail(id) {
+    console.log('👁️ showIuranDetail called with id:', id);
+
+    // Fetch iuran data and populate detail modal
+    $.get('/admin/api/iuran/' + id)
+        .done(function(response) {
+            if (response.success) {
+                const iuran = response.data;
+
+                // Populate detail modal
+                $('#detail_no_kk').text(iuran.keluarga?.no_kk || '-');
+                $('#detail_kepala_keluarga').text(iuran.keluarga?.kepala_keluarga?.nama_lengkap || '-');
+                $('#detail_jenis_iuran').text(iuran.jenis_iuran?.nama || '-');
+                $('#detail_periode').text(iuran.periode_bulan ? new Date(iuran.periode_bulan + '-01').toLocaleDateString('id-ID', { year: 'numeric', month: 'long' }) : '-');
+                $('#detail_nominal').text('Rp ' + (iuran.nominal ? parseInt(iuran.nominal).toLocaleString('id-ID') : '0'));
+                $('#detail_denda').text('Rp ' + (iuran.denda_terlambatan ? parseInt(iuran.denda_terlambatan).toLocaleString('id-ID') : '0'));
+                $('#detail_jatuh_tempo').text(iuran.jatuh_tempo ? new Date(iuran.jatuh_tempo).toLocaleDateString('id-ID') : '-');
+
+                // Status badge
+                const statusHtml = {
+                    'belum_bayar': '<span class="badge bg-warning text-white">Belum Bayar</span>',
+                    'sebagian': '<span class="badge bg-info text-white">Sebagian</span>',
+                    'lunas': '<span class="badge bg-success text-white">Lunas</span>',
+                    'batal': '<span class="badge bg-secondary text-white">Batal</span>'
+                };
+                $('#detail_status').html(statusHtml[iuran.status] || '-');
+
+                // Format keterangan untuk menampilkan format periode yang lebih baik
+                let formattedKeterangan = iuran.keterangan || '-';
+                if (formattedKeterangan.includes('Generate otomatis periode')) {
+                    // Replace format "2025-11" dengan "November 2025"
+                    formattedKeterangan = formattedKeterangan.replace(/(\d{4}-\d{2})/g, function(match) {
+                        const [year, month] = match.split('-');
+                        const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                        return months[parseInt(month) - 1] + ' ' + year;
+                    });
+                }
+                $('#detail_keterangan').text(formattedKeterangan);
+                $('#detail_dibuat_oleh').text(iuran.created_by?.name || 'System');
+                $('#detail_tanggal_dibuat').text(iuran.created_at ? new Date(iuran.created_at).toLocaleString('id-ID') : '-');
+
+                // Payment history
+                let paymentHistoryHtml = '';
+                if (iuran.pembayaran && iuran.pembayaran.length > 0) {
+                    paymentHistoryHtml = '<div class="table-responsive"><table class="table table-sm table-hover">';
+                    paymentHistoryHtml += '<thead><tr><th>No.</th><th>Tanggal</th><th>Jumlah</th><th>Metode</th><th>Keterangan</th></tr></thead><tbody>';
+
+                    iuran.pembayaran.forEach((payment, index) => {
+                        const metodeHtml = {
+                            'cash': '<span class="badge bg-primary text-white">Cash</span>',
+                            'transfer': '<span class="badge bg-info text-white">Transfer</span>',
+                            'qris': '<span class="badge bg-success text-white">QRIS</span>',
+                            'ewallet': '<span class="badge bg-warning text-white">E-Wallet</span>'
+                        };
+
+                        paymentHistoryHtml += '<tr>';
+                        paymentHistoryHtml += '<td><span class="badge bg-dark text-white">' + (index + 1) + '</span></td>';
+                        paymentHistoryHtml += '<td>' + new Date(payment.created_at).toLocaleString('id-ID') + '</td>';
+                        paymentHistoryHtml += '<td><strong class="text-success">Rp ' + parseInt(payment.jumlah_bayar).toLocaleString('id-ID') + '</strong></td>';
+                        paymentHistoryHtml += '<td>' + (metodeHtml[payment.metode_pembayaran] || payment.metode_pembayaran) + '</td>';
+                        paymentHistoryHtml += '<td>' + (payment.keterangan || '-') + '</td>';
+                        paymentHistoryHtml += '</tr>';
+                    });
+
+                    paymentHistoryHtml += '</tbody></table></div>';
+                } else {
+                    paymentHistoryHtml = '<div class="alert alert-warning"><i class="fas fa-info-circle me-2"></i>Belum ada pembayaran untuk tagihan ini.</div>';
+                }
+                $('#detail_payment_history').html(paymentHistoryHtml);
+
+                $('#detailModal').modal('show');
+            } else {
+                showToast('Gagal memuat detail iuran', 'error');
+            }
+        })
+        .fail(function() {
+            showToast('Gagal mengambil data iuran', 'error');
+        });
+}
+
+function confirmDelete(id) {
+    console.log('🗑️ confirmDelete called with id:', id);
+
+    // Set the delete form action
+    $('#deleteForm').attr('action', '/admin/api/iuran/' + id);
+
+    // Show delete confirmation modal
+    $('#deleteModal').modal('show');
+}
+
 $(document).ready(function() {
     let currentPage = 1;
     let currentUrl = '/admin/iuran';
 
     // Load statistics
     function loadStatistics() {
-        const periode = $('#periode').val() || new Date().toISOString().slice(0, 7);
+        console.log('📊 loadStatistics called');
 
-        $.get('/admin/api/iuran/statistics?periode=' + periode)
+        // Get same filter parameters as loadIuran
+        var formData = $('#filterForm').serializeArray();
+        var params = {};
+
+        $.each(formData, function(i, field) {
+            params[field.name] = field.value;
+        });
+
+        console.log('📊 Statistics filter params:', params);
+
+        // Build query string for statistics
+        var queryString = $.param(params);
+        var statisticsUrl = '/admin/api/iuran/statistics';
+        if (queryString) {
+            statisticsUrl += '?' + queryString;
+        }
+
+        console.log('📊 Statistics URL:', statisticsUrl);
+
+        $.get(statisticsUrl)
             .done(function(response) {
+                console.log('✅ Statistics success:', response);
                 if (response.success) {
                     const data = response.data;
                     $('#stats-total').text(data.total);
                     $('#stats-lunas').text(data.lunas);
                     $('#stats-belum').text(data.belum_bayar);
                     $('#stats-persentase').text(data.persentase_lunas + '%');
+
+                    // Debug: Log statistics update
+                    console.log('📊 Updated statistics:', {
+                        total: data.total,
+                        lunas: data.lunas,
+                        belum_bayar: data.belum_bayar,
+                        persentase: data.persentase_lunas + '%'
+                    });
                 }
-            });
-    }
-
-    // Load data table
-    function loadData(page = 1) {
-        const formData = $('#filterForm').serialize();
-        const url = `${currentUrl}?page=${page}&${formData}`;
-
-        $.get(url)
-            .done(function(html) {
-                // Extract table content and pagination from response
-                const tempDiv = $('<div>').html(html);
-                $('#dataTable').html(tempDiv.find('#dataTable').html());
-                $('#paginationInfo').html(tempDiv.find('#paginationInfo').html());
-                $('#paginationLinks').html(tempDiv.find('#paginationLinks').html());
-
-                // Update current page
-                currentPage = page;
-
-                // Re-bind event handlers for new content
-                bindEventHandlers();
             })
-            .fail(function() {
-                Swal.fire('Error', 'Gagal memuat data', 'error');
+            .fail(function(xhr) {
+                console.error('❌ Statistics error:', xhr);
             });
     }
+
+    // Load iuran data
+    function loadIuran(page = 1) {
+        console.log('🔄 loadIuran called with page:', page);
+        showLoading();
+
+        var formData = $('#filterForm').serializeArray();
+        var params = {};
+
+        $.each(formData, function(i, field) {
+            params[field.name] = field.value;
+        });
+
+        params.page = page;
+        console.log('📤 Request params:', params);
+
+        $.ajax({
+            url: '/admin/api/iuran',
+            type: 'GET',
+            data: params,
+            success: function(response) {
+                console.log('✅ AJAX Success:', response);
+                hideLoading();
+                if (response.success) {
+                    console.log('📊 Rendering table with data:', response.data);
+                    console.log('📄 Pagination info:', response.pagination);
+                    renderIuranTable(response.data);
+                    renderPagination(response.pagination);
+                } else {
+                    console.error('❌ Response error:', response.message);
+                    if (typeof showToast !== 'undefined') {
+                        showToast(response.message, 'error');
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                }
+            },
+            error: function(xhr) {
+                console.error('❌ AJAX Error:', xhr);
+                console.log('Status:', xhr.status);
+                console.log('Response Text:', xhr.responseText);
+                console.log('Response JSON:', xhr.responseJSON);
+
+                hideLoading();
+                var message = xhr.responseJSON?.message || 'Gagal memuat data iuran';
+                console.log('📝 Error message:', message);
+
+                if (typeof showToast !== 'undefined') {
+                    showToast(message, 'error');
+                } else {
+                    alert('Error: ' + message);
+                }
+            }
+        });
+    }
+
+    // Render iuran table
+    function renderIuranTable(iuranList) {
+        console.log('🎨 renderIuranTable called with:', iuranList);
+        var html = '';
+        var no = 1;
+
+        if (iuranList.length === 0) {
+            console.log('📭 No data available');
+            html = '<tr><td colspan="10" class="text-center text-muted">Tidak ada data iuran</td></tr>';
+        } else {
+            console.log(`📊 Rendering ${iuranList.length} items`);
+            iuranList.forEach(function(iuran) {
+                var statusBadge = '';
+                switch(iuran.status) {
+                    case 'belum_bayar':
+                        statusBadge = '<span class="badge badge-danger">Belum Bayar</span>';
+                        break;
+                    case 'sebagian':
+                        statusBadge = '<span class="badge badge-warning">Sebagian</span>';
+                        break;
+                    case 'lunas':
+                        statusBadge = '<span class="badge badge-success">Lunas</span>';
+                        break;
+                    case 'batal':
+                        statusBadge = '<span class="badge badge-secondary">Batal</span>';
+                        break;
+                    default:
+                        statusBadge = '<span class="badge badge-secondary">' + iuran.status + '</span>';
+                }
+
+                // Format periode (F Y)
+                var periodeFormatted = '-';
+                if (iuran.periode_bulan) {
+                    var [year, month] = iuran.periode_bulan.split('-');
+                    var dateObj = new Date(year, month - 1);
+                    periodeFormatted = dateObj.toLocaleDateString('id-ID', {
+                        year: 'numeric',
+                        month: 'long'
+                    });
+                }
+
+                // Format jatuh tempo (d F Y)
+                var jatuhTempo = '-';
+                if (iuran.jatuh_tempo) {
+                    var date = new Date(iuran.jatuh_tempo);
+                    jatuhTempo = date.toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        year: 'numeric',
+                        month: 'long'
+                    });
+                }
+
+                html += `
+                    <tr>
+                        <td>${no++}</td>
+                        <td>${periodeFormatted}</td>
+                        <td><code>${iuran.keluarga?.no_kk || '-'}</code></td>
+                        <td>${iuran.keluarga?.kepala_keluarga?.nama_lengkap || '-'}</td>
+                        <td>${iuran.jenis_iuran?.nama || '-'}</td>
+                        <td>Rp ${Number(iuran.nominal || 0).toLocaleString('id-ID')}</td>
+                        <td>${statusBadge}</td>
+                        <td>${jatuhTempo}</td>
+                        <td>
+                            ${iuran.status === 'lunas' ?
+                                `<button type="button" class="btn btn-sm btn-success" disabled title="Sudah Lunas">
+                                    <i class="fas fa-check-circle"></i>
+                                </button>` :
+                                `<button type="button" class="btn btn-sm btn-info" onclick="showPaymentModal(${iuran.id})" title="Bayar">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </button>`
+                            }
+                        </td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-info" onclick="showIuranDetail(${iuran.id})" title="Lihat Detail">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(${iuran.id})" title="Hapus">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        console.log('💾 Updating #dataTable with HTML');
+        $('#dataTable').html(html);
+        console.log('✅ Table render completed');
+    }
+
+    // Render pagination
+    function renderPagination(pagination) {
+        var html = '';
+
+        // Previous button
+        if (pagination.current_page > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="loadIuran(${pagination.current_page - 1})">Previous</a></li>`;
+        }
+
+        // Page numbers
+        for (var i = 1; i <= pagination.last_page; i++) {
+            var active = i === pagination.current_page ? 'active' : '';
+            html += `<li class="page-item ${active}"><a class="page-link" href="#" onclick="loadIuran(${i})">${i}</a></li>`;
+        }
+
+        // Next button
+        if (pagination.current_page < pagination.last_page) {
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="loadIuran(${pagination.current_page + 1})">Next</a></li>`;
+        }
+
+        $('#paginationLinks').html(html);
+        $('#paginationInfo').html(`Showing ${pagination.from || 0} to ${pagination.to || 0} of ${pagination.total || 0} entries`);
+    }
+
 
     // Bind event handlers
     function bindEventHandlers() {
-        // Edit button
-        $('.edit-btn').off('click').on('click', function() {
-            const id = $(this).data('id');
-            $.get(`/admin/iuran/${id}/edit`)
-                .done(function(response) {
-                    if (response.success) {
-                        const data = response.data;
-                        $('#edit_id').val(data.id);
-                        $('#edit_kk_id').val(data.kk_id);
-                        $('#edit_jenis_iuran_id').val(data.jenis_iuran_id);
-                        $('#edit_periode_bulan').val(data.periode_bulan);
-                        $('#edit_nominal').val(data.nominal);
-                        $('#edit_status').val(data.status);
-                        $('#edit_denda_terlambatan').val(data.denda_terlambatan);
-                        $('#edit_jatuh_tempo').val(data.jatuh_tempo);
-                        $('#edit_keterangan').val(data.keterangan);
-                        $('#editModal').modal('show');
-                    } else {
-                        Swal.fire('Error', response.message, 'error');
-                    }
-                });
-        });
-
         // Delete button
         $('.delete-btn').off('click').on('click', function() {
             const id = $(this).data('id');
             $('#deleteForm').attr('action', `/admin/iuran/${id}`);
             $('#deleteModal').modal('show');
-        });
-
-        // Detail button
-        $('.detail-btn').off('click').on('click', function() {
-            const id = $(this).data('id');
-            window.location.href = `/admin/iuran/${id}`;
         });
 
         // Payment button
@@ -630,11 +931,11 @@ $(document).ready(function() {
 
     // Auto-trigger search with debounce
     let searchTimeout;
-    $('#search, #periode, #status, #keluarga_id').on('input change', function() {
+    $('#search, #periode, #status').on('input change', function() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             loadStatistics();
-            loadData(1);
+            loadIuran(1);
         }, 500);
     });
 
@@ -642,27 +943,10 @@ $(document).ready(function() {
     $('#resetFilters').on('click', function() {
         $('#filterForm')[0].reset();
         loadStatistics();
-        loadData(1);
+        loadIuran(1);
     });
 
-    // Load jenis iuran when keluarga selected
-    $('#kk_id').on('change', function() {
-        const keluargaId = $(this).val();
-        if (keluargaId) {
-            $.get(`/admin/api/iuran/keluarga/${keluargaId}/jenis-iuran`)
-                .done(function(response) {
-                    if (response.success) {
-                        const select = $('#jenis_iuran_id');
-                        select.html('<option value="">Pilih Jenis Iuran</option>');
-                        response.data.forEach(function(jenis) {
-                            select.append(`<option value="${jenis.id}">${jenis.nama} - Rp ${Number(jenis.effective_nominal || jenis.jumlah).toLocaleString('id-ID')}</option>`);
-                        });
-                    }
-                });
-        } else {
-            $('#jenis_iuran_id').html('<option value="">Pilih Keluarga dulu</option>');
-        }
-    });
+    // Removed jenis iuran loading - now using server-side rendered options
 
     // Create form submission
     $('#createForm').on('submit', function(e) {
@@ -675,10 +959,10 @@ $(document).ready(function() {
                     $('#createModal').modal('hide');
                     $('#createForm')[0].reset();
                     loadStatistics();
-                    loadData(currentPage);
-                    Swal.fire('Success', response.message, 'success');
+                    loadIuran(currentPage);
+                    showToast(response.message, 'success');
                 } else {
-                    Swal.fire('Error', response.message, 'error');
+                    showToast(response.message, 'error');
                 }
             })
             .fail(function(xhr) {
@@ -688,48 +972,14 @@ $(document).ready(function() {
                     for (const field in errors) {
                         errorMessage += `${errors[field][0]}\n`;
                     }
-                    Swal.fire('Validation Error', errorMessage, 'error');
+                    showToast(errorMessage, 'error');
                 } else {
-                    Swal.fire('Error', 'Terjadi kesalahan', 'error');
+                    showToast('Terjadi kesalahan', 'error');
                 }
             });
     });
 
-    // Edit form submission
-    $('#editForm').on('submit', function(e) {
-        e.preventDefault();
-        const id = $('#edit_id').val();
-        const formData = $(this).serialize();
-
-        $.ajax({
-            url: `/admin/iuran/${id}`,
-            method: 'PUT',
-            data: formData
-        })
-            .done(function(response) {
-                if (response.success) {
-                    $('#editModal').modal('hide');
-                    loadStatistics();
-                    loadData(currentPage);
-                    Swal.fire('Success', response.message, 'success');
-                } else {
-                    Swal.fire('Error', response.message, 'error');
-                }
-            })
-            .fail(function(xhr) {
-                const errors = xhr.responseJSON?.errors;
-                if (errors) {
-                    let errorMessage = '';
-                    for (const field in errors) {
-                        errorMessage += `${errors[field][0]}\n`;
-                    }
-                    Swal.fire('Validation Error', errorMessage, 'error');
-                } else {
-                    Swal.fire('Error', 'Terjadi kesalahan', 'error');
-                }
-            });
-    });
-
+    
     // Generate bulk form submission
     $('#generateBulkForm').on('submit', function(e) {
         e.preventDefault();
@@ -741,10 +991,10 @@ $(document).ready(function() {
                     $('#generateBulkModal').modal('hide');
                     $('#generateBulkForm')[0].reset();
                     loadStatistics();
-                    loadData(currentPage);
-                    Swal.fire('Success', response.message, 'success');
+                    loadIuran(currentPage);
+                    showToast(response.message, 'success');
                 } else {
-                    Swal.fire('Error', response.message, 'error');
+                    showToast(response.message, 'error');
                 }
             })
             .fail(function(xhr) {
@@ -754,9 +1004,9 @@ $(document).ready(function() {
                     for (const field in errors) {
                         errorMessage += `${errors[field][0]}\n`;
                     }
-                    Swal.fire('Validation Error', errorMessage, 'error');
+                    showToast(errorMessage, 'error');
                 } else {
-                    Swal.fire('Error', 'Terjadi kesalahan', 'error');
+                    showToast('Terjadi kesalahan', 'error');
                 }
             });
     });
@@ -775,14 +1025,14 @@ $(document).ready(function() {
                 if (response.success) {
                     $('#deleteModal').modal('hide');
                     loadStatistics();
-                    loadData(currentPage);
-                    Swal.fire('Success', response.message, 'success');
+                    loadIuran(currentPage);
+                    showToast(response.message, 'success');
                 } else {
-                    Swal.fire('Error', response.message, 'error');
+                    showToast(response.message, 'error');
                 }
             })
             .fail(function(xhr) {
-                Swal.fire('Error', xhr.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                showToast(xhr.responseJSON?.message || 'Terjadi kesalahan', 'error');
             });
     });
 
@@ -795,25 +1045,19 @@ $(document).ready(function() {
                     tbody.empty();
 
                     if (response.data.length === 0) {
-                        tbody.append('<tr><td colspan="7" class="text-center">Belum ada pembayaran</td></tr>');
+                        tbody.append('<tr><td colspan="6" class="text-center">Belum ada pembayaran</td></tr>');
                         return;
                     }
 
                     response.data.forEach(function(payment) {
-                        const statusBadge = getStatusBadge(payment.status);
-                        const buktiHtml = payment.bukti_pembayaran
-                            ? `<a href="/storage/pembayaran/${payment.bukti_pembayaran}" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>`
-                            : '-';
-
                         const row = `
                             <tr>
                                 <td>${formatDateTime(payment.created_at)}</td>
-                                <td>Rp ${Number(payment.jumlah).toLocaleString('id-ID')}</td>
+                                <td><strong class="text-success">Rp ${Number(payment.jumlah_bayar).toLocaleString('id-ID')}</strong></td>
                                 <td>${getPaymentMethodLabel(payment.metode_pembayaran)}</td>
-                                <td>${statusBadge}</td>
                                 <td>${payment.created_by_name || '-'}</td>
                                 <td>${payment.keterangan || '-'}</td>
-                                <td>${buktiHtml}</td>
+                                <td><code>${payment.nomor_referensi || '-'}</code></td>
                             </tr>
                         `;
                         tbody.append(row);
@@ -821,7 +1065,7 @@ $(document).ready(function() {
                 }
             })
             .fail(function() {
-                Swal.fire('Error', 'Gagal memuat riwayat pembayaran', 'error');
+                showToast('Gagal memuat riwayat pembayaran', 'error');
             });
     }
 
@@ -829,15 +1073,11 @@ $(document).ready(function() {
     $('#metode_pembayaran').on('change', function() {
         const method = $(this).val();
 
-        // Hide all optional fields
-        $('#bankDetailsGroup, #nomorRekeningGroup, #namaPengirimGroup, #waktuPembayaranGroup, #buktiPembayaranGroup').hide();
-
-        // Show fields based on payment method
-        if (method === 'transfer') {
-            $('#bankDetailsGroup, #nomorRekeningGroup, #namaPengirimGroup, #waktuPembayaranGroup, #buktiPembayaranGroup').show();
-            $('#waktu_pembayaran').val(new Date().toISOString().slice(0, 16));
-        } else if (['qris', 'gopay', 'ovo', 'dana', 'shopeepay', 'linkaja', 'ewallet'].includes(method)) {
-            $('#nomorRekeningGroup, #buktiPembayaranGroup').show();
+        // Suggest filling nomor_referensi for non-cash payments
+        if (method !== 'cash') {
+            $('#nomor_referensi').attr('placeholder', 'Nomor referensi wajib diisi untuk ' + method);
+        } else {
+            $('#nomor_referensi').attr('placeholder', 'Nomor referensi transaksi (opsional)');
         }
     });
 
@@ -845,25 +1085,22 @@ $(document).ready(function() {
     $('#paymentForm').on('submit', function(e) {
         e.preventDefault();
 
-        const formData = new FormData(this);
+        const formData = $(this).serialize();
 
-        // AJAX form submission with file support
+        // AJAX form submission
         $.ajax({
             url: '/admin/api/iuran/payment',
             method: 'POST',
             data: formData,
-            processData: false,
-            contentType: false,
             success: function(response) {
                 if (response.success) {
                     $('#paymentModal').modal('hide');
                     $('#paymentForm')[0].reset();
-                    $('#bankDetailsGroup, #nomorRekeningGroup, #namaPengirimGroup, #waktuPembayaranGroup, #buktiPembayaranGroup').hide();
                     loadStatistics();
-                    loadData(currentPage);
-                    Swal.fire('Success', response.message, 'success');
+                    loadIuran(currentPage);
+                    showToast(response.message, 'success');
                 } else {
-                    Swal.fire('Error', response.message, 'error');
+                    showToast(response.message, 'error');
                 }
             },
             error: function(xhr) {
@@ -873,9 +1110,9 @@ $(document).ready(function() {
                     for (const field in errors) {
                         errorMessage += `${errors[field][0]}\n`;
                     }
-                    Swal.fire('Validation Error', errorMessage, 'error');
+                    showToast(errorMessage, 'error');
                 } else {
-                    Swal.fire('Error', xhr.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                    showToast(xhr.responseJSON?.message || 'Terjadi kesalahan', 'error');
                 }
             }
         });
@@ -884,36 +1121,40 @@ $(document).ready(function() {
     // Utility functions
     function getPaymentMethodLabel(method) {
         const labels = {
-            'tunai': 'Tunai',
+            'cash': 'Tunai',
             'transfer': 'Transfer Bank',
             'qris': 'QRIS',
-            'gopay': 'GoPay',
-            'ovo': 'OVO',
-            'dana': 'DANA',
-            'shopeepay': 'ShopeePay',
-            'linkaja': 'LinkAja',
             'ewallet': 'E-Wallet'
         };
         return labels[method] || method;
     }
 
-    function getStatusBadge(status) {
-        const badges = {
-            'pending': '<span class="badge bg-warning">Pending</span>',
-            'verified': '<span class="badge bg-success">Terverifikasi</span>',
-            'rejected': '<span class="badge bg-danger">Ditolak</span>'
-        };
-        return badges[status] || status;
-    }
-
+    
     function formatDateTime(dateString) {
         const date = new Date(dateString);
         return date.toLocaleString('id-ID');
     }
 
+    // Event handlers for filters
+    console.log('🎯 Setting up filter event handlers');
+    $('#periode, #status').on('change', function() {
+        console.log('🔄 Filter changed, reloading data');
+        loadStatistics();
+        loadIuran();
+    });
+
+    // Reset filters
+    $('#resetFilters').on('click', function() {
+        console.log('🔄 Reset filters clicked');
+        $('#filterForm')[0].reset();
+        loadStatistics();
+        loadIuran();
+    });
+
     // Initial load
+    console.log('🚀 Starting initial data load');
     loadStatistics();
-    loadData(1);
+    loadIuran();
 });
 </script>
 @endpush

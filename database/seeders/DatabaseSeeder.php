@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             WargaSeeder::class,
             PengaturanSistemSeeder::class,
             JenisIuranSeeder::class,
+            KK1IuranConnectionSeeder::class,
         ]);
     }
 }

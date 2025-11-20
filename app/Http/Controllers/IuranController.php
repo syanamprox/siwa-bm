@@ -70,8 +70,8 @@ class IuranController extends Controller
         $iurans = $query->paginate(15);
 
         // Get data for filters
-        $keluargas = Keluarga::orderBy('no_kk')->get();
-        $jenisIurans = JenisIuran::orderBy('nama')->get();
+        $keluargas = Keluarga::with(['kepalaKeluarga'])->orderBy('no_kk')->get();
+        $jenisIurans = JenisIuran::where('is_aktif', true)->orderBy('nama')->get();
         $periodes = Iuran::select('periode_bulan')
             ->distinct()
             ->orderBy('periode_bulan', 'desc')
@@ -86,20 +86,150 @@ class IuranController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
+     * API: Get iuran data for AJAX loading
      */
-    public function create()
+    public function apiIndex(Request $request): JsonResponse
     {
-        $keluargas = Keluarga::with(['kepalaKeluarga', 'jenisIuran'])
-            ->where('status_keluarga', 'Aktif')
-            ->orderBy('no_kk')
-            ->get();
+        $query = Iuran::with([
+                'keluarga.kepalaKeluarga',
+                'jenisIuran',
+                'createdBy',
+                'pembayaran'
+            ])
+            ->orderBy('periode_bulan', 'desc')
+            ->orderBy('jenis_iuran_id');
 
-        $jenisIurans = JenisIuran::where('is_aktif', true)
-            ->orderBy('nama')
-            ->get();
+        // Search
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('keluarga', function ($keluarga) use ($search) {
+                    $keluarga->where('no_kk', 'like', "%{$search}%")
+                            ->orWhereHas('kepalaKeluarga', function ($kepala) use ($search) {
+                                $kepala->where('nama_lengkap', 'like', "%{$search}%");
+                            });
+                })
+                ->orWhereHas('jenisIuran', function ($jenis) use ($search) {
+                    $jenis->where('nama', 'like', "%{$search}%");
+                })
+                ->orWhere('periode_bulan', 'like', "%{$search}%");
+            });
+        }
 
-        return view('admin.iuran.create', compact('keluargas', 'jenisIurans'));
+        // Filter by periode
+        if ($request->has('periode') && $request->periode != '') {
+            $query->where('periode_bulan', $request->periode);
+        }
+
+        // Filter by status
+        if ($request->has('status') && $request->status != '') {
+            $query->where('status', $request->status);
+        }
+
+        // Filter by keluarga
+        if ($request->has('keluarga_id') && $request->keluarga_id != '') {
+            $query->where('kk_id', $request->keluarga_id);
+        }
+
+        // Filter by jenis iuran
+        if ($request->has('jenis_iuran_id') && $request->jenis_iuran_id != '') {
+            $query->where('jenis_iuran_id', $request->jenis_iuran_id);
+        }
+
+        // Debug: Get total count for comparison
+        $totalCount = Iuran::count();
+
+        $iurans = $query->paginate(15);
+
+        return response()->json([
+            'success' => true,
+            'data' => $iurans->items(),
+            'pagination' => [
+                'current_page' => $iurans->currentPage(),
+                'last_page' => $iurans->lastPage(),
+                'per_page' => $iurans->perPage(),
+                'total' => $iurans->total(),
+                'from' => $iurans->firstItem(),
+                'to' => $iurans->lastItem(),
+            ],
+            'debug' => [
+                'total_all_iurans' => $totalCount,
+                'filtered_count' => $iurans->total(),
+                'has_filters' => [
+                    'search' => $request->has('search') && $request->search != '',
+                    'periode' => $request->has('periode') && $request->periode != '',
+                    'status' => $request->has('status') && $request->status != '',
+                    'keluarga_id' => $request->has('keluarga_id') && $request->keluarga_id != '',
+                    'jenis_iuran_id' => $request->has('jenis_iuran_id') && $request->jenis_iuran_id != ''
+                ],
+                'filter_values' => [
+                    'search' => $request->search,
+                    'periode' => $request->periode,
+                    'status' => $request->status,
+                    'keluarga_id' => $request->keluarga_id,
+                    'jenis_iuran_id' => $request->jenis_iuran_id
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * API: Get single iuran for modal operations
+     */
+    public function apiShow(Iuran $iuran): JsonResponse
+    {
+        $iuran->load([
+            'keluarga.kepalaKeluarga',
+            'jenisIuran',
+            'createdBy',
+            'pembayaran'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $iuran
+        ]);
+    }
+
+    /**
+     * API: Get iuran data for editing
+     */
+    public function apiEdit(Iuran $iuran): JsonResponse
+    {
+        $iuran->load(['keluarga', 'jenisIuran']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $iuran
+        ]);
+    }
+
+    /**
+     * API: Delete iuran
+     */
+    public function apiDestroy(Iuran $iuran): JsonResponse
+    {
+        try {
+            // Check if iuran has payments
+            if ($iuran->pembayaran()->count() > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak dapat menghapus iuran yang sudah memiliki pembayaran'
+                ], 422);
+            }
+
+            $iuran->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data iuran berhasil dihapus'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus data iuran: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -344,7 +474,7 @@ class IuranController extends Controller
                                 'nominal' => $keluargaIuran?->nominal_custom ?? $jenisIuran->jumlah,
                                 'status' => 'belum_bayar',
                                 'jatuh_tempo' => Carbon::parse($periode . '-01')->endOfMonth(),
-                                'keterangan' => "Generate otomatis periode {$periode}",
+                                'keterangan' => "Generate otomatis periode " . Carbon::parse($periode . '-01')->format('F Y'),
                                 'created_by' => auth()->id(),
                             ]);
                             $createdCount++;
@@ -375,7 +505,10 @@ class IuranController extends Controller
     {
         try {
             $keluarga = Keluarga::findOrFail($keluargaId);
-            $jenisIurans = $keluarga->jenisIuran()->wherePivot('status_aktif', true)->get();
+            $jenisIurans = $keluarga->jenisIuran()
+                ->wherePivot('status_aktif', true)
+                ->where('jenis_iurans.is_aktif', true)
+                ->get();
 
             return response()->json([
                 'success' => true,
@@ -396,15 +529,61 @@ class IuranController extends Controller
     public function statistics(Request $request): JsonResponse
     {
         try {
-            $periode = $request->periode ?? date('Y-m');
+            // Build query same as apiIndex
+            $query = Iuran::with([
+                'keluarga.kepalaKeluarga',
+                'jenisIuran',
+                'createdBy',
+                'pembayaran'
+            ]);
 
-            $total = Iuran::where('periode_bulan', $periode)->count();
-            $belumBayar = Iuran::where('periode_bulan', $periode)->where('status', 'belum_bayar')->count();
-            $sebagian = Iuran::where('periode_bulan', $periode)->where('status', 'sebagian')->count();
-            $lunas = Iuran::where('periode_bulan', $periode)->where('status', 'lunas')->count();
+            // Apply same filters as apiIndex
+            if ($request->has('search') && $request->search != '') {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('keluarga', function ($keluarga) use ($search) {
+                        $keluarga->where('no_kk', 'like', "%{$search}%")
+                                ->orWhereHas('kepalaKeluarga', function ($kepala) use ($search) {
+                                    $kepala->where('nama_lengkap', 'like', "%{$search}%");
+                                });
+                    })
+                    ->orWhereHas('jenisIuran', function ($jenis) use ($search) {
+                        $jenis->where('nama', 'like', "%{$search}%");
+                    })
+                    ->orWhere('periode_bulan', 'like', "%{$search}%");
+                });
+            }
 
-            $totalNominal = Iuran::where('periode_bulan', $periode)->sum('nominal');
-            $totalDenda = Iuran::where('periode_bulan', $periode)->sum('denda_terlambatan');
+            // Filter by periode
+            if ($request->has('periode') && $request->periode != '') {
+                $query->where('periode_bulan', $request->periode);
+            }
+
+            // Filter by status
+            if ($request->has('status') && $request->status != '') {
+                $query->where('status', $request->status);
+            }
+
+            // Filter by keluarga
+            if ($request->has('keluarga_id') && $request->keluarga_id != '') {
+                $query->where('kk_id', $request->keluarga_id);
+            }
+
+            // Filter by jenis iuran
+            if ($request->has('jenis_iuran_id') && $request->jenis_iuran_id != '') {
+                $query->where('jenis_iuran_id', $request->jenis_iuran_id);
+            }
+
+            $filteredIurans = $query->get();
+
+            // Calculate statistics
+            $total = $filteredIurans->count();
+            $belumBayar = $filteredIurans->where('status', 'belum_bayar')->count();
+            $sebagian = $filteredIurans->where('status', 'sebagian')->count();
+            $lunas = $filteredIurans->where('status', 'lunas')->count();
+
+            $totalNominal = $filteredIurans->sum('nominal');
+            $totalDenda = $filteredIurans->sum('denda_terlambatan');
 
             return response()->json([
                 'success' => true,
@@ -416,6 +595,24 @@ class IuranController extends Controller
                     'total_nominal' => $totalNominal,
                     'total_denda' => $totalDenda,
                     'persentase_lunas' => $total > 0 ? round(($lunas / $total) * 100, 2) : 0,
+                    'debug' => [
+                        'total_all_iurans' => Iuran::count(),
+                        'filtered_count' => $filteredIurans->count(),
+                        'has_filters' => [
+                            'search' => $request->has('search') && $request->search != '',
+                            'periode' => $request->has('periode') && $request->periode != '',
+                            'status' => $request->has('status') && $request->status != '',
+                            'keluarga_id' => $request->has('keluarga_id') && $request->keluarga_id != '',
+                            'jenis_iuran_id' => $request->has('jenis_iuran_id') && $request->jenis_iuran_id != ''
+                        ],
+                        'filter_values' => [
+                            'search' => $request->search,
+                            'periode' => $request->periode,
+                            'status' => $request->status,
+                            'keluarga_id' => $request->keluarga_id,
+                            'jenis_iuran_id' => $request->jenis_iuran_id
+                        ]
+                    ]
                 ]
             ]);
 
@@ -435,13 +632,8 @@ class IuranController extends Controller
         $validator = Validator::make($request->all(), [
             'iuran_id' => 'required|exists:iurans,id',
             'jumlah_bayar' => 'required|numeric|min:0',
-            'metode_pembayaran' => 'required|in:tunai,transfer,qris,gopay,ovo,dana,shopeepay,linkaja,ewallet',
-            'nama_bank' => 'required_if:metode_pembayaran,transfer',
-            'nomor_rekening' => 'required_if:metode_pembayaran,transfer',
-            'nama_pengirim' => 'required_if:metode_pembayaran,transfer',
-            'waktu_pembayaran' => 'required_if:metode_pembayaran,transfer',
-            'keterangan' => 'nullable|string|max:255',
-            'bukti_pembayaran' => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:2048'
+            'metode_pembayaran' => 'required|in:cash,transfer,qris,ewallet',
+            'keterangan' => 'nullable|string|max:255'
         ]);
 
         if ($validator->fails()) {
@@ -463,31 +655,18 @@ class IuranController extends Controller
                 ], 400);
             }
 
-            // Process file upload
-            $buktiPembayaranPath = null;
-            if ($request->hasFile('bukti_pembayaran')) {
-                $file = $request->file('bukti_pembayaran');
-                $filename = 'bukti_' . time() . '_' . $iuran->id . '.' . $file->getClientOriginalExtension();
-                $buktiPembayaranPath = $file->storeAs('pembayaran', $filename, 'public');
-            }
-
-            // Create payment record
+            // Create payment record - simplified to match actual database schema
             $pembayaran = PembayaranIuran::create([
                 'iuran_id' => $iuran->id,
-                'jumlah' => $request->jumlah_bayar,
-                'metode_pembayaran' => $request->metode_pembayaran,
-                'nama_bank' => $request->nama_bank,
-                'nomor_rekening' => $request->nomor_rekening,
-                'nama_pengirim' => $request->nama_pengirim,
-                'waktu_pembayaran' => $request->waktu_pembayaran ? Carbon::parse($request->waktu_pembayaran) : Carbon::now(),
-                'status' => $request->metode_pembayaran === 'tunai' ? 'verified' : 'pending',
-                'keterangan' => $request->keterangan,
-                'bukti_pembayaran' => $buktiPembayaranPath,
+                'jumlah_bayar' => $request->jumlah_bayar,
+                'metode_pembayaran' => $request->metode_pembayaran, // Note: database expects 'cash', not 'tunai'
                 'created_by' => auth()->id(),
+                'keterangan' => $request->keterangan ?? 'Pembayaran cash',
+                'nomor_referensi' => PembayaranIuran::generateNomorReferensi(), // Generate nomor referensi
             ]);
 
             // Update iuran status based on total payments
-            $totalDibayar = $iuran->pembayaran()->sum('jumlah');
+            $totalDibayar = $iuran->pembayaran()->sum('jumlah_bayar');
             $totalTagihan = $iuran->total_tagihan ?? $iuran->nominal + $iuran->denda_terlambatan;
 
             if ($totalDibayar >= $totalTagihan) {
@@ -501,11 +680,12 @@ class IuranController extends Controller
                 'message' => 'Pembayaran berhasil diproses',
                 'data' => [
                     'payment_id' => $pembayaran->id,
-                    'jumlah' => $pembayaran->jumlah,
-                    'status_pembayaran' => $pembayaran->status,
+                    'jumlah_bayar' => $pembayaran->jumlah_bayar,
+                    'metode_pembayaran' => $pembayaran->metode_pembayaran,
                     'status_iuran' => $iuran->fresh()->status,
                     'total_dibayar' => $totalDibayar,
-                    'sisa_tagihan' => max(0, $totalTagihan - $totalDibayar)
+                    'sisa_tagihan' => max(0, $totalTagihan - $totalDibayar),
+                    'nomor_referensi' => $pembayaran->nomor_referensi
                 ]
             ]);
 
@@ -582,7 +762,7 @@ class IuranController extends Controller
 
             // Update iuran status
             $iuran = $pembayaran->iuran;
-            $totalDibayar = $iuran->pembayaran()->sum('jumlah');
+            $totalDibayar = $iuran->pembayaran()->sum('jumlah_bayar');
             $totalTagihan = $iuran->total_tagihan ?? $iuran->nominal + $iuran->denda_terlambatan;
 
             if ($totalDibayar >= $totalTagihan) {
@@ -638,7 +818,7 @@ class IuranController extends Controller
 
             // Update iuran status
             $iuran = $pembayaran->iuran;
-            $totalDibayar = $iuran->pembayaran()->sum('jumlah');
+            $totalDibayar = $iuran->pembayaran()->sum('jumlah_bayar');
             $totalTagihan = $iuran->total_tagihan ?? $iuran->nominal + $iuran->denda_terlambatan;
 
             if ($totalDibayar >= $totalTagihan) {

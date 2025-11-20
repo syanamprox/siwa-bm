@@ -8,6 +8,7 @@ use App\Http\Controllers\KeluargaController;
 use App\Http\Controllers\IuranController;
 use App\Http\Controllers\JenisIuranController;
 use App\Http\Controllers\KeluargaIuranController;
+use App\Http\Controllers\IuranGenerationController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\PengaturanSistemController;
 use App\Http\Controllers\ChangelogController;
@@ -122,10 +123,14 @@ Route::middleware('auth')->group(function () {
         Route::delete('/api/keluarga/{keluarga}', [KeluargaController::class, 'destroy']);
         Route::delete('/api/keluarga/{keluarga}/remove-member/{warga}', [KeluargaController::class, 'removeMember']);
 
-        
+  
+        // Iuran Generation Routes (must be before resource routes)
+        Route::get('/iuran/generate', [IuranGenerationController::class, 'create'])->name('iuran.generate');
+        Route::post('/iuran/generate', [IuranGenerationController::class, 'generate'])->name('iuran.generate.store');
+
         // Iuran Management Routes
         Route::get('/iuran', [IuranController::class, 'index'])->name('iuran.index');
-        Route::resource('iuran', IuranController::class)->except(['index']);
+        Route::resource('iuran', IuranController::class)->except(['index', 'create']);
 
         // Jenis Iuran Management Routes
         Route::get('/jenis-iuran', [JenisIuranController::class, 'index'])->name('jenis_iuran.index');
@@ -143,8 +148,17 @@ Route::middleware('auth')->group(function () {
         Route::put('/keluarga/{keluarga}/iuran/{jenisIuran}', [KeluargaIuranController::class, 'update'])->name('keluarga_iuran.update');
         Route::delete('/keluarga/{keluarga}/iuran/{jenisIuran}', [KeluargaIuranController::class, 'destroy'])->name('keluarga_iuran.destroy');
 
+        // API Routes for Iuran Generation
+        Route::get('/api/iuran/generation/rt-options', [IuranGenerationController::class, 'getRtOptions']);
+        Route::get('/api/iuran/generation/preview', [IuranGenerationController::class, 'preview']);
+        Route::post('/api/iuran/generation/generate', [IuranGenerationController::class, 'generate']);
+
         // API Routes for Iuran operations
         Route::get('/api/iuran/statistics', [IuranController::class, 'statistics']);
+        Route::get('/api/iuran', [IuranController::class, 'apiIndex']);
+        Route::get('/api/iuran/{iuran}', [IuranController::class, 'apiShow']);
+        Route::get('/api/iuran/{iuran}/edit', [IuranController::class, 'apiEdit']);
+        Route::delete('/api/iuran/{iuran}', [IuranController::class, 'apiDestroy']);
         Route::post('/api/iuran/generate-bulk', [IuranController::class, 'generateBulk']);
         Route::get('/api/iuran/keluarga/{keluargaId}/jenis-iuran', [IuranController::class, 'getKeluargaJenisIuran']);
         Route::post('/api/iuran/payment', [IuranController::class, 'processPayment']);
