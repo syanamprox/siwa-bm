@@ -77,24 +77,32 @@ Sistem Informasi Warga (SIWA) adalah aplikasi berbasis web yang dibanggunakan un
 
 ### 5. Manajemen Iuran Warga (Community Fee Management)
 - **Jenis Iuran**:
-  - Iuran Kebersihan (Bulanan)
-  - Iuran Keamanan (Satpam)
-  - Iuran Sosial/Kematian
-  - Iuran Infrastruktur
+  - Iuran Kebersihan (Bulanan - Rp 25,000)
+  - Iuran Keamanan (Bulanan - Rp 30,000)
+  - Iuran Sosial/Kematian (Bulanan - Rp 10,000)
+  - Iuran Kampung (Bulanan - Rp 10,000)
+  - Iuran Acara 17 Agustus (Tahunan - Rp 50,000)
 - **Pengelolaan Iuran**:
-  - Pembuatan tagihan iuran per warga per RT/RW
-  - Pembayaran iuran (tunai, transfer)
-  - Riwayat pembayaran
-  - Tunggakan iuran
+  - KK-Based Billing System (per KK bukan per warga)
+  - Many-to-Many Connection (Keluarga ↔ Jenis Iuran)
+  - Manual Tagihan Generation per periode (anti-duplicate)
+  - Hierarchical Generation (RT hanya wilayahnya)
+  - Input pembayaran (tunai, digital payment)
+  - Riwayat pembayaran dengan audit trail
+  - Tunggakan iuran tracking
 - **Laporan Iuran**:
-  - Laporan pembayaran bulanan per RT/RW
-  - Daftar tunggakan per warga
-  - Statistik pemasukan iuran
-  - Export laporan ke PDF/Excel
-- **Fitur Tambahan**:
-  - Reminder otomatis untuk tunggakan
-  - Kalkulasi denda keterlambatan
-  - Dashboard monitoring iuran real-time
+  - Statistik pembayaran per RT/RW/Kelurahan
+  - Coverage rate tracking (lunas vs tunggakan)
+  - Simple dashboard dengan grafik
+  - Export laporan ke Excel/PDF
+- **Special Cases**:
+  - Discount system per KK (RT bisa set nominal_custom)
+  - Free iuran untuk kasus khusus (janda/pensiunan)
+  - Audit trail untuk perubahan nominal
+- **Payment Methods**:
+  - Cash (Tunai) dengan kuitansi
+  - Digital payment (QRIS, E-wallet)
+  - Tidak memerlukan bukti transfer (trust-based)
 
 ### 6. Portal Publik Warga (Public Citizen Portal)
 - **Pencarian Data Warga**:
@@ -297,25 +305,116 @@ Total: **10 tabel** dengan optimasi performa dan foreign key constraints.
 - **Week 7-8**: Manajemen iuran lengkap dengan tracking tunggakan
 - **Week 9-10**: Testing AJAX functionality, debugging, dan deployment
 
-## Status Current Implementation
-✅ **COMPLETED**: Database structure rebuilt with updated design
-- Alamat & status domisili moved to keluarga level
-- Proper foreign key relationships established
-- Real Bendul Merisi data seeded
-- Migration & seeder system complete
+## Status Current Implementation (Updated)
 
-⚠️ **IN PROGRESS**: Keluarga & Warga Multi-Input System
-- Multi-person keluarga + warga input functionality
-- Foreign key linking to wilayahs table
-- Modal-based CRUD with validation
-- Status: Need rollback & rebuild based on updated brief
+### ✅ **COMPLETED MODULES**:
 
-## Next Implementation Steps
-1. **Rollback Migration**: Remove incorrect keluargas/wargas modifications
-2. **Rebuild Tables**: Create migrations based on updated brief
-3. **Implement Linking**: rt_id foreign key with auto-generate alamat fields
-4. **Update Forms**: Single RT selection dropdown with cascading display
-5. **CRUD Integration**: Complete keluarga + multi-warga input system
+#### 1. **Authentication & User Management**
+- Multi-level authentication system (Admin, Lurah, RW, RT)
+- Session management with "Ingat Saya" functionality
+- User profile management
+- Default account credentials removed from login page
+
+#### 2. **Data Master & Wilayah Management**
+- Hierarchical wilayah system (Kelurahan → RW → RT)
+- Public API endpoints for wilayah data access
+- Cascading dropdown system (Kelurahan → RW → RT)
+- Real Bendul Merisi sample data (17 wilayah records)
+
+#### 3. **Keluarga Management System**
+- **KK-First Architecture**: Warga creation through keluarga module
+- Dual address system:
+  - **Alamat KTP**: Manual input (rt_kk, rw_kk, kelurahan_kk, kecamatan_kk, kabupaten_kk, provinsi_kk)
+  - **Alamat Domisili**: Cascading dropdown with rt_id linkage
+- Foto KK upload with validation and display
+- CRUD operations with modal interface
+- Activity logging system
+
+#### 4. **Warga Management System**
+- Edit-only module (new warga created via keluarga)
+- Fundamental data focus (4 sections): Data Pribadi, Orang Tua, Kontak, Data Lainnya
+- Foto KTP upload and management
+- Improved search & filter with auto-trigger (500ms debounce)
+- Enhanced table display with proper address resolution
+- Action buttons with disabled states for unavailable features
+
+#### 5. **Photo Storage System**
+- **Standardized Structure**:
+  ```
+  storage/app/public/documents/
+  ├── ktp/ktp_{nik}_{timestamp}.{ext}
+  └── kk/kk_{no_kk}_{timestamp}.{ext}
+  ```
+- Improved file naming with traceable identifiers
+- Consistent validation: `mimes:jpeg,jpg,png|max:2048`
+- Automatic old file cleanup on updates
+- Proper path resolution and asset handling
+
+#### 6. **API & AJAX Implementation**
+- Public API routes without authentication
+- Real-time validation and feedback
+- Modal-based CRUD operations
+- Toast notifications and loading states
+- Proper error handling and user feedback
+
+### ⚠️ **CURRENTLY IN PROGRESS**:
+
+#### Iuran Management System
+- Basic structure established
+- Relationship conflicts with warga system identified
+- Need to resolve warga-iuran relationship constraints
+
+### 🔄 **PLANNED MODULES**:
+
+#### 1. **Dashboard & Reporting**
+- Real-time statistics and monitoring
+- Chart.js integration for data visualization
+- Demographics reporting per wilayah
+- Export functionality (PDF/Excel)
+
+#### 2. **Iuran Management (Full Implementation)**
+- KK-based iuran system (not warga-based)
+- Payment tracking and tunggakan management
+- Automatic billing and reminder system
+- Financial reporting
+
+#### 3. **Public Portal**
+- Anonymous warga data verification
+- Iuran status checking with QR codes
+- Rate limiting and security measures
+- Sensitive data filtering
+
+#### 4. **System Administration**
+- Backup and restore functionality
+- System settings management
+- Activity log monitoring
+- User activity tracking
+
+## Technical Achievements
+
+### **Database Optimization**
+- Soft deletes implemented across all tables
+- Proper foreign key constraints and relationships
+- Activity logging with comprehensive audit trail
+- Storage optimization with single source of truth principle
+
+### **User Experience Improvements**
+- Auto-trigger search functionality
+- Disabled state indicators for unavailable actions
+- Consistent validation feedback
+- Smooth modal transitions and loading states
+
+### **Security Enhancements**
+- Removed default credentials from login page
+- Rate limiting preparation for public access
+- Input validation and sanitization
+- Session management with configurable lifetime
+
+### **Performance Optimizations**
+- Efficient database queries with proper indexing
+- Lazy loading for relationships
+- Optimized file storage structure
+- AJAX-based interactions for better responsiveness
 
 ---
 *Dokumen ini akan terus diperbarui sesuai dengan perkembangan proyek.*

@@ -6,6 +6,8 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\WargaController;
 use App\Http\Controllers\KeluargaController;
 use App\Http\Controllers\IuranController;
+use App\Http\Controllers\JenisIuranController;
+use App\Http\Controllers\KeluargaIuranController;
 use App\Http\Controllers\WilayahController;
 use App\Http\Controllers\PengaturanSistemController;
 use App\Http\Controllers\ChangelogController;
@@ -25,21 +27,14 @@ Route::prefix('portal')->group(function () {
     Route::get('/captcha', [App\Http\Controllers\PublicPortalController::class, 'generateCaptcha'])->name('portal.captcha');
 });
 
-// Public API Routes untuk wilayah data (no auth required)
-Route::get('/api/keluarga/wilayah', [KeluargaController::class, 'getWilayah']);
-Route::get('/api/keluarga/rt-info', [KeluargaController::class, 'getRtInfo']);
-Route::get('/api/keluarga/statistics', [KeluargaController::class, 'statistics']);
-
-// Public API Routes untuk warga statistics (no auth required)
-Route::get('/api/warga/statistics', [WargaController::class, 'statistics']);
 
 // Authentication Routes (using Laravel Breeze)
 require __DIR__.'/auth.php';
 
 // Authenticated Routes
 Route::middleware('auth')->group(function () {
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    // Dashboard (moved to admin group for consistency)
+    // Note: Dashboard route moved to admin group below
 
     // Profile Routes (from Laravel Breeze)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -48,6 +43,9 @@ Route::middleware('auth')->group(function () {
 
     // Admin Only Routes
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
         // User Management Routes
         Route::get('/users', [UserController::class, 'indexView'])->name('users.index');
         Route::resource('users', UserController::class)->except(['index']);
@@ -86,6 +84,84 @@ Route::middleware('auth')->group(function () {
         // API Routes for AJAX operations
         Route::get('/api/pengaturan', [PengaturanSistemController::class, 'apiIndex']);
 
+        // Warga Management Routes
+        Route::get('/warga', [WargaController::class, 'indexView'])->name('warga.index');
+        Route::resource('warga', WargaController::class)->except(['index', 'store', 'update', 'destroy']);
+
+        // API Routes for Warga operations
+        Route::get('/api/warga', [WargaController::class, 'index']);
+        Route::get('/api/warga/create', [WargaController::class, 'create']);
+        Route::get('/api/warga/statistics', [WargaController::class, 'statistics']);
+        Route::post('/api/warga/export', [WargaController::class, 'export']);
+        Route::post('/api/warga/import', [WargaController::class, 'import']);
+        Route::get('/api/warga/{warga}/edit', [WargaController::class, 'edit']);
+        Route::get('/api/warga/{warga}', [WargaController::class, 'show']);
+        Route::put('/api/warga/{warga}', [WargaController::class, 'update']);
+        Route::post('/api/warga', [WargaController::class, 'store']);
+        Route::delete('/api/warga/{warga}', [WargaController::class, 'destroy']);
+
+        // Keluarga Management Routes
+        Route::get('/keluarga', [KeluargaController::class, 'indexView'])->name('keluarga.index');
+        Route::resource('keluarga', KeluargaController::class)->except(['index', 'store', 'update', 'destroy']);
+
+        // API Routes for Keluarga operations
+        Route::get('/api/keluarga', [KeluargaController::class, 'index']);
+        Route::get('/api/keluarga/create', [KeluargaController::class, 'create']);
+        Route::get('/api/keluarga/statistics', [KeluargaController::class, 'statistics']);
+
+        // API Routes for wilayah data (admin only) - must be before parameter routes
+        Route::get('/api/keluarga/wilayah', [KeluargaController::class, 'getWilayah']);
+        Route::get('/api/keluarga/rt-info', [KeluargaController::class, 'getRtInfo']);
+
+        Route::patch('/api/keluarga/{keluarga}/status', [KeluargaController::class, 'updateStatus']);
+        Route::post('/api/keluarga/{keluarga}/add-member', [KeluargaController::class, 'addMember']);
+        Route::get('/api/keluarga/{keluarga}/edit', [KeluargaController::class, 'edit']);
+        Route::get('/api/keluarga/{keluarga}', [KeluargaController::class, 'show']);
+        Route::put('/api/keluarga/{keluarga}', [KeluargaController::class, 'update']);
+        Route::post('/api/keluarga', [KeluargaController::class, 'store']);
+        Route::delete('/api/keluarga/{keluarga}', [KeluargaController::class, 'destroy']);
+        Route::delete('/api/keluarga/{keluarga}/remove-member/{warga}', [KeluargaController::class, 'removeMember']);
+
+        
+        // Iuran Management Routes
+        Route::get('/iuran', [IuranController::class, 'index'])->name('iuran.index');
+        Route::resource('iuran', IuranController::class)->except(['index']);
+
+        // Jenis Iuran Management Routes
+        Route::get('/jenis-iuran', [JenisIuranController::class, 'index'])->name('jenis_iuran.index');
+        Route::get('/jenis-iuran/create', [JenisIuranController::class, 'create'])->name('jenis_iuran.create');
+        Route::post('/jenis-iuran', [JenisIuranController::class, 'store'])->name('jenis_iuran.store');
+        Route::get('/jenis-iuran/{jenis_iuran}', [JenisIuranController::class, 'show'])->name('jenis_iuran.show');
+        Route::get('/jenis-iuran/{jenis_iuran}/edit', [JenisIuranController::class, 'edit'])->name('jenis_iuran.edit');
+        Route::put('/jenis-iuran/{jenis_iuran}', [JenisIuranController::class, 'update'])->name('jenis_iuran.update');
+        Route::delete('/jenis-iuran/{jenis_iuran}', [JenisIuranController::class, 'destroy'])->name('jenis_iuran.destroy');
+
+        // Keluarga-Iuran Connection Management Routes
+        Route::get('/keluarga-iuran/overview', [KeluargaIuranController::class, 'overview'])->name('keluarga_iuran.overview');
+        Route::get('/keluarga/{keluarga}/iuran', [KeluargaIuranController::class, 'index'])->name('keluarga_iuran.index');
+        Route::post('/keluarga/{keluarga}/iuran', [KeluargaIuranController::class, 'store'])->name('keluarga_iuran.store');
+        Route::put('/keluarga/{keluarga}/iuran/{jenisIuran}', [KeluargaIuranController::class, 'update'])->name('keluarga_iuran.update');
+        Route::delete('/keluarga/{keluarga}/iuran/{jenisIuran}', [KeluargaIuranController::class, 'destroy'])->name('keluarga_iuran.destroy');
+
+        // API Routes for Iuran operations
+        Route::get('/api/iuran/statistics', [IuranController::class, 'statistics']);
+        Route::post('/api/iuran/generate-bulk', [IuranController::class, 'generateBulk']);
+        Route::get('/api/iuran/keluarga/{keluargaId}/jenis-iuran', [IuranController::class, 'getKeluargaJenisIuran']);
+
+        // API Routes for Jenis Iuran operations
+        Route::get('/api/jenis-iuran', [JenisIuranController::class, 'index'])->name('api.jenis_iuran.index');
+        Route::post('/api/jenis-iuran', [JenisIuranController::class, 'store'])->name('api.jenis_iuran.store');
+        Route::get('/api/jenis-iuran/create', [JenisIuranController::class, 'create'])->name('api.jenis_iuran.create');
+        Route::get('/api/jenis-iuran/{jenis_iuran}', [JenisIuranController::class, 'show'])->name('api.jenis_iuran.show');
+        Route::get('/api/jenis-iuran/{jenis_iuran}/edit', [JenisIuranController::class, 'edit'])->name('api.jenis_iuran.edit');
+        Route::put('/api/jenis-iuran/{jenis_iuran}', [JenisIuranController::class, 'update'])->name('api.jenis_iuran.update');
+        Route::delete('/api/jenis-iuran/{jenis_iuran}', [JenisIuranController::class, 'destroy'])->name('api.jenis_iuran.destroy');
+        Route::put('/api/jenis-iuran/{jenis_iuran}/toggle-status', [JenisIuranController::class, 'toggleStatus'])->name('api.jenis_iuran.toggle_status');
+
+        // API Routes for Keluarga-Iuran operations
+        Route::get('/api/keluarga-iuran/{keluargaId}/available', [KeluargaIuranController::class, 'getAvailableJenisIuran'])->name('api.keluarga_iuran.available');
+        Route::get('/api/keluarga-iuran/{keluargaId}/active', [KeluargaIuranController::class, 'getActiveConnections'])->name('api.keluarga_iuran.active');
+
         // Backup & Restore Routes
         Route::get('/backup', [App\Http\Controllers\BackupController::class, 'index'])->name('backup.index');
         Route::post('/backup/create', [App\Http\Controllers\BackupController::class, 'create'])->name('backup.create');
@@ -95,36 +171,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/backup/status', [App\Http\Controllers\BackupController::class, 'status'])->name('backup.status');
     });
 
-    // Warga Management Routes
-    Route::get('/warga', [WargaController::class, 'indexView'])->name('warga.index');
-    Route::resource('warga', WargaController::class)->except(['index', 'store', 'update', 'destroy']);
-
-    // API Routes for AJAX operations
-    Route::get('/api/warga', [WargaController::class, 'index']);
-    Route::get('/api/warga/create', [WargaController::class, 'create']);
-    Route::get('/api/warga/{warga}/edit', [WargaController::class, 'edit']);
-    Route::get('/api/warga/{warga}', [WargaController::class, 'show']);
-    Route::put('/api/warga/{warga}', [WargaController::class, 'update']);
-    Route::post('/api/warga', [WargaController::class, 'store']);
-    Route::delete('/api/warga/{warga}', [WargaController::class, 'destroy']);
-    Route::post('/api/warga/export', [WargaController::class, 'export']);
-    Route::post('/api/warga/import', [WargaController::class, 'import']);
-
-    // Keluarga Management Routes
-    Route::get('/keluarga', [KeluargaController::class, 'indexView'])->name('keluarga.index');
-    Route::resource('keluarga', KeluargaController::class)->except(['index', 'store', 'update', 'destroy']);
-
-    // API Routes for AJAX operations
-    Route::get('/api/keluarga', [KeluargaController::class, 'index']);
-    Route::get('/api/keluarga/create', [KeluargaController::class, 'create']);
-    Route::get('/api/keluarga/{keluarga}/edit', [KeluargaController::class, 'edit']);
-    Route::get('/api/keluarga/{keluarga}', [KeluargaController::class, 'show']);
-    Route::put('/api/keluarga/{keluarga}', [KeluargaController::class, 'update']);
-    Route::post('/api/keluarga', [KeluargaController::class, 'store']);
-    Route::delete('/api/keluarga/{keluarga}', [KeluargaController::class, 'destroy']);
-    Route::get('/api/keluarga/statistics', [KeluargaController::class, 'statistics']);
-    Route::post('/api/keluarga/{keluarga}/add-member', [KeluargaController::class, 'addMember']);
-    Route::delete('/api/keluarga/{keluarga}/remove-member/{warga}', [KeluargaController::class, 'removeMember']);
+    // All management routes moved to admin group above for consistency
 
     // Note: API Routes for cascading dropdown moved to public section above
 

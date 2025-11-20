@@ -43,9 +43,9 @@ class DashboardController extends Controller
         $data['total_keluarga'] = Keluarga::count();
         $data['total_rt'] = Wilayah::where('tingkat', 'RT')->count();
         $data['total_rw'] = Wilayah::where('tingkat', 'RW')->count();
-        $data['total_iuran_bulanan'] = Iuran::where('status', 'belum_bayar')->sum('jumlah');
-        $data['pemasukan_bulan_ini'] = PembayaranIuran::whereMonth('tanggal_bayar', now()->month)
-            ->whereYear('tanggal_bayar', now()->year)
+        $data['total_iuran_bulanan'] = Iuran::where('status', 'belum_bayar')->sum('nominal');
+        $data['pemasukan_bulan_ini'] = PembayaranIuran::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
             ->sum('jumlah_bayar');
 
         // Get demographics data for charts
@@ -77,9 +77,9 @@ class DashboardController extends Controller
         $data['total_rt'] = Wilayah::where('tingkat', 'RT')->count();
 
         // Iuran statistics for kelurahan
-        $data['total_tagihan_iuran'] = Iuran::where('status', 'belum_bayar')->sum('jumlah');
-        $data['pemasukan_bulan_ini'] = PembayaranIuran::whereMonth('tanggal_bayar', now()->month)
-            ->whereYear('tanggal_bayar', now()->year)
+        $data['total_tagihan_iuran'] = Iuran::where('status', 'belum_bayar')->sum('nominal');
+        $data['pemasukan_bulan_ini'] = PembayaranIuran::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
             ->sum('jumlah_bayar');
 
         // Warga per RW
@@ -113,17 +113,19 @@ class DashboardController extends Controller
         $data['total_rt'] = Wilayah::whereIn('parent_id', $rw_ids)->count();
 
         // Iuran statistics for RW
-        $data['total_tagihan_iuran'] = Iuran::whereIn('keluarga_id', function($query) use ($rw_ids) {
-            $query->select('id')->from('keluargas')->whereIn('rw_kk', $rw_ids);
+        $data['total_tagihan_iuran'] = Iuran::whereIn('kk_id', function($query) use ($rw_ids) {
+            $query->select('id')->from('keluargas')->whereHas('wilayah', function($q) use ($rw_ids) {
+                $q->whereIn('parent_id', $rw_ids);
+            });
         })
             ->where('status', 'belum_bayar')
-            ->sum('jumlah');
+            ->sum('nominal');
 
         $data['pemasukan_bulan_ini'] = PembayaranIuran::whereIn('iuran_id', function($query) use ($rw_ids) {
             $query->select('id')->from('iuran')->whereIn('rt_id', $rw_ids);
         })
-        ->whereMonth('tanggal_bayar', now()->month)
-        ->whereYear('tanggal_bayar', now()->year)
+        ->whereMonth('created_at', now()->month)
+        ->whereYear('created_at', now()->year)
         ->sum('jumlah_bayar');
 
         // Warga per RT in this RW
@@ -154,17 +156,19 @@ class DashboardController extends Controller
         $data['total_keluarga'] = Keluarga::whereIn('rt_kk', $rt_codes)->count();
 
         // Iuran statistics for RT
-        $data['total_tagihan_iuran'] = Iuran::whereIn('keluarga_id', function($query) use ($rt_codes) {
-            $query->select('id')->from('keluargas')->whereIn('rt_kk', $rt_codes);
+        $data['total_tagihan_iuran'] = Iuran::whereIn('kk_id', function($query) use ($rt_codes) {
+            $query->select('id')->from('keluargas')->whereHas('wilayah', function($q) use ($rt_codes) {
+                $q->whereIn('kode', $rt_codes);
+            });
         })
             ->where('status', 'belum_bayar')
-            ->sum('jumlah');
+            ->sum('nominal');
 
         $data['pemasukan_bulan_ini'] = PembayaranIuran::whereIn('iuran_id', function($query) use ($rt_areas) {
             $query->select('id')->from('iuran')->whereIn('rt_id', $rt_areas->pluck('id'));
         })
-        ->whereMonth('tanggal_bayar', now()->month)
-        ->whereYear('tanggal_bayar', now()->year)
+        ->whereMonth('created_at', now()->month)
+        ->whereYear('created_at', now()->year)
         ->sum('jumlah_bayar');
 
         // Recent payments in this RT
@@ -172,7 +176,7 @@ class DashboardController extends Controller
             $query->select('id')->from('iuran')->whereIn('rt_id', $rt_areas->pluck('id'));
         })
         ->with(['iuran.warga', 'petugas'])
-        ->orderBy('tanggal_bayar', 'desc')
+        ->orderBy('created_at', 'desc')
         ->take(5)
         ->get();
 

@@ -23,17 +23,16 @@ class Iuran extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'warga_id',
         'kk_id',
         'jenis_iuran_id',
-        'rt_id',
-        'rw_id',
         'nominal',
         'periode_bulan',
         'status',
         'jatuh_tempo',
         'denda_terlambatan',
         'reminder_sent_at',
+        'created_by',
+        'keterangan',
     ];
 
     /**
@@ -55,19 +54,11 @@ class Iuran extends Model
     }
 
     /**
-     * Relasi ke warga
-     */
-    public function warga()
-    {
-        return $this->belongsTo(Warga::class, 'warga_id');
-    }
-
-    /**
-     * Relasi ke keluarga
+     * Relasi ke keluarga (KK-based)
      */
     public function keluarga()
     {
-        return $this->belongsTo(Keluarga::class, 'keluarga_id');
+        return $this->belongsTo(Keluarga::class, 'kk_id');
     }
 
     /**
@@ -84,6 +75,14 @@ class Iuran extends Model
     public function pembayaran()
     {
         return $this->hasMany(PembayaranIuran::class, 'iuran_id');
+    }
+
+    /**
+     * Relasi ke user yang membuat
+     */
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**

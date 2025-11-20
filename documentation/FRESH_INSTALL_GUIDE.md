@@ -188,9 +188,18 @@ php artisan route:cache
 php artisan view:cache
 ```
 
-### 5.3 Storage Links
+### 5.3 Storage Links (Required for Photo Upload)
 ```bash
 php artisan storage:link
+```
+**Important**: This creates the symbolic link for document uploads (KTP/KK photos)
+
+### 5.4 Verify Document Storage Structure
+```bash
+ls -la storage/app/public/
+# Should show: documents/ directory
+mkdir -p storage/app/public/documents/ktp
+mkdir -p storage/app/public/documents/kk
 ```
 
 ---
@@ -212,6 +221,17 @@ curl -X POST http://127.0.0.1:8000/login \
 - **User Management**: http://127.0.0.1:8000/admin/users
 - **Wilayah Management**: http://127.0.0.1:8000/admin/wilayah
 - **Dashboard**: http://127.0.0.1:8000/admin/dashboard
+- **Keluarga Management**: http://127.0.0.1:8000/keluarga (test KK creation)
+- **Warga Management**: http://127.0.0.1:8000/warga (test warga editing)
+
+### 6.3 Test Photo Upload
+1. Login as Admin
+2. Go to Keluarga → Create New Keluarga
+3. Upload foto KK (test file upload)
+4. Check storage: `ls -la storage/app/public/documents/kk/`
+5. Create warga through keluarga form
+6. Test foto KTP upload
+7. Check storage: `ls -la storage/app/public/documents/ktp/`
 
 ---
 
@@ -278,18 +298,26 @@ After successful fresh installation:
 - **6 Jenis Iuran** (Fee types)
 
 ### 🏗️ **System Features Ready:**
-- ✅ **Authentication**: Login with email/name + password
-- ✅ **User Management**: CRUD with soft delete
-- ✅ **Wilayah Management**: Hierarchical structure
-- ✅ **Activity Logging**: Complete audit trail
-- ✅ **Toast Notifications**: User feedback system
-- ✅ **Role-based Access**: 4-level hierarchy
+- ✅ **Authentication**: Multi-level login with "Ingat Saya" functionality
+- ✅ **User Management**: CRUD with soft delete and role-based access
+- ✅ **Wilayah Management**: Hierarchical structure with public API
+- ✅ **Activity Logging**: Complete audit trail for all operations
+- ✅ **Toast Notifications**: Real-time user feedback system
+- ✅ **Role-based Access**: 4-level hierarchy (Admin, Lurah, RW, RT)
+- ✅ **Keluarga Management**: KK-first architecture with dual address system
+- ✅ **Warga Management**: Edit-only module with enhanced search functionality
+- ✅ **Photo Storage**: Standardized KTP/KK upload with organized file structure
+- ✅ **AJAX Operations**: Modal-based CRUD with real-time validation
+- ✅ **Cascading Dropdowns**: Dynamic wilayah selection (Kelurahan → RW → RT)
+- ✅ **Security Enhancements**: Rate limiting, input validation, session management
 
 ### 🔐 **Default Login Credentials:**
 - **Admin**: admin@siwa.test / admin123
 - **Lurah**: lurah@siwa.test / lurah123
 - **RW**: rw03@siwa.test / rw123
 - **RT**: rt01@siwa.test / rt123
+
+**⚠️ SECURITY NOTE**: Default credentials are NOT displayed on login page for security reasons.
 
 ---
 

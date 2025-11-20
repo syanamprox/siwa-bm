@@ -122,43 +122,53 @@
                         </label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="search" name="search"
-                                   placeholder="Masukkan No. KK atau nama kepala keluarga..."
-                                   onkeypress="if(event.key === 'Enter') { event.preventDefault(); applyFilters(); }">
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="button" onclick="applyFilters()" title="Cari">
-                                    <i class="fas fa-search"></i>
-                                </button>
-                            </div>
+                                   placeholder="Masukkan No. KK atau nama kepala keluarga...">
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <label for="rt" class="font-weight-bold">
                             <i class="fas fa-map-marker-alt mr-1"></i>RT
                         </label>
                         <input type="text" class="form-control" id="rt" name="rt"
-                               placeholder="01" maxlength="3"
-                               onkeypress="if(event.key === 'Enter') { event.preventDefault(); applyFilters(); }">
+                               placeholder="01" maxlength="3">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <label for="rw" class="font-weight-bold">
                             <i class="fas fa-map-marker-alt mr-1"></i>RW
                         </label>
                         <input type="text" class="form-control" id="rw" name="rw"
-                               placeholder="01" maxlength="3"
-                               onkeypress="if(event.key === 'Enter') { event.preventDefault(); applyFilters(); }">
+                               placeholder="01" maxlength="3">
                     </div>
-                    <div class="col-md-3">
-                        <div class="btn-group w-100" role="group">
-                            <button type="button" class="btn btn-success" onclick="applyFilters()" title="Terapkan Filter">
-                                <i class="fas fa-filter mr-1"></i>Filter
-                            </button>
-                            <button type="button" class="btn btn-secondary" onclick="resetFilters()" title="Reset Filter">
-                                <i class="fas fa-redo mr-1"></i>Reset
-                            </button>
-                            <button type="button" class="btn btn-info" onclick="exportData()" title="Export Data">
-                                <i class="fas fa-download"></i>
-                            </button>
-                        </div>
+                    <div class="col-md-2">
+                        <label for="kelurahan" class="font-weight-bold">
+                            <i class="fas fa-map-marker-alt mr-1"></i>Kelurahan
+                        </label>
+                        <select class="form-control" id="kelurahan" name="kelurahan">
+                            <option value="">Semua Kelurahan</option>
+                            <option value="Jemur Wonosari">Jemur Wonosari</option>
+                            <option value="Margorejo">Margorejo</option>
+                            <option value="Sidosermo">Sidosermo</option>
+                            <option value="Bringin">Bringin</option>
+                            <option value="Darmo Harapan">Darmo Harapan</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="status_filter" class="font-weight-bold">
+                            <i class="fas fa-flag mr-1"></i>Status Keluarga
+                        </label>
+                        <select class="form-control" id="status_filter" name="status_filter">
+                            <option value="">Semua Status</option>
+                            <option value="Aktif">Aktif</option>
+                            <option value="Pindah">Pindah</option>
+                            <option value="Non-Aktif">Non-Aktif</option>
+                            <option value="Dibubarkan">Dibubarkan</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label for="reset" class="font-weight-bold text-white">.</label>
+                        <button type="button" class="btn btn-secondary w-100" onclick="resetFilters()" title="Reset Filter" style="height: 38px; font-size: 0.875rem;">
+                            <i class="fas fa-redo"></i> Reset
+                        </button>
                     </div>
                 </div>
             </form>
@@ -196,12 +206,13 @@
                             <th>Alamat</th>
                             <th>RT/RW</th>
                             <th>Jumlah Anggota</th>
+                            <th>Status</th>
                             <th width="150">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="7" class="text-center">
+                            <td colspan="8" class="text-center">
                                 <i class="fas fa-spinner fa-spin"></i>
                                 Memuat data...
                             </td>
@@ -737,6 +748,43 @@ $(document).ready(function() {
         loadKeluarga();
     });
 
+    // Auto-trigger search with debounce
+    let searchTimeout;
+    $('#search').on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            loadKeluarga(1);
+        }, 500); // 500ms debounce
+    });
+
+    // Auto-trigger RT filter with debounce
+    let rtTimeout;
+    $('#rt').on('input', function() {
+        clearTimeout(rtTimeout);
+        rtTimeout = setTimeout(() => {
+            loadKeluarga(1);
+        }, 300); // 300ms debounce untuk RT
+    });
+
+    // Auto-trigger RW filter with debounce
+    let rwTimeout;
+    $('#rw').on('input', function() {
+        clearTimeout(rwTimeout);
+        rwTimeout = setTimeout(() => {
+            loadKeluarga(1);
+        }, 300); // 300ms debounce untuk RW
+    });
+
+    // Auto-trigger kelurahan filter
+    $('#kelurahan').on('change', function() {
+        loadKeluarga(1);
+    });
+
+    // Auto-trigger status filter
+    $('#status_filter').on('change', function() {
+        loadKeluarga(1);
+    });
+
     // Wilayah cascading select untuk alamat domisili
     $('#domisili_kelurahan').on('change', function() {
         loadRWDomisili($(this).val());
@@ -800,7 +848,7 @@ $('#foto_kk').on('change', function() {
 
 function loadFormData() {
     $.ajax({
-        url: '/api/keluarga/create',
+        url: '/admin/api/keluarga/create',
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -830,7 +878,7 @@ function populateWilayahOptions(data) {
 function loadKelurahanDomisili() {
     return new Promise((resolve, reject) => {
         $.ajax({
-            url: '/api/keluarga/wilayah?level=kelurahan',
+            url: '/admin/api/keluarga/wilayah?level=kelurahan',
             type: 'GET',
             success: function(response) {
                 if (response.success) {
@@ -860,7 +908,7 @@ function loadRWDomisili(kelurahanId) {
     }
 
     $.ajax({
-        url: '/api/keluarga/wilayah?level=rw&parent_id=' + kelurahanId,
+        url: '/admin/api/keluarga/wilayah?level=rw&parent_id=' + kelurahanId,
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -886,7 +934,7 @@ function loadRTDomisili(rwId) {
     }
 
     $.ajax({
-        url: '/api/keluarga/wilayah?level=rt&parent_id=' + rwId,
+        url: '/admin/api/keluarga/wilayah?level=rt&parent_id=' + rwId,
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -910,7 +958,7 @@ function updateAlamatDisplay(rtId) {
     }
 
     $.ajax({
-        url: '/api/keluarga/rt-info?rt_id=' + rtId,
+        url: '/admin/api/keluarga/rt-info?rt_id=' + rtId,
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -1456,7 +1504,7 @@ function saveKeluarga() {
     });
 
     var keluargaId = $('#keluarga_id').val();
-    var url = keluargaId ? '/api/keluarga/' + keluargaId : '/api/keluarga';
+    var url = keluargaId ? '/admin/api/keluarga/' + keluargaId : '/admin/api/keluarga';
 
     // Always use POST with _method for Laravel
     if (keluargaId) {
@@ -1518,7 +1566,7 @@ function loadKeluarga(page = 1) {
     params.per_page = $('#perPage').val();
 
     $.ajax({
-        url: '/api/keluarga',
+        url: '/admin/api/keluarga',
         type: 'GET',
         data: params,
         success: function(response) {
@@ -1543,7 +1591,7 @@ function renderKeluargaTable(keluargaList, pagination) {
     var no = (pagination.current_page - 1) * pagination.per_page;
 
     if (keluargaList.length === 0) {
-        html = '<tr><td colspan="7" class="text-center text-muted">Tidak ada data keluarga</td></tr>';
+        html = '<tr><td colspan="8" class="text-center text-muted">Tidak ada data keluarga</td></tr>';
     } else {
         keluargaList.forEach(function(keluarga) {
             no++;
@@ -1558,6 +1606,7 @@ function renderKeluargaTable(keluargaList, pagination) {
                     <td><small>${keluarga.alamat_kk}</small></td>
                     <td>${keluarga.rt_kk}/${keluarga.rw_kk}</td>
                     <td><span class="badge badge-info">${jumlahAnggota} orang</span></td>
+                    <td><span class="badge badge-${keluarga.status_badge_class || 'secondary'}">${keluarga.status_label || 'Tidak Diketahui'}</span></td>
                     <td>
                         <div class="btn-group" role="group">
                             <button type="button" class="btn btn-sm btn-primary" onclick="editKeluarga(${keluarga.id})" title="Edit">
@@ -1575,6 +1624,25 @@ function renderKeluargaTable(keluargaList, pagination) {
                                     <i class="fas fa-camera"></i>
                                 </button>
                             `}
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-warning dropdown-toggle" data-toggle="dropdown" title="Ubah Status">
+                                    <i class="fas fa-exchange-alt"></i>
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-item" href="#" onclick="updateStatus(${keluarga.id}, 'Aktif')">
+                                        <i class="fas fa-check-circle text-success"></i> Aktif
+                                    </a>
+                                    <a class="dropdown-item" href="#" onclick="updateStatus(${keluarga.id}, 'Pindah')">
+                                        <i class="fas fa-arrow-right text-warning"></i> Pindah
+                                    </a>
+                                    <a class="dropdown-item" href="#" onclick="updateStatus(${keluarga.id}, 'Non-Aktif')">
+                                        <i class="fas fa-pause text-secondary"></i> Non-Aktif
+                                    </a>
+                                    <a class="dropdown-item" href="#" onclick="updateStatus(${keluarga.id}, 'Dibubarkan')">
+                                        <i class="fas fa-times-circle text-danger"></i> Dibubarkan
+                                    </a>
+                                </div>
+                            </div>
                             <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(${keluarga.id}, '${keluarga.no_kk}')" title="Hapus">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -1612,7 +1680,7 @@ function renderPagination(pagination) {
 
 function loadStatistics() {
     $.ajax({
-        url: '/api/keluarga/statistics',
+        url: '/admin/api/keluarga/statistics',
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -1632,7 +1700,7 @@ function viewKeluarga(id) {
     showLoading();
 
     $.ajax({
-        url: '/api/keluarga/' + id,
+        url: '/admin/api/keluarga/' + id,
         type: 'GET',
         success: function(response) {
             hideLoading();
@@ -1725,7 +1793,7 @@ function deleteKeluarga() {
     var id = $('#delete_keluarga_id').val();
 
     $.ajax({
-        url: '/api/keluarga/' + id,
+        url: '/admin/api/keluarga/' + id,
         type: 'DELETE',
         beforeSend: function() {
             showLoading();
@@ -1750,11 +1818,50 @@ function deleteKeluarga() {
     });
 }
 
+function updateStatus(id, status) {
+    // Langsung update status tanpa konfirmasi dialog
+    $.ajax({
+        url: '/admin/api/keluarga/' + id + '/status',
+        type: 'PATCH',
+        data: {
+            status_keluarga: status,
+            _token: $('meta[name="csrf-token"]').attr('content')
+        },
+        beforeSend: function() {
+            showLoading();
+        },
+        success: function(response) {
+            hideLoading();
+            if (response.success) {
+                showToast(response.message, 'success');
+                // Reload table untuk update tampilan
+                loadKeluarga();
+                loadStatistics();
+            } else {
+                showToast(response.message, 'error');
+            }
+        },
+        error: function(xhr) {
+            hideLoading();
+            var message = xhr.responseJSON?.message || 'Gagal mengupdate status keluarga';
+            var errors = xhr.responseJSON?.errors || {};
+
+            // Tampilkan validation errors jika ada
+            if (Object.keys(errors).length > 0) {
+                var errorMessages = Object.values(errors).flat().join('\n');
+                showToast(errorMessages, 'error');
+            } else {
+                showToast(message, 'error');
+            }
+        }
+    });
+}
+
 function editKeluarga(id) {
     showLoading();
 
     $.ajax({
-        url: '/api/keluarga/' + id,
+        url: '/admin/api/keluarga/' + id,
         type: 'GET',
         success: function(response) {
             hideLoading();
@@ -1828,7 +1935,7 @@ function loadEditDomisiliData(rtId) {
 
     // Get RT info first to know the hierarchy
     $.ajax({
-        url: '/api/keluarga/rt-info?rt_id=' + rtId,
+        url: '/admin/api/keluarga/rt-info?rt_id=' + rtId,
         type: 'GET',
         success: function(response) {
 
@@ -1895,7 +2002,7 @@ function loadEditDomisiliData(rtId) {
 function loadRwOptionsForEdit(kelurahanId) {
     return new Promise((resolve, reject) => {
         $.ajax({
-            url: '/api/keluarga/wilayah?level=rw&parent_id=' + kelurahanId,
+            url: '/admin/api/keluarga/wilayah?level=rw&parent_id=' + kelurahanId,
             type: 'GET',
             success: function(response) {
                 if (response.success) {
@@ -1921,7 +2028,7 @@ function loadRwOptionsForEdit(kelurahanId) {
 function loadRtOptionsForEdit(rwId) {
     return new Promise((resolve, reject) => {
         $.ajax({
-            url: '/api/keluarga/wilayah?level=rt&parent_id=' + rwId,
+            url: '/admin/api/keluarga/wilayah?level=rt&parent_id=' + rwId,
             type: 'GET',
             success: function(response) {
                 if (response.success) {
@@ -1984,9 +2091,6 @@ function loadEditAnggotaData(anggotaList) {
     }
 }
 
-function applyFilters() {
-    loadKeluarga(1);
-}
 
 function resetFilters() {
     $('#filterForm')[0].reset();

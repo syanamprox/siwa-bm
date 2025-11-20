@@ -3,6 +3,109 @@
 ## Overview
 Dokumen ini berisi spesifikasi detail fitur-fitur yang akan diimplementasikan dalam Sistem Informasi Warga (SIWA) Kelurahan berdasarkan brief dan struktur database yang telah dirancang.
 
+## Current Implementation Status
+
+### ✅ **COMPLETED FEATURES**
+
+#### Authentication & User Management
+- **Multi-level Login System**: 4 role hierarchy (Admin, Lurah, RW, RT)
+- **Session Management**:
+  - Standard Laravel session with 120 minutes lifetime
+  - "Ingat Saya" functionality with 5-year remember token
+  - Automatic logout on session expiration
+- **Security Features**:
+  - Rate limiting for login attempts (5 attempts per IP)
+  - Account validation (status_aktif check)
+  - Password hashing with Laravel's built-in security
+  - Default credentials removed from login page
+
+#### Master Data & Wilayah System
+- **Hierarchical Structure**: Kelurahan → RW → RT
+- **Public API Endpoints**:
+  - `/api/keluarga/wilayah` - Cascading dropdown data
+  - `/api/keluarga/rt-info` - RT address information
+- **Real Sample Data**: 17 wilayah records (Bendul Merisi, Surabaya)
+- **Cascading Dropdown**: JavaScript-powered dynamic selection
+
+#### Keluarga Management (KK-First Architecture)
+- **Core Architecture**: Warga creation hanya melalui keluarga module
+- **Dual Address System**:
+  - **Alamat KTP**: Manual input fields (rt_kk, rw_kk, kelurahan_kk, kecamatan_kk, kabupaten_kk, provinsi_kk)
+  - **Alamat Domisili**: RT ID selection dengan cascading dropdown (Kelurahan → RW → RT)
+- **Foto KK Management**:
+  - Upload validation: `mimes:jpeg,jpg,png|max:2048`
+  - Storage: `documents/kk/kk_{no_kk}_{timestamp}.{ext}`
+  - Display with zoom and download functionality
+- **CRUD Operations**: Modal-based AJAX operations
+- **Activity Logging**: Complete audit trail untuk semua perubahan
+
+#### Warga Management System
+- **Edit-Only Module**: Tidak ada create warga langsung (redirect ke keluarga)
+- **Data Structure**: 4 sections dengan focus pada fundamental data
+  - Data Pribadi (NIK, nama, tanggal lahir, jenis kelamin, etc.)
+  - Data Orang Tua (nama_ayah, nama_ibu)
+  - Data Kontak (telepon, email)
+  - Data Lainnya (pendidikan, pekerjaan, agama, etc.)
+- **Foto KTP System**:
+  - Storage: `documents/ktp/ktp_{nik}_{timestamp}.{ext}`
+  - Action button with conditional display
+  - Modal zoom functionality with download option
+- **Enhanced Search**: Auto-trigger (500ms debounce) multi-field search
+- **Table Actions**: View, Foto KTP, Edit, Delete dengan proper disabled states
+
+#### Photo Storage & File Management
+- **Standardized Structure**:
+  ```
+  storage/app/public/documents/
+  ├── ktp/     - Individual KTP photos
+  └── kk/      - Family card photos
+  ```
+- **File Naming Convention**:
+  - KTP: `ktp_{nik}_{timestamp}.{ext}`
+  - KK: `kk_{no_kk}_{timestamp}.{ext}`
+- **Automatic Cleanup**: Old files removed saat update
+- **Consistent Validation**: All photos use same validation rules
+
+#### API & AJAX System
+- **Public Routes**: Wilayah data access tanpa authentication
+- **Real-time Validation**: JavaScript validation with Laravel backend
+- **Modal-based CRUD**: Tidak ada page refresh untuk CRUD operations
+- **Error Handling**: Comprehensive error feedback dengan toast notifications
+- **Loading States**: Smooth loading animations untuk better UX
+
+### ⚠️ **IN PROGRESS**
+
+#### Iuran Management (Partial Implementation)
+- **Basic Models**: Iuran and PembayaranIuran models established
+- **Database Conflicts**: Need to resolve warga-iuran relationship issues
+- **Architecture Decision**: Should be KK-based, not warga-based
+
+### 🔄 **PLANNED FEATURES**
+
+#### Dashboard & Reporting System
+- **Real-time Statistics**: Population demographics, financial summaries
+- **Chart Integration**: Chart.js for data visualization
+- **Export Functionality**: PDF and Excel export capabilities
+- **Filtering**: Date range and wilayah-based filtering
+
+#### Advanced Iuran Management
+- **Automatic Billing**: Monthly invoice generation
+- **Payment Tracking**: Multiple payment methods integration
+- **Tunggakan Management**: Late fee calculation and notifications
+- **Financial Reports**: Comprehensive financial reporting
+
+#### Public Portal
+- **Data Verification**: Anonymous warga data lookup
+- **Iuran Status**: Payment status checking with QR codes
+- **Security Measures**: Rate limiting and data filtering
+- **Mobile Friendly**: Responsive design for public access
+
+#### System Administration
+- **Backup System**: Automated backup and restore
+- **Settings Management**: System configuration interface
+- **Activity Monitoring**: Comprehensive activity log viewer
+- **Performance Metrics**: System performance tracking
+
 ---
 
 ## 1. Manajemen Pengguna (User Management)
@@ -402,18 +505,23 @@ status_aktif       BOOLEAN      ✓           Active/inactive
 
 **Payment Methods:**
 - Cash (tunai) dengan kuitansi
-- Bank transfer dengan bukti transfer
+- Bank transfer (tanpa bukti, trust-based)
 - Digital payment (QRIS, E-wallet)
-- Auto-debit arrangement
+- Record audit trail untuk semua pembayaran
 
 **Payment Workflow:**
-1. User selects warga/periode
-2. System calculates total + denda
+1. User selects KK/periode/iuran
+2. System calculates total (sesuai nominal_custom jika ada)
 3. User input payment details
-4. Upload bukti pembayaran (jika transfer)
-5. Admin verification & approval
-6. Receipt generation
-7. Update payment status
+4. Record payment with audit trail
+5. Receipt generation
+6. Update payment status
+
+**Historical Data Preservation:**
+- **Status-Based System**: keluarga.status_keluarga (Aktif/Pindah/Non-Aktif/Dibubarkan)
+- **Complete Audit Trail**: Semua iuran dan pembayaran tetap tersimpan
+- **Financial Integrity**: Laporan keuangan balance meskipun keluarga berstatus non-aktif
+- **Status Management**: Family status changes affect future iuran generation only
 
 **Payment Validation:**
 - Amount verification

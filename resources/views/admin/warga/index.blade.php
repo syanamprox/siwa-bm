@@ -729,7 +729,7 @@ function loadWarga(page = 1) {
     params.per_page = $('#perPage').val();
 
     $.ajax({
-        url: '/api/warga',
+        url: '/admin/api/warga',
         type: 'GET',
         data: params,
         success: function(response) {
@@ -822,7 +822,7 @@ function renderPagination(pagination) {
 
 function loadStatistics() {
     $.ajax({
-        url: '/api/warga/statistics',
+        url: '/admin/api/warga/statistics',
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -833,14 +833,15 @@ function loadStatistics() {
             }
         },
         error: function(xhr) {
-            console.error('Failed to load statistics');
+            console.error('Failed to load statistics', xhr.status, xhr.responseText);
+            console.log('Response headers:', xhr.getAllResponseHeaders());
         }
     });
 }
 
 function loadFormData() {
     $.ajax({
-        url: '/api/warga/create',
+        url: '/admin/api/warga/create',
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -896,7 +897,7 @@ function editWarga(id) {
     showLoading();
 
     $.ajax({
-        url: '/api/warga/' + id + '/edit',
+        url: '/admin/api/warga/' + id + '/edit',
         type: 'GET',
         success: function(response) {
             hideLoading();
@@ -912,23 +913,12 @@ function editWarga(id) {
                 $('#wargaModal #nama_lengkap').val(warga.nama_lengkap);
                 $('#wargaModal #tempat_lahir').val(warga.tempat_lahir);
 
-                // Debug critical fields
-                console.log('=== Warga Data Debug ===');
-                console.log('ID:', warga.id);
-                console.log('Nama:', warga.nama_lengkap);
-                console.log('Tanggal lahir data:', warga.tanggal_lahir);
-                console.log('Tanggal lahir type:', typeof warga.tanggal_lahir);
-                console.log('Pendidikan terakhir data:', warga.pendidikan_terakhir);
-                console.log('Jenis kelamin data:', warga.jenis_kelamin);
-                console.log('=========================');
-
                 // Format tanggal untuk input type="date" (YYYY-MM-DD)
                 if (warga.tanggal_lahir) {
                     var tanggal = new Date(warga.tanggal_lahir);
                     var formattedDate = tanggal.getFullYear() + '-' +
                                       String(tanggal.getMonth() + 1).padStart(2, '0') + '-' +
                                       String(tanggal.getDate()).padStart(2, '0');
-                    console.log('Formatted date:', formattedDate);
                     $('#wargaModal #tanggal_lahir').val(formattedDate);
                 } else {
                     $('#wargaModal #tanggal_lahir').val('');
@@ -957,10 +947,7 @@ function editWarga(id) {
                 }
                 $('#wargaModal #pekerjaan').val(warga.pekerjaan);
 
-                // Debug pendidikan_terakhir
-                console.log('Pendidikan terakhir data:', warga.pendidikan_terakhir);
-                console.log('Pendidikan options length:', $('#wargaModal #pendidikan_terakhir option').length);
-
+                
                 // Always update pendidikan options to match keluarga form
                 var pendidikanOptions = '<option value="">Pilih Pendidikan</option>' +
                                      '<option value="Tidak Sekolah">📝 Tidak Sekolah</option>' +
@@ -974,10 +961,7 @@ function editWarga(id) {
                                      '<option value="S2">🎓 S2</option>' +
                                      '<option value="S3">🎓 S3</option>';
                 $('#wargaModal #pendidikan_terakhir').html(pendidikanOptions);
-
-                console.log('Available options:', $('#wargaModal #pendidikan_terakhir').html());
                 $('#wargaModal #pendidikan_terakhir').val(warga.pendidikan_terakhir);
-                console.log('After setting value:', $('#wargaModal #pendidikan_terakhir').val());
 
                 if ($('#wargaModal #kewarganegaraan option').length <= 1) {
                     $('#wargaModal #kewarganegaraan').html('<option value="">Pilih</option><option value="WNI">WNI</option><option value="WNA">WNA</option>');
@@ -1021,7 +1005,7 @@ function saveWarga() {
     var wargaId = $('#warga_id').val();
 
     // Always update (no create functionality)
-    var url = '/api/warga/' + wargaId;
+    var url = '/admin/api/warga/' + wargaId;
     formData.append('_method', 'PUT');
 
     // Handle domisili sama dengan KTP
@@ -1083,7 +1067,7 @@ function viewWarga(id) {
     showLoading();
 
     $.ajax({
-        url: '/api/warga/' + id,
+        url: '/admin/api/warga/' + id,
         type: 'GET',
         success: function(response) {
             hideLoading();
@@ -1093,13 +1077,7 @@ function viewWarga(id) {
                 // Append foto_ktp_url accessor
                 warga.foto_ktp_url = warga.foto_ktp ? '/storage/' + warga.foto_ktp : null;
 
-                // Debug foto KTP
-                console.log('=== Warga Debug ===');
-                console.log('Warga object:', warga);
-                console.log('foto_ktp_url:', warga.foto_ktp_url);
-                console.log('foto_ktp:', warga.foto_ktp);
-                console.log('===================');
-
+                
                 var content = `
                     <div class="row">
                         <div class="col-md-6">
@@ -1195,7 +1173,7 @@ function deleteWarga() {
     var id = $('#delete_warga_id').val();
 
     $.ajax({
-        url: '/api/warga/' + id,
+        url: '/admin/api/warga/' + id,
         type: 'DELETE',
         beforeSend: function() {
             showLoading();
@@ -1232,7 +1210,7 @@ function refreshData() {
 
 function redirectToKeluarga() {
     // Direct redirect to keluarga module
-    window.location.href = '/keluarga';
+    window.location.href = '/admin/keluarga';
 }
 
 function showImportModal() {
@@ -1287,7 +1265,7 @@ function displayValidationErrors(errors) {
 // Cascading Dropdown Functions for Domisili
 function loadKelurahanDomisili() {
     return $.ajax({
-        url: '/api/keluarga/wilayah?level=kelurahan',
+        url: '/admin/api/keluarga/wilayah?level=kelurahan',
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -1307,7 +1285,7 @@ function loadKelurahanDomisili() {
 
 function loadRwOptionsForEdit(kelurahanId) {
     return $.ajax({
-        url: '/api/keluarga/wilayah?level=rw&parent_id=' + kelurahanId,
+        url: '/admin/api/keluarga/wilayah?level=rw&parent_id=' + kelurahanId,
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -1327,7 +1305,7 @@ function loadRwOptionsForEdit(kelurahanId) {
 
 function loadRtOptionsForEdit(rwId) {
     return $.ajax({
-        url: '/api/keluarga/wilayah?level=rt&parent_id=' + rwId,
+        url: '/admin/api/keluarga/wilayah?level=rt&parent_id=' + rwId,
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -1397,7 +1375,7 @@ function autoMatchAlamatKtpToWilayah() {
 
     // Cari di tabel wilayahs
     $.ajax({
-        url: '/api/keluarga/wilayah',
+        url: '/admin/api/keluarga/wilayah',
         type: 'GET',
         data: {
             level: 'rt',

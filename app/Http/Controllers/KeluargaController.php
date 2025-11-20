@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Keluarga;
 use App\Models\Warga;
 use App\Models\Wilayah;
+use App\Models\AktivitasLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -44,6 +45,16 @@ class KeluargaController extends Controller
                 $query->rw($request->rw);
             }
 
+            // Filter by Kelurahan
+            if ($request->filled('kelurahan')) {
+                $query->kelurahan($request->kelurahan);
+            }
+
+            // Filter by Status
+            if ($request->filled('status_filter')) {
+                $query->status($request->status_filter);
+            }
+
             // Sort
             $sortField = $request->get('sort_field', 'created_at');
             $sortDirection = $request->get('sort_direction', 'desc');
@@ -53,11 +64,13 @@ class KeluargaController extends Controller
             $perPage = $request->get('per_page', 10);
             $keluarga = $query->paginate($perPage);
 
-            // Add foto_kk_url accessor to each item
+            // Add accessors to each item for frontend
             $keluargaItems = $keluarga->items();
             $formattedItems = collect($keluargaItems)->map(function ($item) {
                 $itemArray = $item->toArray();
-                $itemArray['foto_kk_url'] = $item->foto_kk_url; // This will trigger the accessor
+                $itemArray['foto_kk_url'] = $item->foto_kk_url; // Foto KK accessor
+                $itemArray['status_label'] = $item->status_label; // Status label
+                $itemArray['status_badge_class'] = $item->status_badge_class; // Status badge class
                 return $itemArray;
             });
 
@@ -212,8 +225,8 @@ class KeluargaController extends Controller
             $fotoKkPath = null;
             if ($request->hasFile('foto_kk')) {
                 $file = $request->file('foto_kk');
-                $fileName = 'kk_' . $request->no_kk . '_' . time() . '.' . $file->getClientOriginalExtension();
-                $fotoKkPath = $file->storeAs('keluarga/foto_kk', $fileName, 'public');
+                $fileName = 'kk_' . str_replace(' ', '', $request->no_kk) . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $fotoKkPath = $file->storeAs('documents/kk', $fileName, 'public');
             }
 
             // Create keluarga (wilayah info di-load dynamically via rt_id relationship)
@@ -444,8 +457,8 @@ class KeluargaController extends Controller
 
                 // Upload new file
                 $file = $request->file('foto_kk');
-                $fileName = 'kk_' . $request->no_kk . '_' . time() . '.' . $file->getClientOriginalExtension();
-                $fotoKkPath = $file->storeAs('keluarga/foto_kk', $fileName, 'public');
+                $fileName = 'kk_' . str_replace(' ', '', $request->no_kk) . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $fotoKkPath = $file->storeAs('documents/kk', $fileName, 'public');
             }
 
             // Update keluarga data (wilayah info di-load dynamically via rt_id relationship)
@@ -707,6 +720,65 @@ class KeluargaController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal memuat statistik keluarga: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update status keluarga
+     */
+    public function updateStatus(Request $request, Keluarga $keluarga): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'status_keluarga' => 'required|in:Aktif,Pindah,Non-Aktif,Dibubarkan',
+                'keterangan_status' => 'nullable|string|max:255',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation error',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $oldStatus = $keluarga->status_keluarga;
+            $newStatus = $request->status_keluarga;
+            $keterangan = $request->keterangan_status;
+
+            // Update status menggunakan method dari model
+            $success = $keluarga->updateStatus($newStatus, $keterangan);
+
+            if (!$success) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal mengupdate status keluarga'
+                ], 500);
+            }
+
+            
+            // Reload data untuk response
+            $keluarga->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Status keluarga berhasil diubah menjadi {$newStatus}",
+                'data' => [
+                    'id' => $keluarga->id,
+                    'no_kk' => $keluarga->no_kk,
+                    'status_keluarga' => $keluarga->status_keluarga,
+                    'status_label' => $keluarga->status_label,
+                    'status_badge_class' => $keluarga->status_badge_class,
+                    'keterangan_status' => $keluarga->keterangan_status,
+                    'tanggal_status' => $keluarga->tanggal_status?->format('Y-m-d'),
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate status keluarga: ' . $e->getMessage()
             ], 500);
         }
     }

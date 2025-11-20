@@ -169,20 +169,6 @@
                             Sistem ini dilindungi dengan keamanan berlapis
                         </small>
                     </div>
-
-                    <!-- Default Users Info (untuk development) -->
-                    @if(config('app.env') == 'local')
-                    <div class="text-center mt-4">
-                        <small class="text-info">
-                            <strong>Akun Default:</strong><br>
-                            Admin: admin@siwa.local / admin - password<br>
-                            Lurah: lurah@siwa.local / lurah - password<br>
-                            RW: rw01@siwa.local / rw01 - password<br>
-                            RT: rt01@siwa.local / rt01 - password
-                        </small>
-                    </div>
-                    @endif
-                </div>
             </div>
         </div>
     </div>

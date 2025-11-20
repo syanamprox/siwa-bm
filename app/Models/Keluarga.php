@@ -44,7 +44,9 @@ class Keluarga extends Model
         // Status & Keterangan
         'status_domisili_keluarga',
         'tanggal_mulai_domisili_keluarga',
+        'status_keluarga', // Aktif/Pindah/Non-Aktif/Dibubarkan
         'keterangan_status',
+        'tanggal_status',
     ];
 
     /**
@@ -56,6 +58,7 @@ class Keluarga extends Model
     {
         return [
             'tanggal_mulai_domisili_keluarga' => 'date',
+            'tanggal_status' => 'date',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
@@ -89,11 +92,29 @@ class Keluarga extends Model
     // Note: Boot method tidak diperlukan lagi karena alamat domisili di-load dynamically via rt_id relationship
 
     /**
-     * Relasi ke iuran
+     * Relasi ke iuran billing
      */
     public function iuran()
     {
-        return $this->hasMany(Iuran::class, 'keluarga_id');
+        return $this->hasMany(Iuran::class, 'kk_id');
+    }
+
+    /**
+     * Relasi many-to-many ke jenis iuran (koneksi iuran)
+     */
+    public function jenisIuran()
+    {
+        return $this->belongsToMany(JenisIuran::class, 'keluarga_iuran')
+            ->withPivot(['nominal_custom', 'status_aktif', 'alasan_custom', 'created_by'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Relasi ke koneksi iuran
+     */
+    public function keluargaIuran()
+    {
+        return $this->hasMany(KeluargaIuran::class);
     }
 
     /**
@@ -332,5 +353,69 @@ class Keluarga extends Model
 
         // Jika relative path, convert ke full URL
         return asset('storage/' . $this->foto_kk);
+    }
+
+    /**
+     * Check if keluarga is active
+     */
+    public function isActive(): bool
+    {
+        return $this->status_keluarga === 'Aktif';
+    }
+
+    /**
+     * Get status badge class
+     */
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return match($this->status_keluarga) {
+            'Aktif' => 'success',
+            'Pindah' => 'warning',
+            'Non-Aktif' => 'secondary',
+            'Dibubarkan' => 'danger',
+            default => 'secondary'
+        };
+    }
+
+    /**
+     * Get status label
+     */
+    public function getStatusLabelAttribute(): string
+    {
+        return match($this->status_keluarga) {
+            'Aktif' => 'Aktif',
+            'Pindah' => 'Pindah',
+            'Non-Aktif' => 'Non-Aktif',
+            'Dibubarkan' => 'Dibubarkan',
+            default => $this->status_keluarga
+        };
+    }
+
+    /**
+     * Scope untuk keluarga aktif
+     */
+    public function scopeAktif($query)
+    {
+        return $query->where('status_keluarga', 'Aktif');
+    }
+
+    /**
+     * Scope untuk keluarga berdasarkan status
+     */
+    public function scopeStatus($query, $status)
+    {
+        return $query->where('status_keluarga', $status);
+    }
+
+    /**
+     * Update status keluarga
+     */
+    public function updateStatus(string $status, ?string $keterangan = null): bool
+    {
+        return $this->update([
+            'status_keluarga' => $status,
+            'keterangan_status' => $keterangan,
+            'tanggal_status' => now()
+        ]);
     }
 }

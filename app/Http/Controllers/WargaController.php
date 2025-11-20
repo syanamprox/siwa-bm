@@ -161,7 +161,7 @@ class WargaController extends Controller
                 'pendidikan_terakhir' => 'required|in:Tidak Sekolah,SD/sederajat,SMP/sederajat,SMA/sederajat,D1,D2,D3,D4/S1,S2,S3',
                 'kewarganegaraan' => 'required|in:WNI,WNA',
                 'hubungan_keluarga' => 'required|string|max:50',
-                'foto_ktp' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'foto_ktp' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
                 'email' => 'nullable|email|max:255',
                 'status_domisili' => 'nullable|in:Tetap,Non Domisili,Luar,Sementara',
                 'tanggal_mulai_domisili' => 'nullable|date',
@@ -181,8 +181,8 @@ class WargaController extends Controller
             $fotoKtpPath = null;
             if ($request->hasFile('foto_ktp')) {
                 $file = $request->file('foto_ktp');
-                $filename = 'ktp_' . time() . '_' . \Illuminate\Support\Str::random(8) . '.' . $file->getClientOriginalExtension();
-                $fotoKtpPath = $file->storeAs('uploads/ktp', $filename, 'public');
+                $filename = 'ktp_' . str_replace(' ', '', $request->nik) . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $fotoKtpPath = $file->storeAs('documents/ktp', $filename, 'public');
             }
 
             // Only use fundamental warga fields
@@ -332,7 +332,7 @@ class WargaController extends Controller
                 'pendidikan_terakhir' => 'required|in:Tidak Sekolah,SD/sederajat,SMP/sederajat,SMA/sederajat,D1,D2,D3,D4/S1,S2,S3',
                 'kewarganegaraan' => 'required|in:WNI,WNA',
                 'hubungan_keluarga' => 'required|string|max:50',
-                'foto_ktp' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'foto_ktp' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
                 'kelurahan_domisili' => 'nullable|string|max:100',
                 'no_telepon' => 'nullable|string|max:20',
                 'email' => 'nullable|email|max:255',
@@ -362,8 +362,8 @@ class WargaController extends Controller
                 }
 
                 $file = $request->file('foto_ktp');
-                $filename = 'ktp_' . time() . '_' . \Illuminate\Support\Str::random(8) . '.' . $file->getClientOriginalExtension();
-                $fotoKtpPath = $file->storeAs('uploads/ktp', $filename, 'public');
+                $filename = 'ktp_' . str_replace(' ', '', $request->nik) . '_' . time() . '.' . $file->getClientOriginalExtension();
+                $fotoKtpPath = $file->storeAs('documents/ktp', $filename, 'public');
             }
 
             // Only update fundamental warga fields
