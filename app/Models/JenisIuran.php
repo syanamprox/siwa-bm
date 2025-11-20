@@ -24,10 +24,11 @@ class JenisIuran extends Model
      */
     protected $fillable = [
         'nama',
-        'deskripsi',
-        'nominal_default',
-        'periode',
-        'status_aktif',
+        'kode',
+        'jumlah',
+        'keterangan',
+        'is_aktif',
+        'periode'
     ];
 
     /**
@@ -38,11 +39,10 @@ class JenisIuran extends Model
     protected function casts(): array
     {
         return [
-            'nominal_default' => 'decimal:2',
-            'status_aktif' => 'boolean',
+            'jumlah' => 'decimal:2',
+            'is_aktif' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
-            'deleted_at' => 'datetime',
         ];
     }
 
@@ -55,11 +55,21 @@ class JenisIuran extends Model
     }
 
     /**
+     * Relasi many-to-many ke keluarga (koneksi iuran)
+     */
+    public function keluarga()
+    {
+        return $this->belongsToMany(Keluarga::class, 'keluarga_iuran')
+            ->withPivot(['nominal_custom', 'status_aktif', 'alasan_custom', 'created_by'])
+            ->withTimestamps();
+    }
+
+    /**
      * Scope untuk iuran aktif
      */
     public function scopeAktif($query)
     {
-        return $query->where('status_aktif', true);
+        return $query->where('is_aktif', true);
     }
 
     /**
@@ -75,7 +85,7 @@ class JenisIuran extends Model
      */
     public function scopeBulanan($query)
     {
-        return $query->where('periode', 'Bulanan');
+        return $query->where('periode', 'bulanan');
     }
 
     /**
@@ -83,7 +93,7 @@ class JenisIuran extends Model
      */
     public function scopeTahunan($query)
     {
-        return $query->where('periode', 'Tahunan');
+        return $query->where('periode', 'tahunan');
     }
 
     /**
@@ -91,7 +101,7 @@ class JenisIuran extends Model
      */
     public function scopeSekali($query)
     {
-        return $query->where('periode', 'Sekali');
+        return $query->where('periode', 'sekali');
     }
 
     /**
@@ -99,28 +109,37 @@ class JenisIuran extends Model
      */
     public function getNominalRupiahAttribute(): string
     {
-        return 'Rp ' . number_format($this->nominal_default, 0, ',', '.');
+        return 'Rp ' . number_format($this->jumlah, 0, ',', '.');
     }
 
     /**
-     * Get periode label
+     * Get formatted periode label
      */
     public function getPeriodeLabelAttribute(): string
     {
         return match($this->periode) {
-            'Bulanan' => 'Setiap Bulan',
-            'Tahunan' => 'Setiap Tahun',
-            'Sekali' => 'Sekali Bayar',
-            default => $this->periode,
+            'bulanan' => 'Setiap Bulan',
+            'tahunan' => 'Setiap Tahun',
+            'sekali' => 'Sekali Bayar',
+            default => ucfirst($this->periode),
         };
     }
 
+    /**
+     * Get nominal default attribute (alias for jumlah)
+     */
+    public function getNominalDefaultAttribute()
+    {
+        return $this->jumlah;
+    }
+
+    
     /**
      * Get status label
      */
     public function getStatusLabelAttribute(): string
     {
-        return $this->status_aktif ? 'Aktif' : 'Tidak Aktif';
+        return $this->is_aktif ? 'Aktif' : 'Tidak Aktif';
     }
 
     /**
@@ -128,7 +147,7 @@ class JenisIuran extends Model
      */
     public function getStatusBadgeClassAttribute(): string
     {
-        return $this->status_aktif ? 'success' : 'secondary';
+        return $this->is_aktif ? 'success' : 'secondary';
     }
 
     /**
@@ -136,7 +155,7 @@ class JenisIuran extends Model
      */
     public function toggleStatus(): void
     {
-        $this->update(['status_aktif' => !$this->status_aktif]);
+        $this->update(['is_aktif' => !$this->is_aktif]);
     }
 
     /**
@@ -153,9 +172,9 @@ class JenisIuran extends Model
     public static function getDaftarPeriode(): array
     {
         return [
-            'Bulanan' => 'Setiap Bulan',
-            'Tahunan' => 'Setiap Tahun',
-            'Sekali' => 'Sekali Bayar',
+            'bulanan' => 'Setiap Bulan',
+            'tahunan' => 'Setiap Tahun',
+            'sekali' => 'Sekali Bayar',
         ];
     }
 
@@ -166,7 +185,7 @@ class JenisIuran extends Model
     {
         return $query->where(function($q) use ($keyword) {
             $q->where('nama', 'like', "%{$keyword}%")
-              ->orWhere('deskripsi', 'like', "%{$keyword}%");
+              ->orWhere('keterangan', 'like', "%{$keyword}%");
         });
     }
 
@@ -192,31 +211,31 @@ class JenisIuran extends Model
         return [
             [
                 'nama' => 'Iuran Kebersihan',
-                'deskripsi' => 'Iuran untuk kebersihan lingkungan RT/RW',
-                'nominal_default' => 25000,
-                'periode' => 'Bulanan',
-                'status_aktif' => true,
+                'keterangan' => 'Iuran untuk kebersihan lingkungan RT/RW',
+                'jumlah' => 25000,
+                'periode' => 'bulanan',
+                'is_aktif' => true,
             ],
             [
                 'nama' => 'Iuran Keamanan',
-                'deskripsi' => 'Iuran untuk satpam/keamanan lingkungan',
-                'nominal_default' => 30000,
-                'periode' => 'Bulanan',
-                'status_aktif' => true,
+                'keterangan' => 'Iuran untuk satpam/keamanan lingkungan',
+                'jumlah' => 30000,
+                'periode' => 'bulanan',
+                'is_aktif' => true,
             ],
             [
                 'nama' => 'Iuran Sosial',
-                'deskripsi' => 'Iuran untuk dana sosial/kematian',
-                'nominal_default' => 20000,
-                'periode' => 'Bulanan',
-                'status_aktif' => true,
+                'keterangan' => 'Iuran untuk dana sosial/kematian',
+                'jumlah' => 20000,
+                'periode' => 'bulanan',
+                'is_aktif' => true,
             ],
             [
                 'nama' => 'Iuran Infrastruktur',
-                'deskripsi' => 'Iuran untuk pembangunan/infrastruktur',
-                'nominal_default' => 50000,
-                'periode' => 'Sekali',
-                'status_aktif' => true,
+                'keterangan' => 'Iuran untuk pembangunan/infrastruktur',
+                'jumlah' => 50000,
+                'periode' => 'sekali',
+                'is_aktif' => true,
             ],
         ];
     }

@@ -23,6 +23,9 @@
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <!-- Custom styles for this application -->
     <style>
         /* Override sidebar to white theme for better readability */
@@ -231,7 +234,7 @@
 
             <!-- Data Warga (RT level and above) -->
             @if(auth()->user()->hasRole(['rt','rw','lurah','admin']))
-            <li class="nav-item {{ request()->is('warga*') ? 'active' : '' }}">
+            <li class="nav-item {{ request()->is('admin/warga*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('warga.index') }}">
                     <i class="fas fa-users"></i>
                     <span>Data Warga</span></a>
@@ -240,7 +243,7 @@
 
             <!-- Data Keluarga (RW level and above) -->
             @if(auth()->user()->hasRole(['rw','lurah','admin']))
-            <li class="nav-item {{ request()->is('keluarga*') ? 'active' : '' }}">
+            <li class="nav-item {{ request()->is('admin/keluarga*') ? 'active' : '' }}">
                 <a class="nav-link" href="{{ route('keluarga.index') }}">
                     <i class="fas fa-id-card"></i>
                     <span>Data Keluarga</span></a>
@@ -249,10 +252,30 @@
 
             <!-- Manajemen Iuran -->
             @if(auth()->user()->hasRole(['rt','rw','lurah','admin']))
-            <li class="nav-item {{ request()->is('iuran*') ? 'active' : '' }}">
-                <a class="nav-link" href="#" onclick="alert('Fitur Manajemen Iuran akan segera tersedia'); return false;">
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseIuran" aria-expanded="true" aria-controls="collapseIuran">
                     <i class="fas fa-dollar-sign"></i>
-                    <span>Manajemen Iuran</span></a>
+                    <span>Manajemen Iuran</span>
+                </a>
+                <div id="collapseIuran" class="collapse {{ request()->is('admin/iuran*') ? 'show' : '' }}" aria-labelledby="headingIuran" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <a class="collapse-item {{ request()->is('admin/iuran') ? 'active' : '' }}" href="{{ route('iuran.index') }}">
+                            <i class="fas fa-list"></i> Tagihan Iuran
+                        </a>
+                        <a class="collapse-item {{ request()->is('admin/jenis-iuran*') ? 'active' : '' }}" href="{{ route('jenis_iuran.index') }}">
+                            <i class="fas fa-cogs"></i> Jenis Iuran
+                        </a>
+                        <a class="collapse-item {{ request()->is('admin/keluarga-iuran*') ? 'active' : '' }}" href="{{ route('keluarga_iuran.overview') }}">
+                            <i class="fas fa-link"></i> Koneksi Iuran
+                        </a>
+                        <a class="collapse-item {{ request()->is('admin/pembayaran*') ? 'active' : '' }}" href="#" onclick="alert('Fitur pembayaran akan segera hadir!'); return false;">
+                            <i class="fas fa-credit-card"></i> Pembayaran
+                        </a>
+                        <a class="collapse-item {{ request()->is('admin/laporan-iuran*') ? 'active' : '' }}" href="#" onclick="alert('Fitur laporan akan segera hadir!'); return false;">
+                            <i class="fas fa-chart-bar"></i> Laporan Iuran
+                        </a>
+                    </div>
+                </div>
             </li>
             @endif
 
