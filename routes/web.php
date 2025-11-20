@@ -14,9 +14,9 @@ use App\Http\Controllers\PengaturanSistemController;
 use App\Http\Controllers\ChangelogController;
 use Illuminate\Support\Facades\Route;
 
-// Redirect root to login
+// Redirect root to public portal
 Route::get('/', function () {
-    return redirect('/login');
+    return redirect('/portal');
 });
 
 // Public Portal Routes

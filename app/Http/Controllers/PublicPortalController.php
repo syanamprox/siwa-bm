@@ -89,12 +89,13 @@ class PublicPortalController extends Controller
         // Log the public access
         \App\Models\AktivitasLog::create([
             'user_id' => null,
-            'tabel_referensi' => 'warga',
-            'id_referensi' => $warga->id,
-            'jenis_aktivitas' => 'public_access',
-            'deskripsi' => 'Public portal access check for NIK: ' . substr($warga->nik, 0, 6) . '******',
-            'data_lama' => null,
-            'data_baru' => json_encode(['ip' => $request->ip(), 'search_query' => $search])
+            'action' => 'public_access',
+            'module' => 'warga',
+            'description' => 'Public portal access check for NIK: ' . substr($warga->nik, 0, 6) . '******',
+            'old_data' => null,
+            'new_data' => json_encode(['ip' => $request->ip(), 'search_query' => $search]),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent() ?? 'Unknown'
         ]);
 
         return response()->json([
@@ -143,6 +144,8 @@ class PublicPortalController extends Controller
 
         $keluarga = Keluarga::with(['wargas' => function($query) {
             $query->select('id', 'nama_lengkap', 'hubungan_keluarga', 'jenis_kelamin', 'kk_id');
+        }, 'kepalaKeluarga' => function($query) {
+            $query->select('id', 'nama_lengkap');
         }])->where('no_kk', $request->no_kk)->first();
 
         if (!$keluarga) {
@@ -159,12 +162,13 @@ class PublicPortalController extends Controller
         // Log the public access
         \App\Models\AktivitasLog::create([
             'user_id' => null,
-            'tabel_referensi' => 'keluarga',
-            'id_referensi' => $keluarga->id,
-            'jenis_aktivitas' => 'public_access',
-            'deskripsi' => 'Public portal family check for KK: ' . substr($keluarga->no_kk, 0, 6) . '******',
-            'data_lama' => null,
-            'data_baru' => json_encode(['ip' => $request->ip()])
+            'action' => 'public_access',
+            'module' => 'keluarga',
+            'description' => 'Public portal family check for KK: ' . substr($keluarga->no_kk, 0, 6) . '******',
+            'old_data' => null,
+            'new_data' => json_encode(['ip' => $request->ip()]),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent() ?? 'Unknown'
         ]);
 
         return response()->json([
@@ -221,9 +225,9 @@ class PublicPortalController extends Controller
             ], 404);
         }
 
-        // Get iuran data for this warga
+        // Get iuran data for this warga's keluarga
         $iuranData = Iuran::with(['jenisIuran', 'pembayaranIuran'])
-            ->where('warga_id', $warga->id)
+            ->where('kk_id', $warga->kk_id)
             ->orderBy('periode_bulan', 'desc')
             ->take(12) // Last 12 months
             ->get();
@@ -234,12 +238,13 @@ class PublicPortalController extends Controller
         // Log the public access
         \App\Models\AktivitasLog::create([
             'user_id' => null,
-            'tabel_referensi' => 'iuran',
-            'id_referensi' => $warga->id,
-            'jenis_aktivitas' => 'public_access',
-            'deskripsi' => 'Public portal iuran check for NIK: ' . substr($warga->nik, 0, 6) . '******',
-            'data_lama' => null,
-            'data_baru' => json_encode(['ip' => $request->ip()])
+            'action' => 'public_access',
+            'module' => 'iuran',
+            'description' => 'Public portal iuran check for NIK: ' . substr($warga->nik, 0, 6) . '******',
+            'old_data' => null,
+            'new_data' => json_encode(['ip' => $request->ip()]),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent() ?? 'Unknown'
         ]);
 
         return response()->json([
@@ -260,24 +265,37 @@ class PublicPortalController extends Controller
             'tempat_lahir' => $warga->tempat_lahir,
             'tanggal_lahir' => $warga->tanggal_lahir,
             'jenis_kelamin' => $warga->jenis_kelamin,
+            'golongan_darah' => $warga->golongan_darah,
             'agama' => $warga->agama,
             'status_perkawinan' => $warga->status_perkawinan,
             'pekerjaan' => $warga->pekerjaan,
+            'kewarganegaraan' => $warga->kewarganegaraan,
             'pendidikan_terakhir' => $warga->pendidikan_terakhir,
-            'rt_domisili' => $warga->rt_domisili,
-            'rw_domisili' => $warga->rw_domisili,
-            'kelurahan_domisili' => $warga->kelurahan_domisili,
-            'alamat_domisili' => $warga->alamat_domisili,
-            'status_domisili' => $warga->status_domisili,
             'no_telepon' => $warga->no_telepon ? substr($warga->no_telepon, 0, 3) . '***' . substr($warga->no_telepon, -3) : null,
             'email' => $warga->email ? substr($warga->email, 0, 3) . '***@***.com' : null,
-            'keluarga' => $warga->keluarga ? [
-                'no_kk' => substr($warga->keluarga->no_kk, 0, 6) . '******' . substr($warga->keluarga->no_kk, -4),
-                'alamat_kk' => $warga->keluarga->alamat_kk,
-                'rt_kk' => $warga->keluarga->rt_kk,
-                'rw_kk' => $warga->keluarga->rw_kk,
-                'kelurahan_kk' => $warga->keluarga->kelurahan_kk,
-            ] : null
+            'hubungan_keluarga' => $warga->hubungan_keluarga,
+            'keluarga' => $this->getKeluargaInfo($warga)
+        ];
+    }
+
+    /**
+     * Helper to get keluarga info safely
+     */
+    private function getKeluargaInfo($warga)
+    {
+        if (!$warga->keluarga) return null;
+
+        return [
+            'no_kk' => substr($warga->keluarga->no_kk, 0, 6) . '******' . substr($warga->keluarga->no_kk, -4),
+            'alamat_kk' => substr($warga->keluarga->alamat_kk, 0, 20) . '...',
+            'rt_kk' => $warga->keluarga->rt_kk,
+            'rw_kk' => $warga->keluarga->rw_kk,
+            'kelurahan_kk' => $warga->keluarga->kelurahan_kk,
+            'alamat_domisili' => $warga->keluarga->alamat_domisili ? substr($warga->keluarga->alamat_domisili, 0, 20) . '...' : null,
+            'rt' => $warga->keluarga->wilayah ? $warga->keluarga->wilayah->nama : null,
+            'rw' => $warga->keluarga->wilayah ? $warga->keluarga->wilayah->parent->nama : null,
+            'kelurahan' => $warga->keluarga->wilayah ? $warga->keluarga->wilayah->parent->parent->nama : null,
+            'status_domisili_keluarga' => $warga->keluarga->status_domisili_keluarga,
         ];
     }
 
@@ -288,11 +306,18 @@ class PublicPortalController extends Controller
     {
         return [
             'no_kk' => substr($keluarga->no_kk, 0, 6) . '******' . substr($keluarga->no_kk, -4),
-            'alamat_kk' => $keluarga->alamat_kk,
+            'alamat_kk' => substr($keluarga->alamat_kk, 0, 30) . '...',
             'rt_kk' => $keluarga->rt_kk,
             'rw_kk' => $keluarga->rw_kk,
             'kelurahan_kk' => $keluarga->kelurahan_kk,
+            'alamat_domisili' => $keluarga->alamat_domisili ? substr($keluarga->alamat_domisili, 0, 30) . '...' : null,
+            'rt' => $keluarga->wilayah ? $keluarga->wilayah->nama : null,
+            'rw' => $keluarga->wilayah ? $keluarga->wilayah->parent->nama : null,
+            'kelurahan' => $keluarga->wilayah ? $keluarga->wilayah->parent->parent->nama : null,
+            'status_domisili_keluarga' => $keluarga->status_domisili_keluarga,
+            'tanggal_mulai_domisili_keluarga' => $keluarga->tanggal_mulai_domisili_keluarga,
             'jumlah_anggota' => $keluarga->wargas->count(),
+            'kepala_keluarga' => $keluarga->kepalaKeluarga ? $keluarga->kepalaKeluarga->nama_lengkap : null,
             'anggota_keluarga' => $keluarga->wargas->map(function($warga) {
                 return [
                     'nama_lengkap' => $warga->nama_lengkap,
@@ -312,23 +337,53 @@ class PublicPortalController extends Controller
             'nama_warga' => $warga->nama_lengkap,
             'nik' => substr($warga->nik, 0, 6) . '******' . substr($warga->nik, -4),
             'ringkasan_iuran' => [
-                'total_tagihan' => 'Rp ' . number_format($iuranData->where('status', 'belum_bayar')->sum('jumlah'), 0, ',', '.'),
-                'total_dibayar' => 'Rp ' . number_format($iuranData->pluck('pembayaranIuran')->flatten()->sum('jumlah_bayar'), 0, ',', '.'),
+                'total_tagihan' => 'Rp ' . number_format($iuranData->where('status', 'belum_bayar')->sum('nominal'), 0, ',', '.'),
+                'total_lunas' => 'Rp ' . number_format($iuranData->where('status', 'lunas')->sum('nominal'), 0, ',', '.'),
+                'jumlah_tagihan' => $iuranData->count(),
                 'jumlah_tunggakan' => $iuranData->where('status', 'belum_bayar')->count(),
+                'jumlah_lunas' => $iuranData->where('status', 'lunas')->count(),
             ],
-            'detail_iuran' => $iuranData->map(function($iuran) {
-                $pembayaran = $iuran->pembayaranIuran->first();
+            'detail_iuran' => $iuranData->take(6)->map(function($iuran) { // Limit to 6 recent iuran
                 return [
-                    'jenis_iuran' => $iuran->jenisIuran->nama,
-                    'periode' => $iuran->periode_bulan,
+                    'jenis_iuran' => $iuran->jenisIuran ? $iuran->jenisIuran->nama : 'Unknown',
+                    'periode' => $this->formatPeriode($iuran->periode_bulan),
                     'nominal' => 'Rp ' . number_format($iuran->nominal, 0, ',', '.'),
-                    'status' => $iuran->status,
-                    'jatuh_tempo' => $iuran->jatuh_tempo,
-                    'tanggal_bayar' => $pembayaran ? $pembayaran->tanggal_bayar : null,
-                    'metode_pembayaran' => $pembayaran ? $pembayaran->metode_pembayaran : null,
+                    'status' => $this->formatStatus($iuran->status),
+                    'jatuh_tempo' => $iuran->jatuh_tempo ? date('d/m/Y', strtotime($iuran->jatuh_tempo)) : null,
+                    'keterangan' => $iuran->keterangan ? substr($iuran->keterangan, 0, 50) . '...' : null,
                 ];
             })
         ];
+    }
+
+    /**
+     * Format periode for better readability
+     */
+    private function formatPeriode($periode)
+    {
+        if (strlen($periode) === 7) {
+            $year = substr($periode, 0, 4);
+            $month = substr($periode, 5, 2);
+            $monthNames = ['01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April',
+                          '05' => 'Mei', '06' => 'Juni', '07' => 'Juli', '08' => 'Agustus',
+                          '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'];
+            return ($monthNames[$month] ?? $month) . ' ' . $year;
+        }
+        return $periode;
+    }
+
+    /**
+     * Format status for better readability
+     */
+    private function formatStatus($status)
+    {
+        $statusMap = [
+            'belum_bayar' => 'Belum Bayar',
+            'sebagian' => 'Sebagian',
+            'lunas' => 'Lunas',
+            'batal' => 'Batal'
+        ];
+        return $statusMap[$status] ?? $status;
     }
 
     /**
