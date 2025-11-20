@@ -11,12 +11,65 @@ use Illuminate\Http\JsonResponse;
 class KeluargaIuranController extends Controller
 {
     /**
-     * Display all iuran connections for a specific keluarga.
+     * Display overview of all keluarga-iuran connections across all families
+     */
+    public function overview(Request $request)
+    {
+        // Get all jenis iurans for filter dropdown
+        $allJenisIurans = JenisIuran::where('is_aktif', true)->orderBy('nama')->get();
+
+        // Build query with filters
+        $query = KeluargaIuran::with(['keluarga.kepalaKeluarga', 'jenisIuran'])
+            ->whereHas('jenisIuran') // Only include records with existing jenis iuran
+            ->whereHas('keluarga');   // Only include records with existing keluarga
+
+        // Apply combined search filter
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->whereHas('keluarga', function($subQ) use ($searchTerm) {
+                    $subQ->where('no_kk', 'like', '%' . $searchTerm . '%')
+                          ->orWhereHas('kepalaKeluarga', function($subSubQ) use ($searchTerm) {
+                              $subSubQ->where('nama_lengkap', 'like', '%' . $searchTerm . '%');
+                          });
+                });
+            });
+        }
+
+        if ($request->filled('filter_jenis_iuran')) {
+            $query->where('jenis_iuran_id', $request->filter_jenis_iuran);
+        }
+
+        if ($request->filled('filter_status')) {
+            $query->where('status_aktif', $request->filter_status === '1');
+        }
+
+        $connections = $query->orderBy('created_at', 'desc')->paginate(25);
+
+        $summary = [
+            'total_connections' => KeluargaIuran::count(),
+            'active_connections' => KeluargaIuran::where('status_aktif', true)->count(),
+            'families_with_iuran' => KeluargaIuran::pluck('keluarga_id')->unique()->count(),
+            'total_custom_nominals' => KeluargaIuran::whereNotNull('nominal_custom')->count()
+        ];
+
+        return view('admin.keluarga_iuran.overview', compact('connections', 'summary', 'allJenisIurans'));
+    }
+
+    /**
+     * Index: Show all iuran connections for a specific family
+     * URL: /admin/keluarga/{keluarga}/iuran
      */
     public function index(Keluarga $keluarga)
     {
         $connections = $keluarga->keluargaIuran()
-            ->with('jenisIuran')
+            ->with(['jenisIuran' => function($query) {
+                $query->withTrashed();
+            }])
+            ->whereHas('jenisIuran', function($query) {
+                $query->withTrashed();
+            }) // Include connections with soft-deleted jenis iuran
+            ->orderBy('created_at', 'desc')
             ->get();
 
         $availableIurans = JenisIuran::where('is_aktif', true)
@@ -27,17 +80,23 @@ class KeluargaIuranController extends Controller
     }
 
     /**
-     * Store a new connection between keluarga and jenis iuran.
+     * Store: Connect family to iuran type (AJAX support)
+     * URL: POST /admin/keluarga/{keluarga}/iuran
      */
     public function store(Request $request, Keluarga $keluarga): JsonResponse
     {
-        $validated = $request->validate([
+        $rules = [
             'jenis_iuran_id' => 'required|exists:jenis_iurans,id',
             'nominal_custom' => 'nullable|numeric|min:0',
             'alasan_custom' => 'nullable|string|max:255'
-        ]);
+        ];
 
-        // Check if connection already exists
+        $validated = $request->validate($rules);
+
+        // Handle boolean checkbox separately
+        $validated['status_aktif'] = $request->boolean('status_aktif', true);
+
+        // Check if connection already exists (only active records)
         $exists = $keluarga->keluargaIuran()
             ->where('jenis_iuran_id', $validated['jenis_iuran_id'])
             ->exists();
@@ -45,68 +104,102 @@ class KeluargaIuranController extends Controller
         if ($exists) {
             return response()->json([
                 'success' => false,
-                'message' => 'Koneksi iuran sudah ada untuk keluarga ini'
+                'message' => 'Koneksi iuran ini sudah ada untuk keluarga tersebut'
             ], 422);
         }
 
-        $keluarga->keluargaIuran()->attach($validated['jenis_iuran_id'], [
+        $connection = $keluarga->keluargaIuran()->create([
+            'jenis_iuran_id' => $validated['jenis_iuran_id'],
             'nominal_custom' => $validated['nominal_custom'],
-            'status_aktif' => true,
+            'status_aktif' => $validated['status_aktif'] ?? true,
             'alasan_custom' => $validated['alasan_custom'],
             'created_by' => auth()->id()
         ]);
 
+        $connection->load(['jenisIuran' => function($query) {
+            $query->withTrashed();
+        }]);
+
         return response()->json([
             'success' => true,
-            'message' => 'Koneksi iuran berhasil ditambahkan'
+            'message' => 'Koneksi iuran berhasil ditambahkan',
+            'data' => [
+                'id' => $connection->id,
+                'keluarga_id' => $connection->keluarga_id,
+                'jenis_iuran_id' => $connection->jenis_iuran_id,
+                'nominal_custom' => $connection->nominal_custom,
+                'status_aktif' => $connection->status_aktif,
+                'alasan_custom' => $connection->alasan_custom,
+                'jenisIuran' => $connection->jenisIuran ? [
+                    'id' => $connection->jenisIuran->id,
+                    'nama' => $connection->jenisIuran->nama,
+                    'kode' => $connection->jenisIuran->kode,
+                    'jumlah' => $connection->jenisIuran->jumlah,
+                    'periode_label' => $connection->jenisIuran->periode_label
+                ] : null
+            ]
         ]);
     }
 
     /**
-     * Update an existing connection.
+     * Update: Modify connection (AJAX support)
+     * URL: PUT /admin/keluarga/{keluarga}/iuran/{jenisIuran}
      */
     public function update(Request $request, Keluarga $keluarga, JenisIuran $jenisIuran): JsonResponse
     {
-        $validated = $request->validate([
-            'nominal_custom' => 'nullable|numeric|min:0',
-            'status_aktif' => 'required|boolean',
-            'alasan_custom' => 'nullable|string|max:255'
-        ]);
-
         $connection = $keluarga->keluargaIuran()
             ->where('jenis_iuran_id', $jenisIuran->id)
             ->firstOrFail();
 
-        $connection->update([
-            'nominal_custom' => $validated['nominal_custom'],
-            'status_aktif' => $validated['status_aktif'],
-            'alasan_custom' => $validated['alasan_custom']
-        ]);
+        $rules = [
+            'nominal_custom' => 'nullable|numeric|min:0',
+            'alasan_custom' => 'nullable|string|max:255'
+        ];
+
+        $validated = $request->validate($rules);
+
+        // Handle boolean checkbox separately
+        $validated['status_aktif'] = $request->boolean('status_aktif', false);
+
+        $connection->update($validated);
+
+        // Load relationship with debugging
+        $connection->load(['jenisIuran' => function($query) {
+            $query->withTrashed();
+        }]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Koneksi iuran berhasil diperbarui'
+            'message' => 'Koneksi iuran berhasil diperbarui',
+            'data' => [
+                'id' => $connection->id,
+                'keluarga_id' => $connection->keluarga_id,
+                'jenis_iuran_id' => $connection->jenis_iuran_id,
+                'nominal_custom' => $connection->nominal_custom,
+                'status_aktif' => $connection->status_aktif,
+                'alasan_custom' => $connection->alasan_custom,
+                'jenisIuran' => $connection->jenisIuran ? [
+                    'id' => $connection->jenisIuran->id,
+                    'nama' => $connection->jenisIuran->nama,
+                    'kode' => $connection->jenisIuran->kode,
+                    'jumlah' => $connection->jenisIuran->jumlah,
+                    'periode_label' => $connection->jenisIuran->periode_label
+                ] : null
+            ]
         ]);
     }
 
     /**
-     * Remove a connection.
+     * Destroy: Remove connection (AJAX support)
+     * URL: DELETE /admin/keluarga/{keluarga}/iuran/{jenisIuran}
      */
     public function destroy(Keluarga $keluarga, JenisIuran $jenisIuran): JsonResponse
     {
-        // Check if there are related iuran bills
-        $relatedBills = $keluarga->iuran()
+        $connection = $keluarga->keluargaIuran()
             ->where('jenis_iuran_id', $jenisIuran->id)
-            ->count();
+            ->firstOrFail();
 
-        if ($relatedBills > 0) {
-            return response()->json([
-                'success' => false,
-                'message' => "Tidak dapat menghapus koneksi yang sudah memiliki tagihan iuran ({$relatedBills} tagihan)"
-            ], 422);
-        }
-
-        $keluarga->keluargaIuran()->detach($jenisIuran->id);
+        $connection->delete();
 
         return response()->json([
             'success' => true,
@@ -115,88 +208,118 @@ class KeluargaIuranController extends Controller
     }
 
     /**
-     * API: Get all jenis iuran available for a keluarga.
+     * API: Get available jenis iuran for a family
      */
-    public function getAvailableJenisIuran($keluargaId): JsonResponse
+    public function getAvailableJenisIuran(Keluarga $keluarga): JsonResponse
     {
-        try {
-            $keluarga = Keluarga::findOrFail($keluargaId);
+        $existingConnections = $keluarga->keluargaIuran()->pluck('jenis_iuran_id');
 
-            $connectedIds = $keluarga->keluargaIuran()
-                ->wherePivot('status_aktif', true)
-                ->pluck('jenis_iuran_id');
+        $availableIurans = JenisIuran::where('is_aktif', true)
+            ->whereNotIn('id', $existingConnections)
+            ->get(['id', 'nama', 'kode', 'jumlah', 'periode']);
 
-            $availableIurans = JenisIuran::where('is_aktif', true)
-                ->whereNotIn('id', $connectedIds)
-                ->get(['id', 'nama', 'kode', 'jumlah', 'periode']);
-
-            return response()->json([
-                'success' => true,
-                'data' => $availableIurans
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal mengambil data: ' . $e->getMessage()
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'data' => $availableIurans
+        ]);
     }
 
     /**
-     * API: Get all active connections for a keluarga.
+     * API: Get active connections for a family
      */
-    public function getActiveConnections($keluargaId): JsonResponse
+    public function getActiveConnections(Keluarga $keluarga): JsonResponse
     {
-        try {
-            $keluarga = Keluarga::findOrFail($keluargaId);
-
-            $connections = $keluarga->keluargaIuran()
-                ->wherePivot('status_aktif', true)
-                ->with('jenisIuran')
-                ->get()
-                ->map(function($connection) {
-                    return [
-                        'id' => $connection->id,
-                        'jenis_iuran_id' => $connection->jenis_iuran_id,
-                        'nama' => $connection->jenisIuran->nama,
-                        'nominal_default' => $connection->jenisIuran->jumlah,
-                        'nominal_custom' => $connection->nominal_custom,
-                        'nominal_effective' => $connection->nominal_custom ?? $connection->jenisIuran->jumlah,
-                        'periode' => $connection->jenisIuran->periode,
-                        'alasan_custom' => $connection->alasan_custom
-                    ];
-                });
-
-            return response()->json([
-                'success' => true,
-                'data' => $connections
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal mengambil data: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Display overview of all keluarga-iuran connections.
-     */
-    public function overview()
-    {
-        $connections = KeluargaIuran::with(['keluarga', 'jenisIuran'])
-            ->orderBy('created_at', 'desc')
+        $connections = $keluarga->keluargaIuran()
+            ->where('status_aktif', true)
+            ->with('jenisIuran')
             ->get();
 
+        return response()->json([
+            'success' => true,
+            'data' => $connections
+        ]);
+    }
+
+    /**
+     * API: Get filtered connections for overview with pagination
+     */
+    public function apiOverview(Request $request): JsonResponse
+    {
+        // Get all jenis iurans for filter dropdown
+        $allJenisIurans = JenisIuran::where('is_aktif', true)->orderBy('nama')->get();
+
+        // Build query with filters
+        $query = KeluargaIuran::with(['keluarga.kepalaKeluarga', 'jenisIuran'])
+            ->whereHas('jenisIuran') // Only include records with existing jenis iuran
+            ->whereHas('keluarga');   // Only include records with existing keluarga
+
+        // Apply combined search filter
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->where(function($q) use ($searchTerm) {
+                $q->whereHas('keluarga', function($subQ) use ($searchTerm) {
+                    $subQ->where('no_kk', 'like', '%' . $searchTerm . '%')
+                          ->orWhereHas('kepalaKeluarga', function($subSubQ) use ($searchTerm) {
+                              $subSubQ->where('nama_lengkap', 'like', '%' . $searchTerm . '%');
+                          });
+                });
+            });
+        }
+
+        if ($request->filled('filter_jenis_iuran')) {
+            $query->where('jenis_iuran_id', $request->filter_jenis_iuran);
+        }
+
+        if ($request->filled('filter_status')) {
+            $query->where('status_aktif', $request->filter_status === '1');
+        }
+
+        // Pagination
+        $perPage = $request->per_page ?? 25;
+        $page = $request->page ?? 1;
+
+        $connections = $query->orderBy('created_at', 'desc')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        // Load kepala keluarga data for each connection
+        $connectionsWithKepala = $connections->getCollection()->map(function ($connection) {
+            // Convert to array and add kepala keluarga data
+            $connectionArray = $connection->toArray();
+
+            // Load kepala keluarga if exists
+            if ($connection->keluarga && $connection->keluarga->kepala_keluarga_id) {
+                $kepalaKeluarga = \App\Models\Warga::find($connection->keluarga->kepala_keluarga_id);
+                if ($kepalaKeluarga) {
+                    $connectionArray['keluarga']['kepala_keluarga'] = [
+                        'id' => $kepalaKeluarga->id,
+                        'nama_lengkap' => $kepalaKeluarga->nama_lengkap
+                    ];
+                }
+            }
+
+            return $connectionArray;
+        });
+
+        // Summary data (filtered)
         $summary = [
-            'total_connections' => $connections->count(),
-            'active_connections' => $connections->where('status_aktif', true)->count(),
-            'families_with_iuran' => $connections->pluck('keluarga_id')->unique()->count(),
-            'total_custom_nominals' => $connections->whereNotNull('nominal_custom')->count()
+            'total_connections' => $query->count(),
+            'active_connections' => $query->where('status_aktif', true)->count(),
+            'families_with_iuran' => $query->pluck('keluarga_id')->unique()->count(),
+            'total_custom_nominals' => $query->whereNotNull('nominal_custom')->count()
         ];
 
-        return view('admin.keluarga_iuran.overview', compact('connections', 'summary'));
+        return response()->json([
+            'success' => true,
+            'data' => $connectionsWithKepala->values()->all(),
+            'pagination' => [
+                'current_page' => $connections->currentPage(),
+                'last_page' => $connections->lastPage(),
+                'per_page' => $connections->perPage(),
+                'total' => $connections->total(),
+                'from' => $connections->firstItem(),
+                'to' => $connections->lastItem()
+            ],
+            'summary' => $summary
+        ]);
     }
 }

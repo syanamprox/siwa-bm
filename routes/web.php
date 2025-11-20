@@ -159,6 +159,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/api/jenis-iuran/{jenis_iuran}/toggle-status', [JenisIuranController::class, 'toggleStatus'])->name('api.jenis_iuran.toggle_status');
 
         // API Routes for Keluarga-Iuran operations
+        Route::get('/api/keluarga-iuran/overview', [KeluargaIuranController::class, 'apiOverview'])->name('api.keluarga_iuran.overview');
         Route::get('/api/keluarga-iuran/{keluargaId}/available', [KeluargaIuranController::class, 'getAvailableJenisIuran'])->name('api.keluarga_iuran.available');
         Route::get('/api/keluarga-iuran/{keluargaId}/active', [KeluargaIuranController::class, 'getActiveConnections'])->name('api.keluarga_iuran.active');
 
