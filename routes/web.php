@@ -21,10 +21,13 @@ Route::get('/', function () {
 
 // Public Portal Routes
 Route::prefix('portal')->group(function () {
-    Route::get('/', [App\Http\Controllers\PublicPortalController::class, 'index'])->name('portal.index');
-    Route::post('/cek-warga', [App\Http\Controllers\PublicPortalController::class, 'cekWarga'])->name('portal.cek-warga');
-    Route::post('/cek-keluarga', [App\Http\Controllers\PublicPortalController::class, 'cekKeluarga'])->name('portal.cek-keluarga');
-    Route::post('/cek-iuran', [App\Http\Controllers\PublicPortalController::class, 'cekIuran'])->name('portal.cek-iuran');
+    Route::get('/', [App\Http\Controllers\PublicPortalController::class, 'index'])->name('portal');
+    Route::get('/iuran', [App\Http\Controllers\PublicPortalController::class, 'iuranPage'])->name('portal.iuran');
+    Route::get('/warga', [App\Http\Controllers\PublicPortalController::class, 'wargaPage'])->name('portal.warga');
+    Route::get('/keluarga', [App\Http\Controllers\PublicPortalController::class, 'keluargaPage'])->name('portal.keluarga');
+    Route::post('/cek-warga', [App\Http\Controllers\PublicPortalController::class, 'cekWarga'])->name('portal.cek.warga');
+    Route::post('/cek-keluarga', [App\Http\Controllers\PublicPortalController::class, 'cekKeluarga'])->name('portal.cek.keluarga');
+    Route::post('/cek-iuran', [App\Http\Controllers\PublicPortalController::class, 'cekIuran'])->name('portal.cek.iuran');
     Route::get('/captcha', [App\Http\Controllers\PublicPortalController::class, 'generateCaptcha'])->name('portal.captcha');
 });
 

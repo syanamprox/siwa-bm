@@ -9,6 +9,7 @@ use App\Models\Warga;
 use App\Models\Keluarga;
 use App\Models\Iuran;
 use App\Models\PembayaranIuran;
+use Carbon\Carbon;
 
 class PublicPortalController extends Controller
 {
@@ -18,6 +19,30 @@ class PublicPortalController extends Controller
     public function index()
     {
         return view('portal.index');
+    }
+
+    /**
+     * Display the iuran checking page
+     */
+    public function iuranPage()
+    {
+        return view('portal.iuran');
+    }
+
+    /**
+     * Display the warga checking page
+     */
+    public function wargaPage()
+    {
+        return view('portal.warga');
+    }
+
+    /**
+     * Display the keluarga checking page
+     */
+    public function keluargaPage()
+    {
+        return view('portal.keluarga');
     }
 
     /**
@@ -142,7 +167,7 @@ class PublicPortalController extends Controller
             ], 422);
         }
 
-        $keluarga = Keluarga::with(['wargas' => function($query) {
+        $keluarga = Keluarga::with(['anggotaKeluarga' => function($query) {
             $query->select('id', 'nama_lengkap', 'hubungan_keluarga', 'jenis_kelamin', 'kk_id');
         }, 'kepalaKeluarga' => function($query) {
             $query->select('id', 'nama_lengkap');
@@ -226,7 +251,7 @@ class PublicPortalController extends Controller
         }
 
         // Get iuran data for this warga's keluarga
-        $iuranData = Iuran::with(['jenisIuran', 'pembayaranIuran'])
+        $iuranData = Iuran::with(['jenisIuran', 'pembayaran'])
             ->where('kk_id', $warga->kk_id)
             ->orderBy('periode_bulan', 'desc')
             ->take(12) // Last 12 months
@@ -263,7 +288,7 @@ class PublicPortalController extends Controller
             'nama_lengkap' => $warga->nama_lengkap,
             'nik' => substr($warga->nik, 0, 6) . '******' . substr($warga->nik, -4),
             'tempat_lahir' => $warga->tempat_lahir,
-            'tanggal_lahir' => $warga->tanggal_lahir,
+            'tanggal_lahir' => $this->sanitizeTanggalLahir($warga->tanggal_lahir),
             'jenis_kelamin' => $warga->jenis_kelamin,
             'golongan_darah' => $warga->golongan_darah,
             'agama' => $warga->agama,
@@ -272,10 +297,42 @@ class PublicPortalController extends Controller
             'kewarganegaraan' => $warga->kewarganegaraan,
             'pendidikan_terakhir' => $warga->pendidikan_terakhir,
             'no_telepon' => $warga->no_telepon ? substr($warga->no_telepon, 0, 3) . '***' . substr($warga->no_telepon, -3) : null,
-            'email' => $warga->email ? substr($warga->email, 0, 3) . '***@***.com' : null,
+            'email' => $warga->email ? substr($warga->email, 0, 3) . '***' . substr(strrchr($warga->email, '@'), 0) . '***' . substr(strrchr($warga->email, '.'), -2) : null,
             'hubungan_keluarga' => $warga->hubungan_keluarga,
             'keluarga' => $this->getKeluargaInfo($warga)
         ];
+    }
+
+    /**
+     * Sanitize tanggal lahir untuk public display (sensor tahun)
+     */
+    private function sanitizeTanggalLahir($tanggal)
+    {
+        if (!$tanggal) return null;
+
+        try {
+            $date = Carbon::parse($tanggal);
+            $day = $date->format('d');
+            $monthNames = [
+                '01' => 'Januari',
+                '02' => 'Februari',
+                '03' => 'Maret',
+                '04' => 'April',
+                '05' => 'Mei',
+                '06' => 'Juni',
+                '07' => 'Juli',
+                '08' => 'Agustus',
+                '09' => 'September',
+                '10' => 'Oktober',
+                '11' => 'November',
+                '12' => 'Desember'
+            ];
+            $month = $monthNames[$date->format('m')];
+
+            return "$day $month ****";
+        } catch (Exception $e) {
+            return null;
+        }
     }
 
     /**
@@ -316,9 +373,9 @@ class PublicPortalController extends Controller
             'kelurahan' => $keluarga->wilayah ? $keluarga->wilayah->parent->parent->nama : null,
             'status_domisili_keluarga' => $keluarga->status_domisili_keluarga,
             'tanggal_mulai_domisili_keluarga' => $keluarga->tanggal_mulai_domisili_keluarga,
-            'jumlah_anggota' => $keluarga->wargas->count(),
+            'jumlah_anggota' => $keluarga->anggotaKeluarga->count(),
             'kepala_keluarga' => $keluarga->kepalaKeluarga ? $keluarga->kepalaKeluarga->nama_lengkap : null,
-            'anggota_keluarga' => $keluarga->wargas->map(function($warga) {
+            'anggota_keluarga' => $keluarga->anggotaKeluarga->map(function($warga) {
                 return [
                     'nama_lengkap' => $warga->nama_lengkap,
                     'hubungan_keluarga' => $warga->hubungan_keluarga,
@@ -344,12 +401,30 @@ class PublicPortalController extends Controller
                 'jumlah_lunas' => $iuranData->where('status', 'lunas')->count(),
             ],
             'detail_iuran' => $iuranData->take(6)->map(function($iuran) { // Limit to 6 recent iuran
+                // Get payment date if status is lunas
+                $tanggalBayar = null;
+                if ($iuran->status === 'lunas') {
+                    $latestPayment = $iuran->pembayaran->sortByDesc('created_at')->first();
+                    \Log::info('Iuran ID: ' . $iuran->id . ', Status: ' . $iuran->status);
+                    \Log::info('Payment count: ' . $iuran->pembayaran->count());
+
+                    if ($latestPayment) {
+                        $tanggalBayar = date('d/m/Y', strtotime($latestPayment->created_at));
+                        \Log::info('Latest payment created_at: ' . $latestPayment->created_at . ', formatted: ' . $tanggalBayar);
+                    } else {
+                        // Fallback to jatuh_tempo if no payment record but status is lunas
+                        $tanggalBayar = $iuran->jatuh_tempo ? date('d/m/Y', strtotime($iuran->jatuh_tempo)) : null;
+                        \Log::info('No payment found, fallback to jatuh_tempo: ' . $tanggalBayar);
+                    }
+                }
+
                 return [
                     'jenis_iuran' => $iuran->jenisIuran ? $iuran->jenisIuran->nama : 'Unknown',
                     'periode' => $this->formatPeriode($iuran->periode_bulan),
                     'nominal' => 'Rp ' . number_format($iuran->nominal, 0, ',', '.'),
                     'status' => $this->formatStatus($iuran->status),
                     'jatuh_tempo' => $iuran->jatuh_tempo ? date('d/m/Y', strtotime($iuran->jatuh_tempo)) : null,
+                    'tanggal_bayar' => $tanggalBayar,
                     'keterangan' => $iuran->keterangan ? substr($iuran->keterangan, 0, 50) . '...' : null,
                 ];
             })
@@ -400,7 +475,14 @@ class PublicPortalController extends Controller
             session()->put('captcha_code', $sessionCaptcha);
         }
 
-        return strtoupper($captcha) === $sessionCaptcha;
+        $isValid = strtoupper($captcha) === $sessionCaptcha;
+
+        // Clear captcha after validation to force regeneration
+        if ($isValid) {
+            session()->forget('captcha_code');
+        }
+
+        return $isValid;
     }
 
     /**
@@ -408,6 +490,8 @@ class PublicPortalController extends Controller
      */
     public function generateCaptcha()
     {
+        // Clear old captcha and generate new one
+        session()->forget('captcha_code');
         $code = substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6);
         session()->put('captcha_code', $code);
 
