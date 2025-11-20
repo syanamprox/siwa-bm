@@ -62,6 +62,14 @@ class Iuran extends Model
     }
 
     /**
+     * Get kepala keluarga attribute
+     */
+    public function getKepalaKeluargaAttribute()
+    {
+        return $this->keluarga->kepalaKeluarga?->nama_lengkap ?? '-';
+    }
+
+    /**
      * Relasi ke jenis iuran
      */
     public function jenisIuran()
@@ -143,19 +151,31 @@ class Iuran extends Model
     }
 
     /**
-     * Scope berdasarkan RT
+     * Scope berdasarkan RT (melalui keluarga)
      */
     public function scopeRt($query, $rt)
     {
-        return $query->where('rt_id', $rt);
+        return $query->whereHas('keluarga', function($q) use ($rt) {
+            $q->where('rt_id', $rt);
+        });
     }
 
     /**
-     * Scope berdasarkan RW
+     * Scope berdasarkan RW (melalui keluarga)
      */
     public function scopeRw($query, $rw)
     {
-        return $query->where('rw_id', $rw);
+        return $query->whereHas('keluarga', function($q) use ($rw) {
+            $q->where('rw_id', $rw);
+        });
+    }
+
+    /**
+     * Get total tagihan (nominal + denda)
+     */
+    public function getTotalTagihanAttribute(): float
+    {
+        return $this->nominal + ($this->denda_terlambatan ?? 0);
     }
 
     /**
@@ -163,7 +183,7 @@ class Iuran extends Model
      */
     public function getTotalPembayaranAttribute(): float
     {
-        return $this->pembayaran->sum('jumlah_bayar');
+        return $this->pembayaran->sum('jumlah');
     }
 
     /**
@@ -171,7 +191,7 @@ class Iuran extends Model
      */
     public function getSisaPembayaranAttribute(): float
     {
-        return ($this->nominal + $this->denda_terlambatan) - $this->total_pembayaran;
+        return $this->total_tagihan - $this->total_pembayaran;
     }
 
     /**
@@ -262,20 +282,17 @@ class Iuran extends Model
     }
 
     /**
-     * Generate otomatis iuran untuk warga
+     * Generate otomatis iuran untuk keluarga (KK-based)
      */
-    public static function generateIuran(Warga $warga, JenisIuran $jenisIuran, string $periode): self
+    public static function generateIuran(Keluarga $keluarga, JenisIuran $jenisIuran, string $periode): self
     {
         return self::create([
-            'warga_id' => $warga->id,
-            'kk_id' => $warga->kk_id,
+            'kk_id' => $keluarga->id,
             'jenis_iuran_id' => $jenisIuran->id,
-            'rt_id' => $warga->rt_domisili,
-            'rw_id' => $warga->rw_domisili,
-            'nominal' => $jenisIuran->nominal_default,
+            'nominal' => $jenisIuran->jumlah,
             'periode_bulan' => $periode,
             'status' => 'belum_bayar',
-            'jatuh_tempo' => now()->addDays(30), // Jatuh tempo 30 hari
+            'jatuh_tempo' => Carbon::parse($periode . '-01')->endOfMonth(),
             'denda_terlambatan' => 0,
         ]);
     }
@@ -315,27 +332,50 @@ class Iuran extends Model
     }
 
     /**
-     * Generate tagihan bulanan untuk semua warga
+     * Generate tagihan bulanan untuk semua keluarga aktif (KK-based)
      */
     public static function generateTagihanBulanan(string $periode = null): int
     {
         $periode = $periode ?: now()->format('Y-m');
         $count = 0;
 
-        $jenisIuran = JenisIuran::bulanan()->aktif()->get();
-        $warga = Warga::all();
+        $jenisIuran = JenisIuran::where('is_aktif', true)->get();
+        $keluargas = Keluarga::where('status_keluarga', 'Aktif')->get();
 
-        foreach ($warga as $w) {
+        foreach ($keluargas as $keluarga) {
             foreach ($jenisIuran as $ji) {
-                // Cek apakah iuran untuk periode ini sudah ada
-                $exists = self::where('warga_id', $w->id)
-                            ->where('jenis_iuran_id', $ji->id)
-                            ->where('periode_bulan', $periode)
-                            ->exists();
+                // Check if keluarga is connected to this jenis iuran
+                $connected = $keluarga->keluargaIuran()
+                    ->where('jenis_iuran_id', $ji->id)
+                    ->where('status_aktif', true)
+                    ->exists();
 
-                if (!$exists) {
-                    self::generateIuran($w, $ji, $periode);
-                    $count++;
+                if ($connected) {
+                    // Cek apakah iuran untuk periode ini sudah ada
+                    $exists = self::where('kk_id', $keluarga->id)
+                                ->where('jenis_iuran_id', $ji->id)
+                                ->where('periode_bulan', $periode)
+                                ->exists();
+
+                    if (!$exists) {
+                        // Get nominal from keluarga_iuran or jenis_iuran
+                        $keluargaIuran = $keluarga->keluargaIuran()
+                            ->where('jenis_iuran_id', $ji->id)
+                            ->where('status_aktif', true)
+                            ->first();
+
+                        self::create([
+                            'kk_id' => $keluarga->id,
+                            'jenis_iuran_id' => $ji->id,
+                            'nominal' => $keluargaIuran?->nominal_custom ?? $ji->jumlah,
+                            'periode_bulan' => $periode,
+                            'status' => 'belum_bayar',
+                            'jatuh_tempo' => Carbon::parse($periode . '-01')->endOfMonth(),
+                            'denda_terlambatan' => 0,
+                            'keterangan' => "Generate otomatis periode {$periode}",
+                        ]);
+                        $count++;
+                    }
                 }
             }
         }

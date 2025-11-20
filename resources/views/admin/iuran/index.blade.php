@@ -136,6 +136,7 @@
                                     <th>Nominal</th>
                                     <th>Status</th>
                                     <th>Jatuh Tempo</th>
+                                    <th>Pembayaran</th>
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
@@ -373,6 +374,122 @@
         </div>
     </div>
 </div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Proses Pembayaran Iuran</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="paymentForm">
+                @csrf
+                <input type="hidden" id="payment_iuran_id" name="iuran_id">
+                <div class="modal-body">
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="paymentInfo"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Jumlah Bayar <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="jumlah_bayar" name="jumlah_bayar" min="0" step="0.01" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Metode Pembayaran <span class="text-danger">*</span></label>
+                            <select class="form-select" id="metode_pembayaran" name="metode_pembayaran" required>
+                                <option value="">Pilih Metode</option>
+                                <option value="tunai">Tunai</option>
+                                <option value="transfer">Transfer Bank</option>
+                                <option value="qris">QRIS</option>
+                                <option value="gopay">GoPay</option>
+                                <option value="ovo">OVO</option>
+                                <option value="dana">DANA</option>
+                                <option value="shopeepay">ShopeePay</option>
+                                <option value="linkaja">LinkAja</option>
+                                <option value="ewallet">E-Wallet Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="bankDetailsGroup" style="display: none;">
+                            <label class="form-label">Nama Bank</label>
+                            <select class="form-select" id="nama_bank" name="nama_bank">
+                                <option value="">Pilih Bank</option>
+                                <option value="bca">BCA</option>
+                                <option value="bni">BNI</option>
+                                <option value="bri">BRI</option>
+                                <option value="mandiri">Mandiri</option>
+                                <option value="bsi">BSI</option>
+                                <option value="lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6" id="nomorRekeningGroup" style="display: none;">
+                            <label class="form-label">Nomor Rekening/Referensi</label>
+                            <input type="text" class="form-control" id="nomor_rekening" name="nomor_rekening">
+                        </div>
+                        <div class="col-md-6" id="namaPengirimGroup" style="display: none;">
+                            <label class="form-label">Nama Pengirim</label>
+                            <input type="text" class="form-control" id="nama_pengirim" name="nama_pengirim">
+                        </div>
+                        <div class="col-md-6" id="waktuPembayaranGroup" style="display: none;">
+                            <label class="form-label">Waktu Pembayaran</label>
+                            <input type="datetime-local" class="form-control" id="waktu_pembayaran" name="waktu_pembayaran">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Keterangan</label>
+                            <textarea class="form-control" id="keterangan_pembayaran" name="keterangan" rows="2" placeholder="Catatan tambahan (opsional)"></textarea>
+                        </div>
+                        <div class="col-12" id="buktiPembayaranGroup" style="display: none;">
+                            <label class="form-label">Bukti Pembayaran</label>
+                            <input type="file" class="form-control" id="bukti_pembayaran" name="bukti_pembayaran" accept="image/*,.pdf">
+                            <small class="text-muted">Format: JPG, PNG, atau PDF. Maksimal 2MB</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-credit-card me-1"></i>
+                        Proses Pembayaran
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Payment History Modal -->
+<div class="modal fade" id="paymentHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Riwayat Pembayaran</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Tanggal</th>
+                                <th>Jumlah</th>
+                                <th>Metode</th>
+                                <th>Status</th>
+                                <th>Dibuat Oleh</th>
+                                <th>Keterangan</th>
+                                <th>Bukti</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentHistoryTable">
+                            <!-- Payment history will be loaded via AJAX -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('styles')
@@ -480,6 +597,34 @@ $(document).ready(function() {
         $('.detail-btn').off('click').on('click', function() {
             const id = $(this).data('id');
             window.location.href = `/admin/iuran/${id}`;
+        });
+
+        // Payment button
+        $('.payment-btn').off('click').on('click', function() {
+            const id = $(this).data('id');
+            const data = $(this).data('record');
+
+            $('#payment_iuran_id').val(id);
+            $('#paymentInfo').html(`
+                <strong>No. KK:</strong> ${data.keluarga?.no_kk || '-'}<br>
+                <strong>Kepala Keluarga:</strong> ${data.keluarga?.kepala_keluarga || '-'}<br>
+                <strong>Jenis Iuran:</strong> ${data.jenis_iuran?.nama || '-'}<br>
+                <strong>Periode:</strong> ${data.periode_bulan || '-'}<br>
+                <strong>Total Tagihan:</strong> Rp ${Number(data.total_tagihan || 0).toLocaleString('id-ID')}
+            `);
+
+            // Set max payment amount
+            $('#jumlah_bayar').attr('max', data.total_tagihan);
+            $('#jumlah_bayar').val(data.total_tagihan);
+
+            $('#paymentModal').modal('show');
+        });
+
+        // Payment history button
+        $('.payment-history-btn').off('click').on('click', function() {
+            const id = $(this).data('id');
+            loadPaymentHistory(id);
+            $('#paymentHistoryModal').modal('show');
         });
     }
 
@@ -640,6 +785,131 @@ $(document).ready(function() {
                 Swal.fire('Error', xhr.responseJSON?.message || 'Terjadi kesalahan', 'error');
             });
     });
+
+    // Load payment history
+    function loadPaymentHistory(iuranId) {
+        $.get(`/admin/api/iuran/${iuranId}/payment-history`)
+            .done(function(response) {
+                if (response.success) {
+                    const tbody = $('#paymentHistoryTable');
+                    tbody.empty();
+
+                    if (response.data.length === 0) {
+                        tbody.append('<tr><td colspan="7" class="text-center">Belum ada pembayaran</td></tr>');
+                        return;
+                    }
+
+                    response.data.forEach(function(payment) {
+                        const statusBadge = getStatusBadge(payment.status);
+                        const buktiHtml = payment.bukti_pembayaran
+                            ? `<a href="/storage/pembayaran/${payment.bukti_pembayaran}" target="_blank" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>`
+                            : '-';
+
+                        const row = `
+                            <tr>
+                                <td>${formatDateTime(payment.created_at)}</td>
+                                <td>Rp ${Number(payment.jumlah).toLocaleString('id-ID')}</td>
+                                <td>${getPaymentMethodLabel(payment.metode_pembayaran)}</td>
+                                <td>${statusBadge}</td>
+                                <td>${payment.created_by_name || '-'}</td>
+                                <td>${payment.keterangan || '-'}</td>
+                                <td>${buktiHtml}</td>
+                            </tr>
+                        `;
+                        tbody.append(row);
+                    });
+                }
+            })
+            .fail(function() {
+                Swal.fire('Error', 'Gagal memuat riwayat pembayaran', 'error');
+            });
+    }
+
+    // Payment method change handler
+    $('#metode_pembayaran').on('change', function() {
+        const method = $(this).val();
+
+        // Hide all optional fields
+        $('#bankDetailsGroup, #nomorRekeningGroup, #namaPengirimGroup, #waktuPembayaranGroup, #buktiPembayaranGroup').hide();
+
+        // Show fields based on payment method
+        if (method === 'transfer') {
+            $('#bankDetailsGroup, #nomorRekeningGroup, #namaPengirimGroup, #waktuPembayaranGroup, #buktiPembayaranGroup').show();
+            $('#waktu_pembayaran').val(new Date().toISOString().slice(0, 16));
+        } else if (['qris', 'gopay', 'ovo', 'dana', 'shopeepay', 'linkaja', 'ewallet'].includes(method)) {
+            $('#nomorRekeningGroup, #buktiPembayaranGroup').show();
+        }
+    });
+
+    // Payment form submission
+    $('#paymentForm').on('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        // AJAX form submission with file support
+        $.ajax({
+            url: '/admin/api/iuran/payment',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    $('#paymentModal').modal('hide');
+                    $('#paymentForm')[0].reset();
+                    $('#bankDetailsGroup, #nomorRekeningGroup, #namaPengirimGroup, #waktuPembayaranGroup, #buktiPembayaranGroup').hide();
+                    loadStatistics();
+                    loadData(currentPage);
+                    Swal.fire('Success', response.message, 'success');
+                } else {
+                    Swal.fire('Error', response.message, 'error');
+                }
+            },
+            error: function(xhr) {
+                const errors = xhr.responseJSON?.errors;
+                if (errors) {
+                    let errorMessage = '';
+                    for (const field in errors) {
+                        errorMessage += `${errors[field][0]}\n`;
+                    }
+                    Swal.fire('Validation Error', errorMessage, 'error');
+                } else {
+                    Swal.fire('Error', xhr.responseJSON?.message || 'Terjadi kesalahan', 'error');
+                }
+            }
+        });
+    });
+
+    // Utility functions
+    function getPaymentMethodLabel(method) {
+        const labels = {
+            'tunai': 'Tunai',
+            'transfer': 'Transfer Bank',
+            'qris': 'QRIS',
+            'gopay': 'GoPay',
+            'ovo': 'OVO',
+            'dana': 'DANA',
+            'shopeepay': 'ShopeePay',
+            'linkaja': 'LinkAja',
+            'ewallet': 'E-Wallet'
+        };
+        return labels[method] || method;
+    }
+
+    function getStatusBadge(status) {
+        const badges = {
+            'pending': '<span class="badge bg-warning">Pending</span>',
+            'verified': '<span class="badge bg-success">Terverifikasi</span>',
+            'rejected': '<span class="badge bg-danger">Ditolak</span>'
+        };
+        return badges[status] || status;
+    }
+
+    function formatDateTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('id-ID');
+    }
 
     // Initial load
     loadStatistics();

@@ -147,6 +147,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/api/iuran/statistics', [IuranController::class, 'statistics']);
         Route::post('/api/iuran/generate-bulk', [IuranController::class, 'generateBulk']);
         Route::get('/api/iuran/keluarga/{keluargaId}/jenis-iuran', [IuranController::class, 'getKeluargaJenisIuran']);
+        Route::post('/api/iuran/payment', [IuranController::class, 'processPayment']);
+        Route::get('/api/iuran/{iuranId}/payment-history', [IuranController::class, 'getPaymentHistory']);
+        Route::post('/api/pembayaran/{pembayaran}/verify', [IuranController::class, 'verifyPayment']);
+        Route::post('/api/pembayaran/{pembayaran}/reject', [IuranController::class, 'rejectPayment']);
 
         // API Routes for Jenis Iuran operations
         Route::get('/api/jenis-iuran', [JenisIuranController::class, 'index'])->name('api.jenis_iuran.index');

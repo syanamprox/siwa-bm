@@ -6,9 +6,12 @@ use App\Models\Iuran;
 use App\Models\Keluarga;
 use App\Models\JenisIuran;
 use App\Models\KeluargaIuran;
+use App\Models\PembayaranIuran;
+use App\Models\Warga;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class IuranController extends Controller
@@ -18,7 +21,12 @@ class IuranController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Iuran::with(['keluarga', 'jenisIuran', 'createdBy'])
+        $query = Iuran::with([
+                'keluarga.kepalaKeluarga',
+                'jenisIuran',
+                'createdBy',
+                'pembayaran'
+            ])
             ->orderBy('periode_bulan', 'desc')
             ->orderBy('jenis_iuran_id');
 
@@ -415,6 +423,241 @@ class IuranController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal mengambil statistik: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Process payment for iuran
+     */
+    public function processPayment(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'iuran_id' => 'required|exists:iurans,id',
+            'jumlah_bayar' => 'required|numeric|min:0',
+            'metode_pembayaran' => 'required|in:tunai,transfer,qris,gopay,ovo,dana,shopeepay,linkaja,ewallet',
+            'nama_bank' => 'required_if:metode_pembayaran,transfer',
+            'nomor_rekening' => 'required_if:metode_pembayaran,transfer',
+            'nama_pengirim' => 'required_if:metode_pembayaran,transfer',
+            'waktu_pembayaran' => 'required_if:metode_pembayaran,transfer',
+            'keterangan' => 'nullable|string|max:255',
+            'bukti_pembayaran' => 'nullable|file|mimes:jpeg,jpg,png,pdf|max:2048'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $iuran = Iuran::findOrFail($request->iuran_id);
+
+            // Check if iuran allows payment
+            if (in_array($iuran->status, ['batal', 'lunas'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tagihan ini tidak dapat diproses pembayarannya'
+                ], 400);
+            }
+
+            // Process file upload
+            $buktiPembayaranPath = null;
+            if ($request->hasFile('bukti_pembayaran')) {
+                $file = $request->file('bukti_pembayaran');
+                $filename = 'bukti_' . time() . '_' . $iuran->id . '.' . $file->getClientOriginalExtension();
+                $buktiPembayaranPath = $file->storeAs('pembayaran', $filename, 'public');
+            }
+
+            // Create payment record
+            $pembayaran = PembayaranIuran::create([
+                'iuran_id' => $iuran->id,
+                'jumlah' => $request->jumlah_bayar,
+                'metode_pembayaran' => $request->metode_pembayaran,
+                'nama_bank' => $request->nama_bank,
+                'nomor_rekening' => $request->nomor_rekening,
+                'nama_pengirim' => $request->nama_pengirim,
+                'waktu_pembayaran' => $request->waktu_pembayaran ? Carbon::parse($request->waktu_pembayaran) : Carbon::now(),
+                'status' => $request->metode_pembayaran === 'tunai' ? 'verified' : 'pending',
+                'keterangan' => $request->keterangan,
+                'bukti_pembayaran' => $buktiPembayaranPath,
+                'created_by' => auth()->id(),
+            ]);
+
+            // Update iuran status based on total payments
+            $totalDibayar = $iuran->pembayaran()->sum('jumlah');
+            $totalTagihan = $iuran->total_tagihan ?? $iuran->nominal + $iuran->denda_terlambatan;
+
+            if ($totalDibayar >= $totalTagihan) {
+                $iuran->update(['status' => 'lunas']);
+            } elseif ($totalDibayar > 0) {
+                $iuran->update(['status' => 'sebagian']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran berhasil diproses',
+                'data' => [
+                    'payment_id' => $pembayaran->id,
+                    'jumlah' => $pembayaran->jumlah,
+                    'status_pembayaran' => $pembayaran->status,
+                    'status_iuran' => $iuran->fresh()->status,
+                    'total_dibayar' => $totalDibayar,
+                    'sisa_tagihan' => max(0, $totalTagihan - $totalDibayar)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses pembayaran: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get payment history for an iuran
+     */
+    public function getPaymentHistory($iuranId): JsonResponse
+    {
+        try {
+            $iuran = Iuran::findOrFail($iuranId);
+
+            $payments = $iuran->pembayaran()
+                ->with(['createdBy' => function($query) {
+                    $query->select('id', 'name');
+                }])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($payment) {
+                    return [
+                        'id' => $payment->id,
+                        'jumlah' => $payment->jumlah,
+                        'metode_pembayaran' => $payment->metode_pembayaran,
+                        'nama_bank' => $payment->nama_bank,
+                        'nomor_rekening' => $payment->nomor_rekening,
+                        'nama_pengirim' => $payment->nama_pengirim,
+                        'waktu_pembayaran' => $payment->waktu_pembayaran,
+                        'status' => $payment->status,
+                        'keterangan' => $payment->keterangan,
+                        'bukti_pembayaran' => $payment->bukti_pembayaran,
+                        'created_at' => $payment->created_at,
+                        'created_by_name' => $payment->createdBy?->name
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $payments
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengambil riwayat pembayaran: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify payment (for non-cash payments)
+     */
+    public function verifyPayment(Request $request, PembayaranIuran $pembayaran): JsonResponse
+    {
+        try {
+            if ($pembayaran->status === 'verified') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran sudah diverifikasi'
+                ], 400);
+            }
+
+            $pembayaran->update([
+                'status' => 'verified',
+                'verified_by' => auth()->id(),
+                'verified_at' => Carbon::now()
+            ]);
+
+            // Update iuran status
+            $iuran = $pembayaran->iuran;
+            $totalDibayar = $iuran->pembayaran()->sum('jumlah');
+            $totalTagihan = $iuran->total_tagihan ?? $iuran->nominal + $iuran->denda_terlambatan;
+
+            if ($totalDibayar >= $totalTagihan) {
+                $iuran->update(['status' => 'lunas']);
+            } elseif ($totalDibayar > 0) {
+                $iuran->update(['status' => 'sebagian']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran berhasil diverifikasi'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal verifikasi pembayaran: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Reject payment (for non-cash payments)
+     */
+    public function rejectPayment(Request $request, PembayaranIuran $pembayaran): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'alasan_penolakan' => 'required|string|max:255'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            if ($pembayaran->status === 'rejected') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran sudah ditolak'
+                ], 400);
+            }
+
+            $pembayaran->update([
+                'status' => 'rejected',
+                'alasan_penolakan' => $request->alasan_penolakan,
+                'rejected_by' => auth()->id(),
+                'rejected_at' => Carbon::now()
+            ]);
+
+            // Update iuran status
+            $iuran = $pembayaran->iuran;
+            $totalDibayar = $iuran->pembayaran()->sum('jumlah');
+            $totalTagihan = $iuran->total_tagihan ?? $iuran->nominal + $iuran->denda_terlambatan;
+
+            if ($totalDibayar >= $totalTagihan) {
+                $iuran->update(['status' => 'lunas']);
+            } elseif ($totalDibayar > 0) {
+                $iuran->update(['status' => 'sebagian']);
+            } else {
+                $iuran->update(['status' => 'belum_bayar']);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran berhasil ditolak'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menolak pembayaran: ' . $e->getMessage()
             ], 500);
         }
     }
