@@ -108,21 +108,25 @@ Route::middleware('auth')->group(function () {
         Route::get('/keluarga', [KeluargaController::class, 'indexView'])->name('keluarga.index');
         Route::resource('keluarga', KeluargaController::class)->except(['index', 'store', 'update', 'destroy']);
 
-        // API Routes for Keluarga operations
+        // API Routes for Keluarga operations - Specific routes first (without parameters)
         Route::get('/api/keluarga', [KeluargaController::class, 'index']);
+        Route::post('/api/keluarga', [KeluargaController::class, 'store']);
         Route::get('/api/keluarga/create', [KeluargaController::class, 'create']);
         Route::get('/api/keluarga/statistics', [KeluargaController::class, 'statistics']);
+        Route::get('/api/keluarga/download-template', [KeluargaController::class, 'downloadTemplate']);
+        Route::post('/api/keluarga/import', [KeluargaController::class, 'import']);
+        Route::post('/keluarga/import', [KeluargaController::class, 'import']);
 
         // API Routes for wilayah data (admin only) - must be before parameter routes
         Route::get('/api/keluarga/wilayah', [KeluargaController::class, 'getWilayah']);
         Route::get('/api/keluarga/rt-info', [KeluargaController::class, 'getRtInfo']);
 
+        // Parameterized routes (must come after specific routes)
         Route::patch('/api/keluarga/{keluarga}/status', [KeluargaController::class, 'updateStatus']);
         Route::post('/api/keluarga/{keluarga}/add-member', [KeluargaController::class, 'addMember']);
         Route::get('/api/keluarga/{keluarga}/edit', [KeluargaController::class, 'edit']);
         Route::get('/api/keluarga/{keluarga}', [KeluargaController::class, 'show']);
         Route::put('/api/keluarga/{keluarga}', [KeluargaController::class, 'update']);
-        Route::post('/api/keluarga', [KeluargaController::class, 'store']);
         Route::delete('/api/keluarga/{keluarga}', [KeluargaController::class, 'destroy']);
         Route::delete('/api/keluarga/{keluarga}/remove-member/{warga}', [KeluargaController::class, 'removeMember']);
 

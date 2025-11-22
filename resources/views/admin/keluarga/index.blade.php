@@ -614,6 +614,77 @@
     </div>
 </div>
 
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-import mr-2"></i>Import Data Keluarga & Warga
+                </h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form id="importForm" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <strong>Panduan Import:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Download template Excel terlebih dahulu</li>
+                            <li>Isi data sesuai format pada template</li>
+                            <li>Sheet 1: Data Keluarga (No KK, Alamat, dll)</li>
+                            <li>Sheet 2: Data Warga (NIK, Nama, dll)</li>
+                            <li>Maksimal file size: 5MB (.xlsx)</li>
+                        </ul>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="importFile" class="font-weight-bold">
+                            <i class="fas fa-file-excel mr-2"></i>Pilih File Excel (.xlsx)
+                        </label>
+                        <div class="input-group">
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="importFile" name="file" accept=".xlsx" required>
+                                <label class="custom-file-label" for="importFile">Pilih file...</label>
+                            </div>
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-info" type="button" onclick="downloadTemplate()">
+                                    <i class="fas fa-download mr-1"></i>Download Template
+                                </button>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">
+                            Format: .xlsx | Maksimal: 5MB | Gunakan template yang tersedia
+                        </small>
+                        <div id="fileInfo" class="mt-2"></div>
+                    </div>
+
+                    <div id="errorContainer" class="alert alert-danger" style="display:none;"></div>
+                    <div id="successContainer" class="alert alert-success" style="display:none;"></div>
+
+                    <div id="progressContainer" style="display:none;">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                        </div>
+                        <small class="text-muted mt-1">Sedang memproses data...</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                        <i class="fas fa-times mr-2"></i>Batal
+                    </button>
+                    <button type="button" class="btn btn-primary" id="uploadBtn">
+                        <i class="fas fa-upload mr-2"></i>Upload & Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('styles')
@@ -743,6 +814,12 @@ $(document).ready(function() {
         deleteKeluarga();
     });
 
+    // Import form submission
+    $('#importForm').on('submit', function(e) {
+        e.preventDefault();
+        handleImport();
+    });
+
     // Per page change
     $('#perPage').on('change', function() {
         loadKeluarga();
@@ -800,6 +877,44 @@ $(document).ready(function() {
 
     // Initialize with one warga row
     initializeForm();
+
+    // File input change handler
+    $('#importFile').on('change', function() {
+        var file = this.files[0];
+        var fileInfo = $('#fileInfo');
+
+        if (file) {
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                fileInfo.html('<div class="text-danger"><i class="fas fa-exclamation-triangle mr-1"></i>File terlalu besar. Maksimal 5MB</div>');
+                $(this).val('');
+                return;
+            }
+
+            // Check file type
+            if (!file.name.toLowerCase().endsWith('.xlsx')) {
+                fileInfo.html('<div class="text-danger"><i class="fas fa-exclamation-triangle mr-1"></i>File harus berformat .xlsx</div>');
+                $(this).val('');
+                return;
+            }
+
+            // Show file info
+            var fileSize = (file.size / 1024 / 1024).toFixed(2);
+            fileInfo.html(`
+                <div class="text-success">
+                    <i class="fas fa-check-circle mr-1"></i>
+                    <strong>${file.name}</strong> (${fileSize} MB)
+                </div>
+            `);
+        } else {
+            fileInfo.html('');
+        }
+    });
+
+    // Upload button click handler
+    $('#uploadBtn').on('click', function() {
+        handleImport();
+    });
 });
 
 function initializeForm() {
@@ -2106,11 +2221,15 @@ function refreshData() {
 }
 
 function showImportModal() {
-    showToast('Fitur import akan segera tersedia', 'info');
+    $('#importModal').modal('show');
 }
 
 function exportData() {
-    showToast('Fitur export akan segera tersedia', 'info');
+    window.location.href = '/admin/keluarga/export';
+}
+
+function downloadTemplate() {
+    window.location.href = '/admin/api/keluarga/download-template';
 }
 
 function showStatistics() {
@@ -2128,6 +2247,103 @@ function displayValidationErrors(errors) {
 function manageIuran(keluargaId, noKk) {
     // Redirect to keluarga iuran management page
     window.location.href = `/admin/keluarga/${keluargaId}/iuran`;
+}
+
+function handleImport() {
+    const formData = new FormData($('#importForm')[0]);
+    const fileInput = $('#importFile')[0];
+
+    // Validate file selection
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showToast('Pilih file Excel terlebih dahulu', 'error');
+        return;
+    }
+
+    const file = fileInput.files[0];
+
+    // Validate file
+    if (!file.name.toLowerCase().endsWith('.xlsx')) {
+        showToast('File harus berformat .xlsx', 'error');
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('File terlalu besar. Maksimal 5MB', 'error');
+        return;
+    }
+
+    const btn = $('#uploadBtn');
+    const errorContainer = $('#errorContainer');
+    const successContainer = $('#successContainer');
+    const progressContainer = $('#progressContainer');
+
+    // Reset containers
+    errorContainer.hide();
+    successContainer.hide();
+
+    // Show loading state
+    btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Processing...');
+    progressContainer.show();
+
+    // Debug: Log form data
+        console.log('Form data entries:');
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ':', pair[1]);
+        }
+
+        // Make AJAX request
+        $.ajax({
+            url: '/admin/keluarga/import',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                console.log('Success response:', response);
+                // Hide loading
+                btn.prop('disabled', false).html('<i class="fas fa-upload mr-2"></i>Upload & Import');
+                progressContainer.hide();
+
+                if (response.success) {
+                    successContainer.html(`
+                        <strong>Berhasil!</strong><br>
+                        ${response.keluarga_count || 0} keluarga diimport<br>
+                        ${response.warga_count || 0} warga diimport
+                    `).show();
+
+                    // Reset form and close modal after 2 seconds
+                    setTimeout(() => {
+                        $('#importForm')[0].reset();
+                        $('#fileInfo').html('');
+                        $('#importModal').modal('hide');
+                        // Reload data
+                        loadKeluarga();
+                        loadStatistics();
+                    }, 2000);
+                } else {
+                    console.error('Validation failed:', response);
+                    errorContainer.html('<strong>Error:</strong><br>' + (response.errors ? response.errors.join('<br>') : response.message)).show();
+                }
+            },
+            error: function(xhr) {
+                console.error('AJAX error:', xhr);
+                console.error('Response text:', xhr.responseText);
+                console.error('Status:', xhr.status);
+                console.error('Response JSON:', xhr.responseJSON);
+                // Hide loading
+                btn.prop('disabled', false).html('<i class="fas fa-upload mr-2"></i>Upload & Import');
+                progressContainer.hide();
+
+                const response = xhr.responseJSON || {};
+                const errorMessage = response.message || 'Terjadi kesalahan saat memproses file';
+
+            if (response.errors && Array.isArray(response.errors)) {
+                errorContainer.html('<strong>Validation Error:</strong><br>' + response.errors.join('<br>')).show();
+            } else {
+                errorContainer.html('<strong>Error:</strong><br>' + errorMessage).show();
+            }
+        }
+    });
 }
 
 function viewFotoKk(fotoUrl, kkTitle) {

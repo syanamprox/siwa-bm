@@ -1024,4 +1024,706 @@ class KeluargaController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Import keluarga and warga data from Excel file
+     */
+    public function import(Request $request): JsonResponse
+    {
+        // Check if file exists first
+        if (!$request->hasFile('file')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No file uploaded',
+                'errors' => ['Please select a file to upload'],
+                'debug_info' => [
+                    'has_file' => $request->hasFile('file'),
+                    'request_all' => $request->all(),
+                    'files_all' => $request->files->all()
+                ]
+            ], 422);
+        }
+
+        $file = $request->file('file');
+
+        // Debug file info
+        \Log::info('File details:', [
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getMimeType(),
+            'client_mime_type' => $file->getClientMimeType(),
+            'extension' => $file->getClientOriginalExtension(),
+            'size' => $file->getSize(),
+            'is_valid' => $file->isValid()
+        ]);
+
+        // Simple validation without mime type check for now
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|max:10240'  // Just check if it's a file and within size limit
+        ]);
+
+        if ($validator->fails()) {
+            \Log::error('Validation failed: ', $validator->errors()->toArray());
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()->all(),
+                'file_info' => [
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'client_mime_type' => $file->getClientMimeType(),
+                    'extension' => $file->getClientOriginalExtension(),
+                    'size' => $file->getSize(),
+                    'is_valid' => $file->isValid(),
+                    'error' => $file->getErrorMessage()
+                ]
+            ], 422);
+        }
+
+        // Additional file extension check
+        $allowedExtensions = ['xlsx', 'xls'];
+        $fileExtension = strtolower($file->getClientOriginalExtension());
+
+        if (!in_array($fileExtension, $allowedExtensions)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid file format',
+                'errors' => ['Only Excel files (.xlsx, .xls) are allowed'],
+                'file_info' => [
+                    'extension' => $fileExtension,
+                    'allowed_extensions' => $allowedExtensions
+                ]
+            ], 422);
+        }
+
+        try {
+            // Import both sheets
+            $keluargaData = $this->parseKeluargaSheet($file);
+            $wargaData = $this->parseWargaSheet($file);
+
+            // Validate data
+            $validator = new SimpleImportValidator();
+            $errors = $validator->validate($keluargaData, $wargaData);
+
+            if (!empty($errors)) {
+                return response()->json([
+                    'success' => false,
+                    'errors' => $errors
+                ], 422);
+            }
+
+            // Import data
+            $importService = new SimpleImportService();
+            $importService->import($keluargaData, $wargaData);
+
+            // Log activity
+            AktivitasLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'import',
+                'module' => 'keluarga',
+                'description' => 'Import data keluarga dan warga dari Excel',
+                'old_data' => null,
+                'new_data' => json_encode([
+                    'keluarga_count' => count($keluargaData),
+                    'warga_count' => count($wargaData),
+                    'file_name' => $file->getClientOriginalName()
+                ]),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent() ?? 'Unknown'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'keluarga_count' => count($keluargaData),
+                'warga_count' => count($wargaData),
+                'message' => 'Data berhasil diimport'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memproses file: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Download Excel template for import
+     */
+    public function downloadTemplate()
+    {
+        $filePath = storage_path('app/public/templates/import-keluarga-warga.xlsx');
+
+        // Create template if doesn't exist
+        if (!file_exists($filePath)) {
+            $this->createImportTemplate();
+        }
+
+        return response()->download($filePath, 'template_import_keluarga_warga.xlsx');
+    }
+
+    /**
+     * Parse keluarga sheet from Excel file
+     */
+    private function parseKeluargaSheet($file): array
+    {
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+        $worksheet = $spreadsheet->getSheetByName('Keluarga');
+
+        if (!$worksheet) {
+            throw new \Exception('Sheet "Keluarga" tidak ditemukan');
+        }
+
+        $data = [];
+        $highestRow = $worksheet->getHighestRow();
+        $highestColumn = $worksheet->getHighestColumn();
+
+        // Skip header row (row 1)
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $rowData = $worksheet->rangeToArray('A' . $row . ':' . $highestColumn . $row, NULL, TRUE, FALSE);
+
+            // Skip empty rows
+            if (empty($rowData[0])) continue;
+
+            // Extract first row from the nested array and ensure values are strings
+            $rowValues = $rowData[0] ?? [];
+
+            $data[] = [
+                'no_kk' => (string) ($rowValues[0] ?? ''),
+                'kepala_keluarga_nik' => (string) ($rowValues[1] ?? ''),
+                'alamat_kk' => (string) ($rowValues[2] ?? ''),
+                'rt_kk' => (string) ($rowValues[3] ?? ''),
+                'rw_kk' => (string) ($rowValues[4] ?? ''),
+                'kelurahan_kk' => (string) ($rowValues[5] ?? ''),
+                'kecamatan_kk' => (string) ($rowValues[6] ?? 'Wonocolo'),
+                'kabupaten_kk' => (string) ($rowValues[7] ?? 'Surabaya'),
+                'provinsi_kk' => (string) ($rowValues[8] ?? 'Jawa Timur'),
+                'alamat_domisili' => !empty($rowValues[9]) ? (string) $rowValues[9] : null,
+                'rt_id' => !empty($rowValues[10]) ? (string) $rowValues[10] : null,
+                'status_domisili_keluarga' => (string) ($rowValues[11] ?? 'Tetap'),
+                'tanggal_mulai_domisili' => !empty($rowValues[12]) ? (string) $rowValues[12] : null,
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Parse warga sheet from Excel file
+     */
+    private function parseWargaSheet($file): array
+    {
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file);
+        $worksheet = $spreadsheet->getSheetByName('Warga');
+
+        if (!$worksheet) {
+            throw new \Exception('Sheet "Warga" tidak ditemukan');
+        }
+
+        $data = [];
+        $highestRow = $worksheet->getHighestRow();
+        $highestColumn = $worksheet->getHighestColumn();
+
+        // Skip header row (row 1)
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $rowData = $worksheet->rangeToArray('A' . $row . ':' . $highestColumn . $row, NULL, TRUE, FALSE);
+
+            // Skip empty rows
+            if (empty($rowData[0])) continue;
+
+            // Extract first row from the nested array and ensure values are strings
+            $rowValues = $rowData[0] ?? [];
+
+            $data[] = [
+                'no_kk' => (string) ($rowValues[0] ?? ''),
+                'nik' => (string) ($rowValues[1] ?? ''),
+                'nama_lengkap' => (string) ($rowValues[2] ?? ''),
+                'tempat_lahir' => (string) ($rowValues[3] ?? ''),
+                'tanggal_lahir' => (string) ($rowValues[4] ?? ''),
+                'jenis_kelamin' => (string) ($rowValues[5] ?? ''),
+                'golongan_darah' => !empty($rowValues[6]) ? (string) $rowValues[6] : null,
+                'agama' => (string) ($rowValues[7] ?? ''),
+                'status_perkawinan' => (string) ($rowValues[8] ?? ''),
+                'pekerjaan' => (string) ($rowValues[9] ?? ''),
+                'kewarganegaraan' => (string) ($rowValues[10] ?? 'WNI'),
+                'pendidikan_terakhir' => (string) ($rowValues[11] ?? ''),
+                'hubungan_keluarga' => (string) ($rowValues[12] ?? ''),
+                'no_telepon' => !empty($rowValues[13]) ? (string) $rowValues[13] : null,
+                'email' => !empty($rowValues[14]) ? (string) $rowValues[14] : null,
+                'nama_ayah' => !empty($rowValues[15]) ? (string) $rowValues[15] : null,
+                'nama_ibu' => !empty($rowValues[16]) ? (string) $rowValues[16] : null,
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * Create Excel template for import
+     */
+    private function createImportTemplate()
+    {
+        try {
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+
+            $filePath = storage_path('app/public/templates/import-keluarga-warga.xlsx');
+
+        // Remove default sheet and create new sheets
+        $spreadsheet->removeSheetByIndex(0);
+
+        // Create Keluarga sheet
+        $keluargaSheet = $spreadsheet->createSheet();
+        $keluargaSheet->setTitle('Keluarga');
+
+        // Headers for Keluarga sheet
+        $keluargaHeaders = [
+            'no_kk', 'kepala_keluarga_nik', 'alamat_kk', 'rt_kk', 'rw_kk',
+            'kelurahan_kk', 'kecamatan_kk', 'kabupaten_kk', 'provinsi_kk',
+            'alamat_domisili', 'rt_id', 'status_domisili_keluarga', 'tanggal_mulai_domisili'
+        ];
+
+        $keluargaSheet->fromArray([$keluargaHeaders], null, 'A1');
+
+        // Style headers
+        // Simple styling for headers
+        $keluargaSheet->getStyle('A1:M1')->getFont()->setBold(true);
+
+        // Sample data for Keluarga (5 families in Wonocolo with unique data)
+        $keluargaSample = [
+            ['3578029901220001', '3578028801650001', 'Jl. Ahmad Yani No. 123', '01', '01',
+             'Jemursari', 'Wonocolo', 'Surabaya', 'Jawa Timur',
+             'Jl. Ahmad Yani No. 123', '16', 'Tetap', '2024-01-15'],
+
+            ['3578029901220002', '3578028801650002', 'Jl. Raya Darmo No. 456', '02', '02',
+             'Darmo', 'Wonocolo', 'Surabaya', 'Jawa Timur',
+             'Jl. Raya Darmo No. 456', '17', 'Tetap', '2024-02-20'],
+
+            ['3578029901220003', '3578028801650003', 'Jl. Bengawan No. 789', '03', '03',
+             'Margorejo', 'Wonocolo', 'Surabaya', 'Jawa Timur',
+             'Jl. Bengawan No. 789', '18', 'Tetap', '2024-03-10'],
+
+            ['3578029901220004', '3578028801650004', 'Jl. Embong Malang No. 321', '04', '04',
+             'Gubeng', 'Wonocolo', 'Surabaya', 'Jawa Timur',
+             'Jl. Embong Malang No. 321', '19', 'Sementara', '2024-04-05'],
+
+            ['3578029901220005', '3578028801650005', 'Jl. Sukolilo No. 654', '05', '05',
+             'Sukolilo', 'Wonocolo', 'Surabaya', 'Jawa Timur',
+             'Jl. Sukolilo No. 654', '20', 'Tetap', '2024-05-12']
+        ];
+
+        $keluargaSheet->fromArray($keluargaSample, null, 'A2');
+
+        // Create Warga sheet
+        $wargaSheet = $spreadsheet->createSheet();
+        $wargaSheet->setTitle('Warga');
+
+        // Headers for Warga sheet
+        $wargaHeaders = [
+            'no_kk', 'nik', 'nama_lengkap', 'tempat_lahir', 'tanggal_lahir',
+            'jenis_kelamin', 'golongan_darah', 'agama', 'status_perkawinan',
+            'pekerjaan', 'kewarganegaraan', 'pendidikan_terakhir', 'hubungan_keluarga',
+            'no_telepon', 'email', 'nama_ayah', 'nama_ibu'
+        ];
+
+        $wargaSheet->fromArray([$wargaHeaders], null, 'A1');
+
+        // Style headers
+        $wargaSheet->getStyle('A1:Q1')->getFont()->setBold(true);
+
+        // Sample data for Warga (30 residents, 6 per family with unique data)
+        $wargaSample = [
+            // Family 1 - KK: 3578029901220001
+            ['3578029901220001', '3578028801650001', 'Rudi Hartono', 'Jakarta', '1980-03-15',
+             'L', 'A', 'Islam', 'Kawin', 'Manager', 'WNI', 'S1', 'Kepala Keluarga',
+             '08111111111', 'rudi@email.com', 'Bambang', 'Sumiati'],
+            ['3578029901220001', '3578028801650002', 'Diana Putri', 'Surabaya', '1982-07-20',
+             'P', 'B', 'Islam', 'Kawin', 'Guru', 'WNI', 'S1', 'Istri',
+             '08111111112', 'diana@email.com', 'Hadi', 'Siti'],
+            ['3578029901220001', '3578028801650003', 'Andi Pratama', 'Surabaya', '2005-11-10',
+             'L', 'O', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SMA', 'Anak',
+             '08111111113', 'andi@email.com', 'Rudi Hartono', 'Diana Putri'],
+            ['3578029901220001', '3578028801650004', 'Siti Aminah', 'Surabaya', '2008-04-25',
+             'P', 'A', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SMP', 'Anak',
+             '08111111114', 'siti.a@email.com', 'Rudi Hartono', 'Diana Putri'],
+            ['3578029901220001', '3578028801650005', 'Budi Santoso', 'Surabaya', '2010-09-15',
+             'L', 'AB', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SD', 'Anak',
+             '08111111115', 'budi@email.com', 'Rudi Hartono', 'Diana Putri'],
+            ['3578029901220001', '3578028801650006', 'Mardiyem', 'Jakarta', '1955-12-05',
+             'P', 'B', 'Islam', 'Cerai Hidup', 'Pensiunan', 'WNI', 'SMA', 'Lainnya',
+             '08111111116', 'mardiyem@email.com', 'Suparno', 'Sukinem'],
+
+            // Family 2 - KK: 3578029901220002
+            ['3578029901220002', '3578028801650007', 'Ahmad Fauzi', 'Malang', '1975-06-12',
+             'L', 'A', 'Islam', 'Kawin', 'Engineer', 'WNI', 'S1', 'Kepala Keluarga',
+             '08122222221', 'fauzi@email.com', 'Chotib', 'Marni'],
+            ['3578029901220002', '3578028801650008', 'Fitri Handayani', 'Surabaya', '1977-11-28',
+             'P', 'O', 'Islam', 'Kawin', 'Dokter', 'WNI', 'S1', 'Istri',
+             '08122222222', 'fitri@email.com', 'Sudirman', 'Ratna'],
+            ['3578029901220002', '3578028801650009', 'Rizky Ananda', 'Surabaya', '2002-02-14',
+             'L', 'B', 'Islam', 'Belum Kawin', 'Mahasiswa', 'WNI', 'SMA', 'Anak',
+             '08122222223', 'rizky@email.com', 'Ahmad Fauzi', 'Fitri Handayani'],
+            ['3578029901220002', '3578028801650010', 'Nur Azizah', 'Surabaya', '2004-08-30',
+             'P', 'A', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SMA', 'Anak',
+             '08122222224', 'azizah@email.com', 'Ahmad Fauzi', 'Fitri Handayani'],
+            ['3578029901220002', '3578028801650011', 'Dimas Pratama', 'Surabaya', '2007-01-20',
+             'L', 'AB', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SMP', 'Anak',
+             '08122222225', 'dimas@email.com', 'Ahmad Fauzi', 'Fitri Handayani'],
+            ['3578029901220002', '3578028801650012', 'Siti Aisyah', 'Malang', '1950-05-18',
+             'P', 'B', 'Islam', 'Cerai Hidup', 'Pensiunan', 'WNI', 'SMA', 'Lainnya',
+             '08122222226', 'aisyah@email.com', 'Karjo', 'Sukini'],
+
+            // Family 3 - KK: 3578029901220003
+            ['3578029901220003', '3578028801650013', 'Bambang Sutrisno', 'Surabaya', '1978-09-03',
+             'L', 'A', 'Islam', 'Kawin', 'Wiraswasta', 'WNI', 'D3', 'Kepala Keluarga',
+             '08133333331', 'bambang@email.com', 'Paijo', 'Warni'],
+            ['3578029901220003', '3578028801650014', 'Yuni Astuti', 'Surabaya', '1980-12-17',
+             'P', 'O', 'Islam', 'Kawin', 'Perawat', 'WNI', 'D3', 'Istri',
+             '08133333332', 'yuni@email.com', 'Wagiman', 'Sukiyem'],
+            ['3578029901220003', '3578028801650015', 'Fikri Akbar', 'Surabaya', '2003-05-22',
+             'L', 'B', 'Islam', 'Belum Kawin', 'Mahasiswa', 'WNI', 'SMA', 'Anak',
+             '08133333333', 'fikri@email.com', 'Bambang Sutrisno', 'Yuni Astuti'],
+            ['3578029901220003', '3578028801650016', 'Laila Rahmawati', 'Surabaya', '2006-10-08',
+             'P', 'A', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SMP', 'Anak',
+             '08133333334', 'laila@email.com', 'Bambang Sutrisno', 'Yuni Astuti'],
+            ['3578029901220003', '3578028801650017', 'Arif Rahman', 'Surabaya', '2009-03-14',
+             'L', 'AB', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SD', 'Anak',
+             '08133333335', 'arif@email.com', 'Bambang Sutrisno', 'Yuni Astuti'],
+            ['3578029901220003', '3578028801650018', 'Waginah', 'Surabaya', '1952-07-25',
+             'P', 'B', 'Islam', 'Cerai Hidup', 'Ibu Rumah Tangga', 'WNI', 'SD', 'Lainnya',
+             '08133333336', 'waginah@email.com', 'Tarmudi', 'Sarini'],
+
+            // Family 4 - KK: 3578029901220004
+            ['3578029901220004', '3578028801650019', 'Cahyo Wibowo', 'Sidoarjo', '1972-02-10',
+             'L', 'A', 'Islam', 'Kawin', 'PNS', 'WNI', 'S1', 'Kepala Keluarga',
+             '08144444441', 'cahyo@email.com', 'Sumarno', 'Sukarti'],
+            ['3578029901220004', '3578028801650020', 'Ratna Dewi', 'Surabaya', '1974-06-25',
+             'P', 'O', 'Islam', 'Kawin', 'Guru', 'WNI', 'S1', 'Istri',
+             '08144444442', 'ratna@email.com', 'Supardi', 'Murwati'],
+            ['3578029901220004', '3578028801650021', 'Ghina Aulia', 'Surabaya', '2001-09-30',
+             'P', 'B', 'Islam', 'Belum Kawin', 'Mahasiswi', 'WNI', 'S1', 'Anak',
+             '08144444443', 'ghina@email.com', 'Cahyo Wibowo', 'Ratna Dewi'],
+            ['3578029901220004', '3578028801650022', 'Raka Pratama', 'Surabaya', '2004-01-15',
+             'L', 'A', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SMA', 'Anak',
+             '08144444444', 'raka@email.com', 'Cahyo Wibowo', 'Ratna Dewi'],
+            ['3578029901220004', '3578028801650023', 'Zahra Karimah', 'Surabaya', '2007-07-20',
+             'P', 'AB', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SMP', 'Anak',
+             '08144444445', 'zahra@email.com', 'Cahyo Wibowo', 'Ratna Dewi'],
+            ['3578029901220004', '3578028801650024', 'Sukijan', 'Sidoarjo', '1947-11-12',
+             'L', 'B', 'Islam', 'Cerai Mati', 'Pensiunan', 'WNI', 'SMA', 'Lainnya',
+             '08144444446', 'sukijan@email.com', 'Pardi', 'Warni'],
+
+            // Family 5 - KK: 3578029901220005
+            ['3578029901220005', '3578028801650025', 'Eko Nugroho', 'Madiun', '1976-04-08',
+             'L', 'A', 'Islam', 'Kawin', 'Programmer', 'WNI', 'S1', 'Kepala Keluarga',
+             '08155555551', 'eko@email.com', 'Tarno', 'Sukini'],
+            ['3578029901220005', '3578028801650026', 'Indri Permata', 'Surabaya', '1978-08-23',
+             'P', 'O', 'Islam', 'Kawin', 'Accountant', 'WNI', 'S1', 'Istri',
+             '08155555552', 'indri@email.com', 'Harsono', 'Sutini'],
+            ['3578029901220005', '3578028801650027', 'Rafi Ahmad', 'Surabaya', '2002-12-05',
+             'L', 'B', 'Islam', 'Belum Kawin', 'Mahasiswa', 'WNI', 'S1', 'Anak',
+             '08155555553', 'rafi@email.com', 'Eko Nugroho', 'Indri Permata'],
+            ['3578029901220005', '3578028801650028', 'Naura Sabrina', 'Surabaya', '2005-03-18',
+             'P', 'A', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SMA', 'Anak',
+             '08155555554', 'naura@email.com', 'Eko Nugroho', 'Indri Permata'],
+            ['3578029901220005', '3578028801650029', 'Dafa Putra', 'Surabaya', '2008-10-12',
+             'L', 'AB', 'Islam', 'Belum Kawin', 'Pelajar', 'WNI', 'SMP', 'Anak',
+             '08155555555', 'dafa@email.com', 'Eko Nugroho', 'Indri Permata'],
+            ['3578029901220005', '3578028801650030', 'Saminah', 'Madiun', '1951-02-28',
+             'P', 'B', 'Islam', 'Cerai Hidup', 'Pensiunan', 'WNI', 'SD', 'Lainnya',
+             '08155555556', 'saminah@email.com', 'Kasiran', 'Parni']
+        ];
+
+        $wargaSheet->fromArray($wargaSample, null, 'A2');
+
+        // Create Panduan sheet
+        $panduanSheet = $spreadsheet->createSheet();
+        $panduanSheet->setTitle('Panduan');
+
+        // Headers for Panduan sheet
+        $panduanHeaders = ['Sheet', 'Kolom', 'Deskripsi', 'Format', 'Contoh', 'Wajib'];
+        $panduanSheet->fromArray([$panduanHeaders], null, 'A1');
+        $panduanSheet->getStyle('A1:F1')->getFont()->setBold(true);
+
+        // Panduan data
+        $panduanData = [
+            // Keluarga Sheet Guide
+            ['Keluarga', 'no_kk', 'Nomor Kartu Keluarga', '16 digit angka', '3578020609220004', 'Ya'],
+            ['Keluarga', 'kepala_keluarga_nik', 'NIK Kepala Keluarga', '16 digit angka', '3578027006710001', 'Ya'],
+            ['Keluarga', 'alamat_kk', 'Alamat KK', 'Text alamat lengkap', 'Bendul Merisi 4/37', 'Ya'],
+            ['Keluarga', 'rt_kk', 'RT KK', '2 digit angka', '02', 'Ya'],
+            ['Keluarga', 'rw_kk', 'RW KK', '2 digit angka', '03', 'Ya'],
+            ['Keluarga', 'kelurahan_kk', 'Kelurahan KK', 'Text nama kelurahan', 'Darmo', 'Ya'],
+            ['Keluarga', 'kecamatan_kk', 'Kecamatan KK', 'Text nama kecamatan', 'Wonocolo', 'Ya'],
+            ['Keluarga', 'kabupaten_kk', 'Kabupaten KK', 'Text nama kabupaten', 'Surabaya', 'Ya'],
+            ['Keluarga', 'provinsi_kk', 'Provinsi KK', 'Text nama provinsi', 'Jawa Timur', 'Ya'],
+            ['Keluarga', 'alamat_domisili', 'Alamat Domisili', 'Text alamat lengkap', 'Bendul Merisi 4/37', 'Ya'],
+            ['Keluarga', 'rt_id', 'ID RT (sesuai database)', 'Angka ID RT', '16', 'Ya'],
+            ['Keluarga', 'status_domisili_keluarga', 'Status Domisili', 'Tetap/Non Domisili/Luar/Sementara', 'Tetap', 'Ya'],
+            ['Keluarga', 'tanggal_mulai_domisili', 'Tanggal Mulai Domisili', 'YYYY-MM-DD', '2022-06-01', 'Ya'],
+
+            // Warga Sheet Guide
+            ['Warga', 'no_kk', 'Nomor KK (referensi ke sheet Keluarga)', '16 digit angka', '3578020609220004', 'Ya'],
+            ['Warga', 'nik', 'Nomor Induk Kependudukan', '16 digit angka', '3578027006710001', 'Ya'],
+            ['Warga', 'nama_lengkap', 'Nama Lengkap', 'Text nama lengkap', 'Ahmad Susanto', 'Ya'],
+            ['Warga', 'tempat_lahir', 'Tempat Lahir', 'Text kota/kabupaten', 'Surabaya', 'Ya'],
+            ['Warga', 'tanggal_lahir', 'Tanggal Lahir', 'YYYY-MM-DD', '1971-06-30', 'Ya'],
+            ['Warga', 'jenis_kelamin', 'Jenis Kelamin', 'L/P', 'L', 'Ya'],
+            ['Warga', 'golongan_darah', 'Golongan Darah', 'A/B/AB/O', 'A', 'Ya'],
+            ['Warga', 'agama', 'Agama', 'Text nama agama', 'Islam', 'Ya'],
+            ['Warga', 'status_perkawinan', 'Status Perkawinan', 'Belum Kawin/Kawin/Cerai Hidup/Cerai Mati', 'Kawin', 'Ya'],
+            ['Warga', 'pekerjaan', 'Pekerjaan', 'Text nama pekerjaan', 'Pegawai Swasta', 'Ya'],
+            ['Warga', 'kewarganegaraan', 'Kewarganegaraan', 'WNI/WNA', 'WNI', 'Ya'],
+            ['Warga', 'pendidikan_terakhir', 'Pendidikan Terakhir', 'SD/SMP/SMA/D3/S1/S2/S3', 'S1', 'Ya'],
+            ['Warga', 'hubungan_keluarga', 'Hubungan Keluarga', 'Kepala Keluarga/Suami/Istri/Anak/Menantu/Cucu/Orang Tua/Mertua/Famili Lain/Pembantu/Lainnya', 'Kepala Keluarga', 'Ya'],
+            ['Warga', 'no_telepon', 'Nomor Telepon', '10-15 digit angka', '08123456789', 'Tidak'],
+            ['Warga', 'email', 'Email', 'Format email valid', 'email@domain.com', 'Tidak'],
+            ['Warga', 'nama_ayah', 'Nama Ayah', 'Text nama lengkap ayah', 'Sukarno', 'Ya'],
+            ['Warga', 'nama_ibu', 'Nama Ibu', 'Text nama lengkap ibu', 'Siti Aminah', 'Ya'],
+
+            // Additional Information
+            ['Informasi Umum', '', 'Tips Tambahan:', '', '', ''],
+            ['Informasi Umum', '', '1. Pastikan no_kk di sheet Warga sama dengan data di sheet Keluarga', '', '', ''],
+            ['Informasi Umum', '', '2. Gunakan format tanggal YYYY-MM-DD', '', '', ''],
+            ['Informasi Umum', '', '3. NIK harus 16 digit angka unik per warga', '', '', ''],
+            ['Informasi Umum', '', '4. No KK harus 16 digit angka unik per keluarga', '', '', ''],
+            ['Informasi Umum', '', '5. Hubungi admin jika RT ID tidak diketahui', '', '', ''],
+            ['Informasi Umum', '', '6. Sistem akan memvalidasi data sebelum import:', '', '', ''],
+            ['Informasi Umum', '', '   - Cek duplikasi NIK dan No KK', '', '', ''],
+            ['Informasi Umum', '', '   - Validasi format enum (status domisili, status perkawinan, hubungan keluarga)', '', '', ''],
+            ['Informasi Umum', '', '   - Verifikasi format tanggal dan angka', '', '', ''],
+            ['Informasi Umum', '', '7. Nilai Enum yang Valid:', '', '', ''],
+            ['Informasi Umum', 'status_domisili_keluarga', 'Tetap, Non Domisili, Luar, Sementara', '', '', ''],
+            ['Informasi Umum', 'status_perkawinan', 'Belum Kawin, Kawin, Cerai Hidup, Cerai Mati', '', '', ''],
+            ['Informasi Umum', 'hubungan_keluarga', 'Kepala Keluarga, Suami, Istri, Anak, Menantu, Cucu, Orang Tua, Mertua, Famili Lain, Pembantu, Lainnya', '', '', ''],
+        ];
+
+        $panduanSheet->fromArray($panduanData, null, 'A2');
+
+        // Style panduan sheet
+        $panduanSheet->getStyle('A:F')->getAlignment()->setWrapText(true);
+        $panduanSheet->getColumnDimension('A')->setWidth(15);
+        $panduanSheet->getColumnDimension('B')->setWidth(25);
+        $panduanSheet->getColumnDimension('C')->setWidth(40);
+        $panduanSheet->getColumnDimension('D')->setWidth(25);
+        $panduanSheet->getColumnDimension('E')->setWidth(25);
+        $panduanSheet->getColumnDimension('F')->setWidth(10);
+
+        // Auto-size columns for all sheets
+        foreach (range('A', 'Q') as $column) {
+            $keluargaSheet->getColumnDimension($column)->setAutoSize(true);
+            $wargaSheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        // Create directory if doesn't exist
+        $directory = storage_path('app/public/templates');
+        if (!is_dir($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $writer->save($filePath);
+
+        } catch (\Exception $e) {
+            \Log::error('Error creating Excel template: ' . $e->getMessage());
+            throw new \Exception('Failed to create Excel template: ' . $e->getMessage());
+        }
+    }
+}
+
+/**
+ * Simple import validator
+ */
+class SimpleImportValidator
+{
+    public function validate(array $keluargaData, array $wargaData): array
+    {
+        $errors = [];
+
+        // Validate keluarga
+        foreach ($keluargaData as $index => $keluarga) {
+            $row = $index + 2; // +2 karena header dimulai dari baris 1
+
+            // Required fields
+            if (empty($keluarga['no_kk'])) {
+                $errors[] = "Sheet Keluarga, Baris {$row}: No KK kosong";
+            }
+            if (empty($keluarga['kepala_keluarga_nik'])) {
+                $errors[] = "Sheet Keluarga, Baris {$row}: NIK Kepala Keluarga kosong";
+            }
+            if (empty($keluarga['alamat_kk'])) {
+                $errors[] = "Sheet Keluarga, Baris {$row}: Alamat KTP kosong";
+            }
+
+            // Format validation
+            if (!empty($keluarga['no_kk']) && !preg_match('/^\d{16}$/', $keluarga['no_kk'])) {
+                $errors[] = "Sheet Keluarga, Baris {$row}: No KK harus 16 digit";
+            }
+            if (!empty($keluarga['kepala_keluarga_nik']) && !preg_match('/^\d{16}$/', $keluarga['kepala_keluarga_nik'])) {
+                $errors[] = "Sheet Keluarga, Baris {$row}: NIK Kepala Keluarga harus 16 digit";
+            }
+
+            // Validate status_domisili_keluarga enum values
+            if (!empty($keluarga['status_domisili_keluarga'])) {
+                $validStatus = ['Tetap', 'Non Domisili', 'Luar', 'Sementara'];
+                if (!in_array($keluarga['status_domisili_keluarga'], $validStatus)) {
+                    $errors[] = "Sheet Keluarga, Baris {$row}: Status Domisili tidak valid. Pilih salah satu: " . implode(', ', $validStatus);
+                }
+            }
+        }
+
+        // Validate warga
+        foreach ($wargaData as $index => $warga) {
+            $row = $index + 2;
+
+            // Required fields
+            if (empty($warga['no_kk'])) {
+                $errors[] = "Sheet Warga, Baris {$row}: No KK kosong";
+            }
+            if (empty($warga['nik'])) {
+                $errors[] = "Sheet Warga, Baris {$row}: NIK kosong";
+            }
+            if (empty($warga['nama_lengkap'])) {
+                $errors[] = "Sheet Warga, Baris {$row}: Nama kosong";
+            }
+
+            // Format validation
+            if (!empty($warga['nik']) && !preg_match('/^\d{16}$/', $warga['nik'])) {
+                $errors[] = "Sheet Warga, Baris {$row}: NIK harus 16 digit";
+            }
+            if (!empty($warga['jenis_kelamin']) && !in_array($warga['jenis_kelamin'], ['L', 'P'])) {
+                $errors[] = "Sheet Warga, Baris {$row}: Jenis kelamin harus L atau P";
+            }
+
+            // Date validation
+            if (!empty($warga['tanggal_lahir'])) {
+                try {
+                    Carbon::createFromFormat('Y-m-d', $warga['tanggal_lahir']);
+                } catch (\Exception $e) {
+                    $errors[] = "Sheet Warga, Baris {$row}: Format tanggal lahir salah (gunakan YYYY-MM-DD)";
+                }
+            }
+
+            // Validate status_perkawinan enum values
+            if (!empty($warga['status_perkawinan'])) {
+                $validStatus = ['Belum Kawin', 'Kawin', 'Cerai Hidup', 'Cerai Mati'];
+                if (!in_array($warga['status_perkawinan'], $validStatus)) {
+                    $errors[] = "Sheet Warga, Baris {$row}: Status Perkawinan tidak valid. Pilih salah satu: " . implode(', ', $validStatus);
+                }
+            }
+
+            // Validate hubungan_keluarga enum values
+            if (!empty($warga['hubungan_keluarga'])) {
+                $validHubungan = ['Kepala Keluarga', 'Suami', 'Istri', 'Anak', 'Menantu', 'Cucu', 'Orang Tua', 'Mertua', 'Famili Lain', 'Pembantu', 'Lainnya'];
+                if (!in_array($warga['hubungan_keluarga'], $validHubungan)) {
+                    $errors[] = "Sheet Warga, Baris {$row}: Hubungan Keluarga tidak valid. Pilih salah satu: " . implode(', ', $validHubungan);
+                }
+            }
+        }
+
+        // Check duplicates
+        $kkNumbers = array_column($keluargaData, 'no_kk');
+        $nikNumbers = array_column($wargaData, 'nik');
+
+        if (count($kkNumbers) !== count(array_unique($kkNumbers))) {
+            $errors[] = "Ada No KK yang duplikat di sheet Keluarga";
+        }
+
+        if (count($nikNumbers) !== count(array_unique($nikNumbers))) {
+            $errors[] = "Ada NIK yang duplikat di sheet Warga";
+        }
+
+        // Check existing data in database
+        $existingKK = Keluarga::whereIn('no_kk', $kkNumbers)->pluck('no_kk')->toArray();
+        foreach ($existingKK as $kk) {
+            $errors[] = "No KK {$kk} sudah ada di database";
+        }
+
+        $existingNIK = Warga::whereIn('nik', $nikNumbers)->pluck('nik')->toArray();
+        foreach ($existingNIK as $nik) {
+            $errors[] = "NIK {$nik} sudah ada di database";
+        }
+
+        return $errors;
+    }
+}
+
+/**
+ * Simple import service
+ */
+class SimpleImportService
+{
+    public function import(array $keluargaData, array $wargaData)
+    {
+        DB::transaction(function() use ($keluargaData, $wargaData) {
+            $kepalaKeluargaMap = [];
+
+            // Step 1: Import keluarga dulu
+            foreach ($keluargaData as $keluarga) {
+                $keluargaModel = Keluarga::create([
+                    'no_kk' => $keluarga['no_kk'],
+                    'kepala_keluarga_id' => null, // Akan diisi setelah warga dibuat
+
+                    // Alamat KTP (manual input)
+                    'alamat_kk' => $keluarga['alamat_kk'],
+                    'rt_kk' => $keluarga['rt_kk'],
+                    'rw_kk' => $keluarga['rw_kk'],
+                    'kelurahan_kk' => $keluarga['kelurahan_kk'],
+                    'kecamatan_kk' => $keluarga['kecamatan_kk'],
+                    'kabupaten_kk' => $keluarga['kabupaten_kk'],
+                    'provinsi_kk' => $keluarga['provinsi_kk'],
+
+                    // Alamat Domisili (rt_id connection)
+                    'alamat_domisili' => $keluarga['alamat_domisili'] ?? null,
+                    'rt_id' => $keluarga['rt_id'] ?? null,
+
+                    // Status Domisili
+                    'status_domisili_keluarga' => $keluarga['status_domisili_keluarga'] ?? 'Tetap',
+                    'tanggal_mulai_domisili_keluarga' => !empty($keluarga['tanggal_mulai_domisili'])
+                        ? Carbon::createFromFormat('Y-m-d', $keluarga['tanggal_mulai_domisili'])
+                        : null,
+                    'keterangan_status' => null,
+
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Simpan mapping untuk update kepala keluarga
+                $kepalaKeluargaMap[$keluarga['no_kk']] = [
+                    'keluarga_id' => $keluargaModel->id,
+                    'kepala_nik' => $keluarga['kepala_keluarga_nik']
+                ];
+            }
+
+            // Step 2: Import warga dan update kepala keluarga
+            foreach ($wargaData as $warga) {
+                $wargaModel = Warga::create([
+                    'nik' => $warga['nik'],
+                    'nama_lengkap' => $warga['nama_lengkap'],
+                    'tempat_lahir' => $warga['tempat_lahir'],
+                    'tanggal_lahir' => Carbon::createFromFormat('Y-m-d', $warga['tanggal_lahir']),
+                    'jenis_kelamin' => $warga['jenis_kelamin'],
+                    'golongan_darah' => $warga['golongan_darah'] ?? null,
+                    'agama' => $warga['agama'],
+                    'status_perkawinan' => $warga['status_perkawinan'],
+                    'pekerjaan' => $warga['pekerjaan'],
+                    'kewarganegaraan' => $warga['kewarganegaraan'],
+                    'pendidikan_terakhir' => $warga['pendidikan_terakhir'],
+                    'hubungan_keluarga' => $warga['hubungan_keluarga'],
+                    'no_telepon' => $warga['no_telepon'] ?? null,
+                    'email' => !empty($warga['email']) ? $warga['email'] : null,
+                    'nama_ayah' => $warga['nama_ayah'] ?? null,
+                    'nama_ibu' => $warga['nama_ibu'] ?? null,
+                    'kk_id' => $kepalaKeluargaMap[$warga['no_kk']]['keluarga_id'] ?? null,
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Step 3: Update kepala keluarga jika ini adalah kepala keluarga
+                if (isset($kepalaKeluargaMap[$warga['no_kk']]) &&
+                    $warga['nik'] === $kepalaKeluargaMap[$warga['no_kk']]['kepala_nik']) {
+
+                    Keluarga::where('id', $kepalaKeluargaMap[$warga['no_kk']]['keluarga_id'])
+                            ->update(['kepala_keluarga_id' => $wargaModel->id]);
+                }
+            }
+        });
+    }
 }

@@ -642,6 +642,4 @@ function exportData() {
     showToast('Fitur export akan segera tersedia', 'info');
 }
 </script>
-
-</div>
-@endsection
+@endpush
