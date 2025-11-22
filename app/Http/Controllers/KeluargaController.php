@@ -1293,19 +1293,19 @@ class KeluargaController extends Controller
              'Jemursari', 'Wonocolo', 'Surabaya', 'Jawa Timur',
              'Jl. Ahmad Yani No. 123', '16', 'Tetap', '2024-01-15'],
 
-            ['3578029901220002', '3578028801650002', 'Jl. Raya Darmo No. 456', '02', '02',
+            ['3578029901220002', '3578028801650007', 'Jl. Raya Darmo No. 456', '02', '02',
              'Darmo', 'Wonocolo', 'Surabaya', 'Jawa Timur',
              'Jl. Raya Darmo No. 456', '17', 'Tetap', '2024-02-20'],
 
-            ['3578029901220003', '3578028801650003', 'Jl. Bengawan No. 789', '03', '03',
+            ['3578029901220003', '3578028801650013', 'Jl. Bengawan No. 789', '03', '03',
              'Margorejo', 'Wonocolo', 'Surabaya', 'Jawa Timur',
              'Jl. Bengawan No. 789', '18', 'Tetap', '2024-03-10'],
 
-            ['3578029901220004', '3578028801650004', 'Jl. Embong Malang No. 321', '04', '04',
+            ['3578029901220004', '3578028801650019', 'Jl. Embong Malang No. 321', '04', '04',
              'Gubeng', 'Wonocolo', 'Surabaya', 'Jawa Timur',
              'Jl. Embong Malang No. 321', '19', 'Sementara', '2024-04-05'],
 
-            ['3578029901220005', '3578028801650005', 'Jl. Sukolilo No. 654', '05', '05',
+            ['3578029901220005', '3578028801650025', 'Jl. Sukolilo No. 654', '05', '05',
              'Sukolilo', 'Wonocolo', 'Surabaya', 'Jawa Timur',
              'Jl. Sukolilo No. 654', '20', 'Tetap', '2024-05-12']
         ];
@@ -1717,11 +1717,31 @@ class SimpleImportService
                 ]);
 
                 // Step 3: Update kepala keluarga jika ini adalah kepala keluarga
-                if (isset($kepalaKeluargaMap[$warga['no_kk']]) &&
-                    $warga['nik'] === $kepalaKeluargaMap[$warga['no_kk']]['kepala_nik']) {
+                if (isset($kepalaKeluargaMap[$warga['no_kk']])) {
+                    // Use trim to handle potential whitespace issues from Excel parsing
+                    $wargaNik = trim((string) $warga['nik']);
+                    $expectedNik = trim((string) $kepalaKeluargaMap[$warga['no_kk']]['kepala_nik']);
 
-                    Keluarga::where('id', $kepalaKeluargaMap[$warga['no_kk']]['keluarga_id'])
-                            ->update(['kepala_keluarga_id' => $wargaModel->id]);
+                    // Log debugging untuk setiap warga yang diproses
+                    \Log::info('Processing kepala keluarga check', [
+                        'warga_nik' => $wargaNik,
+                        'expected_kepala_nik' => $expectedNik,
+                        'kk_no' => $warga['no_kk'],
+                        'keluarga_id' => $kepalaKeluargaMap[$warga['no_kk']]['keluarga_id'],
+                        'is_match' => ($wargaNik === $expectedNik),
+                        'warga_id' => $wargaModel->id,
+                        'warga_name' => $warga['nama_lengkap']
+                    ]);
+
+                    if ($wargaNik === $expectedNik) {
+                        \Log::info('Updating kepala keluarga', [
+                            'keluarga_id' => $kepalaKeluargaMap[$warga['no_kk']]['keluarga_id'],
+                            'kepala_keluarga_id' => $wargaModel->id
+                        ]);
+
+                        Keluarga::where('id', $kepalaKeluargaMap[$warga['no_kk']]['keluarga_id'])
+                                ->update(['kepala_keluarga_id' => $wargaModel->id]);
+                    }
                 }
             }
         });
