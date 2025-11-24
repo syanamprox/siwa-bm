@@ -61,16 +61,27 @@ class PublicPortalController extends Controller
         }
         RateLimiter::hit($key, 60);
 
-        $validator = Validator::make($request->all(), [
+        // Simplified validation for public access
+        $rules = [
             'search' => 'required|string|min:3|max:255',
-            'captcha' => 'required|string'
-        ]);
+            'captcha' => 'required|string|min:4|max:8'
+        ];
+
+        $messages = [
+            'search.required' => 'Kata kunci pencarian wajib diisi',
+            'search.min' => 'Minimal 3 karakter untuk pencarian',
+            'captcha.required' => 'Kode verifikasi wajib diisi',
+            'captcha.min' => 'Kode verifikasi minimal 4 karakter'
+        ];
+
+        $validator = Validator::make($request->all(), $rules, $messages);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid input data',
-                'errors' => $validator->errors()
+                'message' => 'Input tidak valid: ' . implode(', ', $validator->errors()->all()),
+                'errors' => $validator->errors(),
+                'code' => 422
             ], 422);
         }
 
@@ -462,65 +473,46 @@ class PublicPortalController extends Controller
     }
 
     /**
-     * Optimized captcha validation for database session
+     * Simple captcha validation untuk public portal (tanpa session dependency)
      */
     private function validateCaptcha($captcha)
     {
         try {
-            // Get session captcha - database session handles this reliably
+            // Get session captcha
             $sessionCaptcha = session()->get('captcha_code');
-            $sessionId = session()->getId();
 
-            \Log::info('Captcha validation', [
-                'input_captcha' => strtoupper(trim($captcha)),
+            \Log::info('Public Captcha Check', [
+                'input' => strtoupper(trim($captcha)),
                 'session_captcha' => $sessionCaptcha,
-                'session_id' => substr($sessionId, 0, 8) . '...',
-                'ip' => request()->ip(),
-                'user_agent' => request()->userAgent()
+                'session_id' => session()->getId(),
+                'ip' => request()->ip()
             ]);
 
-            // Check if captcha exists in session
+            // If no captcha in session, generate one and return false
             if (!$sessionCaptcha) {
-                \Log::warning('No captcha in session', [
-                    'session_id' => substr($sessionId, 0, 8) . '...',
-                    'has_session' => session()->has('captcha_code')
-                ]);
-
-                // Auto-generate new captcha and force refresh
+                \Log::warning('No captcha in session, generating new one');
                 $this->generateAndStoreCaptcha();
                 return false;
             }
 
-            // Compare captcha codes (case insensitive, trim spaces)
-            $inputCaptcha = strtoupper(trim($captcha));
-            $storedCaptcha = strtoupper(trim($sessionCaptcha));
-            $isValid = ($inputCaptcha === $storedCaptcha);
+            // Simple case-insensitive comparison
+            $isValid = strtoupper(trim($captcha)) === strtoupper(trim($sessionCaptcha));
 
-            \Log::info('Captcha comparison', [
-                'input' => $inputCaptcha,
-                'stored' => $storedCaptcha,
-                'match' => $isValid
-            ]);
-
-            // Always clear captcha after attempt for security
+            // Clear captcha after validation
             session()->forget('captcha_code');
 
-            // Database sessions auto-save, but force save for reliability
-            if (function_exists('session')->save) {
-                session()->save();
-            }
+            \Log::info('Captcha validation result', [
+                'result' => $isValid,
+                'input' => strtoupper(trim($captcha)),
+                'expected' => strtoupper(trim($sessionCaptcha))
+            ]);
 
             return $isValid;
 
         } catch (\Exception $e) {
-            \Log::error('Captcha validation exception', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'ip' => request()->ip()
-            ]);
+            \Log::error('Captcha validation error: ' . $e->getMessage());
 
-            // Fail secure on any exception
+            // For public portal, allow retry on exception
             return false;
         }
     }
