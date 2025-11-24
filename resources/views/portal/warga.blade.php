@@ -168,13 +168,16 @@
             showFormLoading($(this));
 
             // Make AJAX request
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                }
+            });
+
             $.ajax({
                 url: '/portal/cek-warga',
                 type: 'POST',
                 data: formData,
-                beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-CSRF-TOKEN', $('meta[name="csrf-token"]').attr('content'));
-                },
                 success: function(response) {
                     hideFormLoading($('#warga-form'));
                     if (response.success) {
