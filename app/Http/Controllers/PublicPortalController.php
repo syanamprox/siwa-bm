@@ -462,41 +462,99 @@ class PublicPortalController extends Controller
     }
 
     /**
-     * Simple captcha validation (replace with reCAPTCHA in production)
+     * Improved captcha validation with better error handling
      */
     private function validateCaptcha($captcha)
     {
-        // This is a simple example - use reCAPTCHA or similar in production
-        $sessionCaptcha = session()->get('captcha_code');
+        try {
+            // Get session captcha with fallback
+            $sessionCaptcha = session()->get('captcha_code');
 
-        if (!$sessionCaptcha) {
-            // Generate new captcha if doesn't exist
-            $sessionCaptcha = substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6);
-            session()->put('captcha_code', $sessionCaptcha);
-        }
+            // Debug logging (remove in production)
+            \Log::info('Captcha validation attempt', [
+                'input_captcha' => strtoupper($captcha),
+                'session_captcha' => $sessionCaptcha,
+                'session_id' => session()->getId(),
+                'ip' => request()->ip()
+            ]);
 
-        $isValid = strtoupper($captcha) === $sessionCaptcha;
+            if (!$sessionCaptcha) {
+                \Log::warning('No captcha code found in session');
 
-        // Clear captcha after validation to force regeneration
-        if ($isValid) {
+                // Generate new captcha if doesn't exist
+                $sessionCaptcha = substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6);
+                session()->put('captcha_code', $sessionCaptcha);
+
+                // Force session save
+                session()->save();
+
+                return false;
+            }
+
+            // Case insensitive comparison
+            $isValid = strtoupper(trim($captcha)) === strtoupper(trim($sessionCaptcha));
+
+            // Clear captcha after validation (both success and fail for security)
             session()->forget('captcha_code');
-        }
+            session()->save();
 
-        return $isValid;
+            \Log::info('Captcha validation result', ['is_valid' => $isValid]);
+
+            return $isValid;
+
+        } catch (\Exception $e) {
+            \Log::error('Captcha validation error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Fail secure on any exception
+            return false;
+        }
     }
 
     /**
-     * Generate new captcha
+     * Generate new captcha with improved reliability
      */
     public function generateCaptcha()
     {
-        // Clear old captcha and generate new one
-        session()->forget('captcha_code');
-        $code = substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6);
-        session()->put('captcha_code', $code);
+        try {
+            // Clear old captcha
+            session()->forget('captcha_code');
 
-        return response()->json([
-            'captcha' => $code
-        ]);
+            // Generate more readable captcha
+            $characters = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Remove ambiguous characters
+            $code = substr(str_shuffle($characters), 0, 6);
+
+            // Store in session with timestamp
+            session()->put('captcha_code', $code);
+            session()->put('captcha_generated_at', now()->timestamp);
+
+            // Force session save
+            session()->save();
+
+            \Log::info('New captcha generated', [
+                'code' => $code,
+                'session_id' => session()->getId()
+            ]);
+
+            return response()->json([
+                'captcha' => $code,
+                'timestamp' => now()->timestamp
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Captcha generation error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // Fallback to simple captcha
+            $fallbackCode = 'ABC123';
+            return response()->json([
+                'captcha' => $fallbackCode,
+                'error' => 'Using fallback captcha'
+            ]);
+        }
     }
 }

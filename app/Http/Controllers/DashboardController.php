@@ -82,10 +82,11 @@ class DashboardController extends Controller
             ->whereYear('created_at', now()->year)
             ->sum('jumlah_bayar');
 
-        // Warga per RW
-        $data['warga_per_rw'] = Warga::join('wilayah as rt', 'warga.rt_domisili', '=', 'rt.kode')
+        // Warga per RW (corrected query using proper relationships)
+        $data['warga_per_rw'] = Warga::selectRaw('COUNT(*) as total, rw.nama as rw_nama')
+            ->join('keluargas', 'warga.kk_id', '=', 'keluargas.id')
+            ->join('wilayah as rt', 'keluargas.rt_id', '=', 'rt.id')
             ->join('wilayah as rw', 'rt.parent_id', '=', 'rw.id')
-            ->selectRaw('rw.nama as rw_nama, COUNT(*) as total')
             ->groupBy('rw.id', 'rw.nama')
             ->orderBy('rw.nama')
             ->get();
@@ -106,33 +107,33 @@ class DashboardController extends Controller
         }
 
         $rw_ids = $rw_areas->pluck('id');
-        $rt_codes = Wilayah::whereIn('parent_id', $rw_ids)->pluck('kode');
+        $rt_ids = Wilayah::whereIn('parent_id', $rw_ids)->pluck('id');
 
-        $data['total_warga'] = Warga::whereIn('rt_domisili', $rt_codes)->count();
-        $data['total_keluarga'] = Keluarga::whereIn('rt_kk', $rt_codes)->count();
+        $data['total_warga'] = Warga::join('keluargas', 'wargas.kk_id', '=', 'keluargas.id')
+            ->whereIn('keluargas.rt_id', $rt_ids)
+            ->count();
+        $data['total_keluarga'] = Keluarga::whereIn('rt_id', $rt_ids)->count();
         $data['total_rt'] = Wilayah::whereIn('parent_id', $rw_ids)->count();
 
-        // Iuran statistics for RW
-        $data['total_tagihan_iuran'] = Iuran::whereIn('kk_id', function($query) use ($rw_ids) {
-            $query->select('id')->from('keluargas')->whereHas('wilayah', function($q) use ($rw_ids) {
-                $q->whereIn('parent_id', $rw_ids);
-            });
-        })
+        // Iuran statistics for RW (using keluarga relationships)
+        $keluarga_ids = Keluarga::whereIn('rt_id', $rt_ids)->pluck('id');
+        $data['total_tagihan_iuran'] = Iuran::whereIn('kk_id', $keluarga_ids)
             ->where('status', 'belum_bayar')
             ->sum('nominal');
 
-        $data['pemasukan_bulan_ini'] = PembayaranIuran::whereIn('iuran_id', function($query) use ($rw_ids) {
-            $query->select('id')->from('iuran')->whereIn('rt_id', $rw_ids);
-        })
-        ->whereMonth('created_at', now()->month)
-        ->whereYear('created_at', now()->year)
-        ->sum('jumlah_bayar');
+        $iuran_ids = Iuran::whereIn('kk_id', $keluarga_ids)->pluck('id');
+        $data['pemasukan_bulan_ini'] = PembayaranIuran::whereIn('iuran_id', $iuran_ids)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('jumlah_bayar');
 
         // Warga per RT in this RW
-        $data['warga_per_rt'] = Warga::whereIn('rt_domisili', $rt_codes)
-            ->selectRaw('rt_domisili, COUNT(*) as total')
-            ->groupBy('rt_domisili')
-            ->orderBy('rt_domisili')
+        $data['warga_per_rt'] = Warga::selectRaw('rt.nama as rt_nama, COUNT(*) as total')
+            ->join('keluargas', 'wargas.kk_id', '=', 'keluargas.id')
+            ->join('wilayah as rt', 'keluargas.rt_id', '=', 'rt.id')
+            ->whereIn('keluargas.rt_id', $rt_ids)
+            ->groupBy('rt.id', 'rt.nama')
+            ->orderBy('rt.nama')
             ->get();
 
         return view('dashboard.rw', compact('data'));
@@ -150,40 +151,36 @@ class DashboardController extends Controller
             return view('dashboard.no-access', compact('data'));
         }
 
-        $rt_codes = $rt_areas->pluck('kode');
+        $rt_ids = $rt_areas->pluck('id');
 
-        $data['total_warga'] = Warga::whereIn('rt_domisili', $rt_codes)->count();
-        $data['total_keluarga'] = Keluarga::whereIn('rt_kk', $rt_codes)->count();
+        $data['total_warga'] = Warga::join('keluargas', 'wargas.kk_id', '=', 'keluargas.id')
+            ->whereIn('keluargas.rt_id', $rt_ids)
+            ->count();
+        $data['total_keluarga'] = Keluarga::whereIn('rt_id', $rt_ids)->count();
 
         // Iuran statistics for RT
-        $data['total_tagihan_iuran'] = Iuran::whereIn('kk_id', function($query) use ($rt_codes) {
-            $query->select('id')->from('keluargas')->whereHas('wilayah', function($q) use ($rt_codes) {
-                $q->whereIn('kode', $rt_codes);
-            });
-        })
+        $keluarga_ids = Keluarga::whereIn('rt_id', $rt_ids)->pluck('id');
+        $data['total_tagihan_iuran'] = Iuran::whereIn('kk_id', $keluarga_ids)
             ->where('status', 'belum_bayar')
             ->sum('nominal');
 
-        $data['pemasukan_bulan_ini'] = PembayaranIuran::whereIn('iuran_id', function($query) use ($rt_areas) {
-            $query->select('id')->from('iuran')->whereIn('rt_id', $rt_areas->pluck('id'));
-        })
-        ->whereMonth('created_at', now()->month)
-        ->whereYear('created_at', now()->year)
-        ->sum('jumlah_bayar');
+        $iuran_ids = Iuran::whereIn('kk_id', $keluarga_ids)->pluck('id');
+        $data['pemasukan_bulan_ini'] = PembayaranIuran::whereIn('iuran_id', $iuran_ids)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('jumlah_bayar');
 
         // Recent payments in this RT
-        $data['recent_payments'] = PembayaranIuran::whereIn('iuran_id', function($query) use ($rt_areas) {
-            $query->select('id')->from('iuran')->whereIn('rt_id', $rt_areas->pluck('id'));
-        })
-        ->with(['iuran.warga', 'petugas'])
-        ->orderBy('created_at', 'desc')
-        ->take(5)
-        ->get();
+        $data['recent_payments'] = PembayaranIuran::whereIn('iuran_id', $iuran_ids)
+            ->with(['iuran.keluarga', 'petugas'])
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
 
         // Pending iuran list
-        $data['pending_iuran'] = Iuran::whereIn('rt_id', $rt_areas->pluck('id'))
-            ->where('status', 'pending')
-            ->with(['warga', 'jenisIuran'])
+        $data['pending_iuran'] = Iuran::whereIn('kk_id', $keluarga_ids)
+            ->where('status', 'belum_bayar')
+            ->with(['keluarga', 'jenisIuran'])
             ->orderBy('jatuh_tempo', 'asc')
             ->take(10)
             ->get();
