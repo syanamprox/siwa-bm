@@ -462,50 +462,62 @@ class PublicPortalController extends Controller
     }
 
     /**
-     * Improved captcha validation with better error handling
+     * Optimized captcha validation for database session
      */
     private function validateCaptcha($captcha)
     {
         try {
-            // Get session captcha with fallback
+            // Get session captcha - database session handles this reliably
             $sessionCaptcha = session()->get('captcha_code');
+            $sessionId = session()->getId();
 
-            // Debug logging (remove in production)
-            \Log::info('Captcha validation attempt', [
-                'input_captcha' => strtoupper($captcha),
+            \Log::info('Captcha validation', [
+                'input_captcha' => strtoupper(trim($captcha)),
                 'session_captcha' => $sessionCaptcha,
-                'session_id' => session()->getId(),
-                'ip' => request()->ip()
+                'session_id' => substr($sessionId, 0, 8) . '...',
+                'ip' => request()->ip(),
+                'user_agent' => request()->userAgent()
             ]);
 
+            // Check if captcha exists in session
             if (!$sessionCaptcha) {
-                \Log::warning('No captcha code found in session');
+                \Log::warning('No captcha in session', [
+                    'session_id' => substr($sessionId, 0, 8) . '...',
+                    'has_session' => session()->has('captcha_code')
+                ]);
 
-                // Generate new captcha if doesn't exist
-                $sessionCaptcha = substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6);
-                session()->put('captcha_code', $sessionCaptcha);
-
-                // Force session save
-                session()->save();
-
+                // Auto-generate new captcha and force refresh
+                $this->generateAndStoreCaptcha();
                 return false;
             }
 
-            // Case insensitive comparison
-            $isValid = strtoupper(trim($captcha)) === strtoupper(trim($sessionCaptcha));
+            // Compare captcha codes (case insensitive, trim spaces)
+            $inputCaptcha = strtoupper(trim($captcha));
+            $storedCaptcha = strtoupper(trim($sessionCaptcha));
+            $isValid = ($inputCaptcha === $storedCaptcha);
 
-            // Clear captcha after validation (both success and fail for security)
+            \Log::info('Captcha comparison', [
+                'input' => $inputCaptcha,
+                'stored' => $storedCaptcha,
+                'match' => $isValid
+            ]);
+
+            // Always clear captcha after attempt for security
             session()->forget('captcha_code');
-            session()->save();
 
-            \Log::info('Captcha validation result', ['is_valid' => $isValid]);
+            // Database sessions auto-save, but force save for reliability
+            if (function_exists('session')->save) {
+                session()->save();
+            }
 
             return $isValid;
 
         } catch (\Exception $e) {
-            \Log::error('Captcha validation error', [
+            \Log::error('Captcha validation exception', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'ip' => request()->ip()
             ]);
 
             // Fail secure on any exception
@@ -514,47 +526,55 @@ class PublicPortalController extends Controller
     }
 
     /**
-     * Generate new captcha with improved reliability
+     * Helper method to generate and store captcha
+     */
+    private function generateAndStoreCaptcha()
+    {
+        $characters = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $code = substr(str_shuffle($characters), 0, 6);
+
+        session()->put('captcha_code', $code);
+        session()->put('captcha_generated_at', now()->timestamp);
+
+        // Force save for database session
+        if (function_exists('session')->save) {
+            session()->save();
+        }
+
+        \Log::info('New captcha generated', [
+            'code' => $code,
+            'session_id' => substr(session()->getId(), 0, 8) . '...'
+        ]);
+
+        return $code;
+    }
+
+    /**
+     * Generate new captcha (API endpoint)
      */
     public function generateCaptcha()
     {
         try {
-            // Clear old captcha
-            session()->forget('captcha_code');
-
-            // Generate more readable captcha
-            $characters = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // Remove ambiguous characters
-            $code = substr(str_shuffle($characters), 0, 6);
-
-            // Store in session with timestamp
-            session()->put('captcha_code', $code);
-            session()->put('captcha_generated_at', now()->timestamp);
-
-            // Force session save
-            session()->save();
-
-            \Log::info('New captcha generated', [
-                'code' => $code,
-                'session_id' => session()->getId()
-            ]);
+            // Generate and store using helper method
+            $code = $this->generateAndStoreCaptcha();
 
             return response()->json([
                 'captcha' => $code,
-                'timestamp' => now()->timestamp
+                'timestamp' => now()->timestamp,
+                'success' => true
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Captcha generation error', [
+            \Log::error('Captcha API generation failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'ip' => request()->ip()
             ]);
 
-            // Fallback to simple captcha
-            $fallbackCode = 'ABC123';
             return response()->json([
-                'captcha' => $fallbackCode,
-                'error' => 'Using fallback captcha'
-            ]);
+                'captcha' => 'ERROR',
+                'error' => 'Captcha generation failed',
+                'success' => false
+            ], 500);
         }
     }
 }
