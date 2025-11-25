@@ -63,15 +63,12 @@ class PublicPortalController extends Controller
 
         // Simplified validation for public access
         $rules = [
-            'search' => 'required|string|min:3|max:255',
-            'captcha' => 'required|string|min:4|max:8'
+            'search' => 'required|string|min:3|max:255'
         ];
 
         $messages = [
             'search.required' => 'Kata kunci pencarian wajib diisi',
-            'search.min' => 'Minimal 3 karakter untuk pencarian',
-            'captcha.required' => 'Kode verifikasi wajib diisi',
-            'captcha.min' => 'Kode verifikasi minimal 4 karakter'
+            'search.min' => 'Minimal 3 karakter untuk pencarian'
         ];
 
         $validator = Validator::make($request->all(), $rules, $messages);
@@ -81,15 +78,6 @@ class PublicPortalController extends Controller
                 'success' => false,
                 'message' => 'Input tidak valid: ' . implode(', ', $validator->errors()->all()),
                 'errors' => $validator->errors(),
-                'code' => 422
-            ], 422);
-        }
-
-        // Simple captcha validation (you may want to use reCAPTCHA)
-        if (!$this->validateCaptcha($request->captcha)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid captcha',
                 'code' => 422
             ], 422);
         }
@@ -158,8 +146,7 @@ class PublicPortalController extends Controller
         RateLimiter::hit($key, 60);
 
         $validator = Validator::make($request->all(), [
-            'no_kk' => 'required|string|min:10|max:20',
-            'captcha' => 'required|string'
+            'no_kk' => 'required|string|min:10|max:20'
         ]);
 
         if ($validator->fails()) {
@@ -167,14 +154,6 @@ class PublicPortalController extends Controller
                 'success' => false,
                 'message' => 'Invalid input data',
                 'errors' => $validator->errors()
-            ], 422);
-        }
-
-        if (!$this->validateCaptcha($request->captcha)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid captcha',
-                'code' => 422
             ], 422);
         }
 
@@ -231,8 +210,7 @@ class PublicPortalController extends Controller
         RateLimiter::hit($key, 60);
 
         $validator = Validator::make($request->all(), [
-            'nik' => 'required|string|min:16|max:16',
-            'captcha' => 'required|string'
+            'nik' => 'required|string|min:16|max:16'
         ]);
 
         if ($validator->fails()) {
@@ -240,14 +218,6 @@ class PublicPortalController extends Controller
                 'success' => false,
                 'message' => 'Invalid input data',
                 'errors' => $validator->errors()
-            ], 422);
-        }
-
-        if (!$this->validateCaptcha($request->captcha)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid captcha',
-                'code' => 422
             ], 422);
         }
 
@@ -470,103 +440,5 @@ class PublicPortalController extends Controller
             'batal' => 'Batal'
         ];
         return $statusMap[$status] ?? $status;
-    }
-
-    /**
-     * Simple captcha validation untuk public portal (tanpa session dependency)
-     */
-    private function validateCaptcha($captcha)
-    {
-        try {
-            // Get session captcha
-            $sessionCaptcha = session()->get('captcha_code');
-
-            \Log::info('Public Captcha Check', [
-                'input' => strtoupper(trim($captcha)),
-                'session_captcha' => $sessionCaptcha,
-                'session_id' => session()->getId(),
-                'ip' => request()->ip()
-            ]);
-
-            // If no captcha in session, generate one and return false
-            if (!$sessionCaptcha) {
-                \Log::warning('No captcha in session, generating new one');
-                $this->generateAndStoreCaptcha();
-                return false;
-            }
-
-            // Simple case-insensitive comparison
-            $isValid = strtoupper(trim($captcha)) === strtoupper(trim($sessionCaptcha));
-
-            // Clear captcha after validation
-            session()->forget('captcha_code');
-
-            \Log::info('Captcha validation result', [
-                'result' => $isValid,
-                'input' => strtoupper(trim($captcha)),
-                'expected' => strtoupper(trim($sessionCaptcha))
-            ]);
-
-            return $isValid;
-
-        } catch (\Exception $e) {
-            \Log::error('Captcha validation error: ' . $e->getMessage());
-
-            // For public portal, allow retry on exception
-            return false;
-        }
-    }
-
-    /**
-     * Helper method to generate and store captcha
-     */
-    private function generateAndStoreCaptcha()
-    {
-        $characters = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
-        $code = substr(str_shuffle($characters), 0, 6);
-
-        session()->put('captcha_code', $code);
-        session()->put('captcha_generated_at', now()->timestamp);
-
-        // Force save for database session
-        if (function_exists('session')->save) {
-            session()->save();
-        }
-
-        \Log::info('New captcha generated', [
-            'code' => $code,
-            'session_id' => substr(session()->getId(), 0, 8) . '...'
-        ]);
-
-        return $code;
-    }
-
-    /**
-     * Generate new captcha (API endpoint)
-     */
-    public function generateCaptcha()
-    {
-        try {
-            // Generate and store using helper method
-            $code = $this->generateAndStoreCaptcha();
-
-            return response()->json([
-                'captcha' => $code,
-                'timestamp' => now()->timestamp,
-                'success' => true
-            ]);
-
-        } catch (\Exception $e) {
-            \Log::error('Captcha API generation failed', [
-                'error' => $e->getMessage(),
-                'ip' => request()->ip()
-            ]);
-
-            return response()->json([
-                'captcha' => 'ERROR',
-                'error' => 'Captcha generation failed',
-                'success' => false
-            ], 500);
-        }
     }
 }

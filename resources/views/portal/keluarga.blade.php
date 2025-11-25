@@ -46,32 +46,7 @@
                                 </small>
                             </div>
 
-                            <div class="form-group">
-                                <label for="captcha-keluarga" class="form-label font-weight-bold">
-                                    <i class="fas fa-shield-alt text-primary mr-2"></i>
-                                    Kode Verifikasi
-                                </label>
-                                <div class="row align-items-center">
-                                    <div class="col-md-8">
-                                        <input type="text" class="form-control form-control-portal" id="captcha-keluarga"
-                                               name="captcha" placeholder="Masukkan kode di samping" required
-                                               style="height: 58px;">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="captcha-display" id="captcha-display-keluarga"
-                                             style="height: 58px; line-height: 52px; font-size: 1.4rem;">
-                                            {{ session('captcha_code') ?? strtoupper(substr(str_shuffle('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6)) }}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="d-flex justify-content-between mt-2">
-                                    <small class="form-text text-muted">Masukkan kode verifikasi untuk keamanan</small>
-                                    <small class="form-text text-primary" style="cursor: pointer;" id="refresh-captcha-keluarga">
-                                        <i class="fas fa-sync-alt mr-1"></i>Refresh Kode
-                                    </small>
-                                </div>
-                            </div>
-
+                            
                             <div class="form-group mb-0">
                                 <button type="submit" class="btn btn-primary btn-portal btn-block">
                                     <i class="fas fa-search mr-2"></i>
@@ -160,7 +135,6 @@
 
             const formData = {
                 no_kk: $('#no_kk').val(),
-                captcha: $('#captcha-keluarga').val(),
                 _token: $('meta[name="csrf-token"]').attr('content')
             };
 
@@ -179,21 +153,14 @@
                     hideFormLoading($('#keluarga-form'));
                     if (response.success) {
                         displayKeluargaResult(response.data);
-                        // Auto refresh captcha after successful submission
-                        refreshCaptcha('keluarga');
                     } else {
                         showToast('error', response.message);
-                        // Refresh captcha on error too
-                        refreshCaptcha('keluarga');
                     }
                 },
                 error: function(xhr, status, error) {
                     hideFormLoading($('#keluarga-form'));
                     const response = xhr.responseJSON || { message: 'Terjadi kesalahan pada server' };
-                    if (response.message && response.message.includes('CAPTCHA')) {
-                        showToast('error', response.message);
-                        refreshCaptcha('keluarga');
-                    } else if (xhr.status === 429) {
+                    if (xhr.status === 429) {
                         showToast('warning', response.message || 'Terlalu banyak permintaan. Silakan tunggu beberapa saat.');
                     } else if (xhr.status === 404) {
                         showToast('error', 'Data keluarga tidak ditemukan. Silakan periksa kembali nomor KK Anda.');
@@ -204,26 +171,7 @@
             });
         });
 
-        // Refresh captcha
-        $('#refresh-captcha-keluarga').on('click', function() {
-            refreshCaptcha('keluarga');
-        });
-
-        // Refresh captcha function
-        function refreshCaptcha(type) {
-            $.get('{{ route("portal.captcha") }}')
-                .done(function(data) {
-                    $('#captcha-display-' + type).text(data.captcha);
-                    $('#captcha-' + type).val('');
-                })
-                .fail(function() {
-                    // Generate local captcha if server fails
-                    const randomCaptcha = Math.random().toString(36).substring(2, 8).toUpperCase();
-                    $('#captcha-display-' + type).text(randomCaptcha);
-                    $('#captcha-' + type).val('');
-                });
-        }
-
+        
         // Display keluarga result function
         function displayKeluargaResult(data) {
             // Sanitize name function - show first 4 characters + "***" for privacy
