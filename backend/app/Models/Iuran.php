@@ -183,7 +183,7 @@ class Iuran extends Model
      */
     public function getTotalPembayaranAttribute(): float
     {
-        return $this->pembayaran->sum('jumlah');
+        return (float) $this->pembayaran()->sum('jumlah_bayar');
     }
 
     /**

@@ -12,57 +12,26 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create default admin user
-        User::create([
-            'name' => 'Administrator',
-            'email' => 'admin@siwa.test',
-            'password' => bcrypt('admin123'),
-            'role' => 'admin',
-        ]);
+        $users = [
+            ['name' => 'Administrator', 'username' => 'admin', 'password' => 'admin123', 'role' => 'admin'],
+            ['name' => 'RULLY PRASETYA NEGARA, S.STP.,M.Si', 'username' => 'lurah', 'password' => 'lurah123', 'role' => 'lurah'],
+            ['name' => 'BAMBANG SETYAWAN', 'username' => 'rw03', 'password' => 'rw123', 'role' => 'rw'],
+            ['name' => 'TRI BAGUS WAHYUDI', 'username' => 'rt01', 'password' => 'rt123', 'role' => 'rt'],
+            ['name' => 'AKHMAD SURYADI', 'username' => 'rt02', 'password' => 'rt123', 'role' => 'rt'],
+            ['name' => 'M. YASIN', 'username' => 'rt03', 'password' => 'rt123', 'role' => 'rt'],
+            ['name' => 'SULICHAH', 'username' => 'rt04', 'password' => 'rt123', 'role' => 'rt'],
+        ];
 
-        // Create default lurah user
-        User::create([
-            'name' => 'RULLY PRASETYA NEGARA, S.STP.,M.Si',
-            'email' => 'lurah@siwa.test',
-            'password' => bcrypt('lurah123'),
-            'role' => 'lurah',
-        ]);
-
-        // Create default RW III user
-        User::create([
-            'name' => 'BAMBANG SETYAWAN',
-            'email' => 'rw03@siwa.test',
-            'password' => bcrypt('rw123'),
-            'role' => 'rw',
-        ]);
-
-        // Create default RT users
-        User::create([
-            'name' => 'TRI BAGUS WAHYUDI',
-            'email' => 'rt01@siwa.test',
-            'password' => bcrypt('rt123'),
-            'role' => 'rt',
-        ]);
-
-        User::create([
-            'name' => 'AKHMAD SURYADI',
-            'email' => 'rt02@siwa.test',
-            'password' => bcrypt('rt123'),
-            'role' => 'rt',
-        ]);
-
-        User::create([
-            'name' => 'M. YASIN',
-            'email' => 'rt03@siwa.test',
-            'password' => bcrypt('rt123'),
-            'role' => 'rt',
-        ]);
-
-        User::create([
-            'name' => 'SULICHAH',
-            'email' => 'rt04@siwa.test',
-            'password' => bcrypt('rt123'),
-            'role' => 'rt',
-        ]);
+        foreach ($users as $u) {
+            User::updateOrCreate(
+                ['username' => $u['username']],
+                [
+                    'name' => $u['name'],
+                    'password' => bcrypt($u['password']),
+                    'role' => $u['role'],
+                    'status_aktif' => 1,
+                ]
+            );
+        }
     }
 }

@@ -26,12 +26,18 @@ class PembayaranIuran extends Model
         'iuran_id',
         'jumlah_bayar',
         'metode_pembayaran',
-        'bukti_pembayaran',
-        'tanggal_bayar',
-        'denda_dibayar',
-        'petugas_id',
-        'catatan',
+        'nomor_referensi',
+        'keterangan',
+        'created_by',
     ];
+
+    /**
+     * Petugas yang mencatat pembayaran.
+     */
+    public function createdBy()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
+    }
 
     /**
      * The attributes that should be cast.
