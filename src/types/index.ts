@@ -11,6 +11,7 @@ export interface WilayahRef {
   tingkat: 'Kelurahan' | 'RW' | 'RT'
   parent?: WilayahRef | null
   children?: WilayahRef[]
+  total_kk?: number
 }
 
 /* ── Warga ── */
