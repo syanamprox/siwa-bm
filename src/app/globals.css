@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════
+   Design tokens — EXACT COPY dari businessplus-marketing/tailwind.config.js
+   Translated to Tailwind v4 @theme format (CSS-first config)
+   ═══════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ── brand: Business+ blue ── */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+  --color-brand: #2563eb;
+
+  /* ── ink (dark) ── */
+  --color-ink: #101715;
+  --color-ink-700: #1c2e28;
+  --color-ink-800: #13211c;
+  --color-ink-900: #0c1512;
+
+  /* ── canvas / surface / line ── */
+  --color-canvas: #f4f6f8;
+  --color-surface: #ffffff;
+  --color-line: #eceff3;
+
+  /* ── semantic ── */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #f43f5e;
+  --color-info: #3b82f6;
+
+  /* ── font ── */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+
+  /* ── border radius ── */
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.375rem;
+
+  /* ── shadow ── */
+  --shadow-card: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  --shadow-hover: 0 6px 20px rgba(16,24,40,.08);
+  --shadow-pop: 0 16px 48px rgba(16,24,40,.14);
+
+  /* ── animations (exact match v3 keyframes + timing) ── */
+  --animate-fade-up: fade-up 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) both;
+  --animate-slide-in-right: slide-in-right 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.2s ease-out both;
+  --animate-blink: blink 1.05s steps(1) infinite;
+  --animate-modal-in: modal-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-bump-in: bump-in 0.42s cubic-bezier(0.34, 1.4, 0.5, 1) both;
+  --animate-shimmer: shimmer 1.2s linear infinite;
+}
+
+@keyframes fade-up {
+  0%   { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-in-right {
+  0%   { transform: translateX(100%); }
+  100% { transform: translateX(0); }
+}
+@keyframes fade-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes blink {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes modal-in {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes bump-in {
+  0%   { opacity: 0; transform: scale(0.72); }
+  55%  { opacity: 1; transform: scale(1.04); }
+  75%  { transform: scale(0.985); }
+  100% { transform: scale(1); }
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Base styles — exact copy dari businessplus-marketing/index.css
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f4f6f8;
+  color: #0f172a;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-feature-settings: 'cv11', 'ss01';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* thin, subtle scrollbars */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: #d4dae2; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #aeb8c4; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ═══════════════════════════════════════════════════════════
+   Component layer — exact copy dari businessplus-marketing
+   ═══════════════════════════════════════════════════════════ */
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+  .card-hover {
+    @apply transition-shadow duration-200 hover:shadow-hover;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Print — A4 quotation document
+   ═══════════════════════════════════════════════════════════ */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  body {
+    background: white !important;
+  }
+}
