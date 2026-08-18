@@ -83,6 +83,7 @@ export interface KeluargaIuranConn {
   alasan_custom: string | null
   status_aktif: boolean
   jenisIuran?: JenisIuran
+  keluarga?: KeluargaRef | null
 }
 
 /* ── Iuran ── */

@@ -75,7 +75,7 @@ export default function KeluargaPage() {
                   <tr key={k.id} className={`cursor-pointer hover:bg-slate-50 ${isFetching ? 'opacity-60' : ''}`}
                     onClick={() => setDetailId(k.id)}>
                     <td className="px-4 py-3 tabular-nums text-slate-600">{k.no_kk}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{k.nama_kepala_keluarga ?? k.kepalaKeluarga?.nama_lengkap ?? <span className="text-amber-600">belum ada</span>}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">{k.nama_kepala_keluarga ?? <span className="text-amber-600">belum ada</span>}</td>
                     <td className="px-4 py-3 text-slate-600">
                       <span className="inline-flex items-center gap-1"><MapPin size={12} className="text-slate-300" />{k.wilayah?.nama ?? '-'}</span>
                     </td>
