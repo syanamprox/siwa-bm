@@ -10,11 +10,15 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
 export class ApiError extends Error {
   status: number
   data: unknown
+  errors?: Record<string, string[]>
   constructor(message: string, status: number, data?: unknown) {
     super(message)
     this.name = 'ApiError'
     this.status = status
     this.data = data
+    if (data && typeof data === 'object' && 'errors' in data) {
+      this.errors = (data as { errors: Record<string, string[]> }).errors
+    }
   }
 }
 

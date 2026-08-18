@@ -73,13 +73,13 @@ class WargaController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate($this->rules());
-
-        $data = collect($validated)->except(['foto_ktp'])->all();
+        $data = collect($validated)->except(['foto_ktp', 'foto_ktp_data'])->all();
 
         if ($request->hasFile('foto_ktp')) {
             $file = $request->file('foto_ktp');
-            $path = $file->storeAs('documents/ktp', "ktp_{$validated['nik']}_".time().'.'.$file->extension(), 'public');
-            $data['foto_ktp'] = $path;
+            $data['foto_ktp'] = $file->storeAs('documents/ktp', "ktp_{$validated['nik']}_".time().'.'.$file->extension(), 'public');
+        } elseif (! empty($validated['foto_ktp_data'])) {
+            $data['foto_ktp'] = $this->storeBase64Image($validated['foto_ktp_data'], $validated['nik']);
         }
 
         $warga = Warga::create($data + ['created_by' => $request->user()->id]);
@@ -92,8 +92,7 @@ class WargaController extends Controller
     {
         $this->authorizeWarga($request, $warga);
         $validated = $request->validate($this->rules($warga->id));
-
-        $data = collect($validated)->except(['foto_ktp'])->all();
+        $data = collect($validated)->except(['foto_ktp', 'foto_ktp_data'])->all();
         $old = $warga->only(['nik', 'nama_lengkap', 'kk_id', 'hubungan_keluarga']);
 
         if ($request->hasFile('foto_ktp')) {
@@ -101,14 +100,33 @@ class WargaController extends Controller
                 \Storage::disk('public')->delete($warga->foto_ktp);
             }
             $file = $request->file('foto_ktp');
-            $path = $file->storeAs('documents/ktp', "ktp_{$validated['nik']}_".time().'.'.$file->extension(), 'public');
-            $data['foto_ktp'] = $path;
+            $data['foto_ktp'] = $file->storeAs('documents/ktp', "ktp_{$validated['nik']}_".time().'.'.$file->extension(), 'public');
+        } elseif (! empty($validated['foto_ktp_data'])) {
+            if ($warga->foto_ktp) {
+                \Storage::disk('public')->delete($warga->foto_ktp);
+            }
+            $data['foto_ktp'] = $this->storeBase64Image($validated['foto_ktp_data'], $validated['nik']);
         }
 
         $warga->update($data + ['updated_by' => $request->user()->id]);
         $this->logActivity($request, 'update', 'warga', "Ubah warga {$warga->nama_lengkap} (NIK {$warga->nik})", $old, $warga->fresh()->only(['nik', 'nama_lengkap', 'kk_id', 'hubungan_keluarga']));
 
         return response()->json(['data' => $warga->fresh()->load('keluarga:id,no_kk')]);
+    }
+
+    /**
+     * Simpan data-URL base64 image → path storage. Return path.
+     */
+    private function storeBase64Image(string $dataUrl, string $nik): string
+    {
+        [$meta, $content] = explode(',', $dataUrl, 2);
+        preg_match('/image\/(\w+)/', $meta, $m);
+        $ext = $m[1] ?? 'jpg';
+
+        return \Storage::disk('public')->put(
+            "documents/ktp/ktp_{$nik}_".time().'.'.$ext,
+            base64_decode($content)
+        ) ? "documents/ktp/ktp_{$nik}_".time().'.'.$ext : '';
     }
 
     public function destroy(Request $request, Warga $warga): JsonResponse
@@ -175,6 +193,7 @@ class WargaController extends Controller
             'hubungan_keluarga' => ['required', 'string', 'max:50'],
             'kk_id' => ['nullable', 'exists:keluargas,id'],
             'foto_ktp' => ['nullable', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
+            'foto_ktp_data' => ['nullable', 'string', 'starts_with:data:image'],
         ];
     }
 

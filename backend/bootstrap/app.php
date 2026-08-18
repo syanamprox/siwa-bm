@@ -18,6 +18,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
         $middleware->statefulApi();
+
+        // Portal publik: tanpa CSRF (diakses tamu tanpa cookie session)
+        $middleware->validateCsrfTokens(except: [
+            'api/portal/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

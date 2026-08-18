@@ -37,7 +37,7 @@ class JenisIuranController extends Controller
             $query->where('is_aktif', $request->input('status') === '1');
         }
 
-        $items = $query->withCount(['keluargaIuran as koneksi_aktif' => fn ($q) => $q->where('status_aktif', true)])
+        $items = $query->withCount(['keluarga as koneksi_aktif' => fn ($q) => $q->where('status_aktif', true)])
             ->orderBy('nama')
             ->get();
 

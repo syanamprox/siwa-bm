@@ -204,10 +204,18 @@ class Wilayah extends Model
     public function getKodeDisplayAttribute(): string
     {
         return match($this->tingkat) {
-            'Kelurahan' => $this->kode,
-            'RW' => "RW {$this->kode}",
-            'RT' => "RT {$this->kode}",
-            default => $this->kode,
+            'Kelurahan' => $this->kode ?? '',
+            'RW' => 'RW '.($this->kode ?? ''),
+            'RT' => 'RT '.($this->kode ?? ''),
+            default => $this->kode ?? '',
         };
+    }
+
+    /**
+     * Keluarga yang berdomisili di wilayah RT ini.
+     */
+    public function keluarga()
+    {
+        return $this->hasMany(\App\Models\Keluarga::class, 'rt_id');
     }
 }
