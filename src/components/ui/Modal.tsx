@@ -1,7 +1,8 @@
 'use client'
 
 import { X } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 
 export function Modal({
@@ -19,6 +20,11 @@ export function Modal({
   children: React.ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
 }) {
+  // Portal ke body — hindari containing-block dari ancestor ber-transform
+  // (animate-fade-up) yang merusak position:fixed modal.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -26,7 +32,7 @@ export function Modal({
     return () => window.removeEventListener('keydown', handler)
   }, [open, onClose])
 
-  if (!open) return null
+  if (!mounted || !open) return null
 
   const widths = {
     sm: 'max-w-md',
@@ -35,7 +41,7 @@ export function Modal({
     xl: 'max-w-4xl',
   }
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
       <div
@@ -44,7 +50,7 @@ export function Modal({
           widths[size],
         )}
       >
-        <div className="flex items-start justify-between border-b border-line px-6 py-4">
+        <div className="sticky top-0 z-10 flex items-start justify-between border-b border-line bg-surface px-6 py-4">
           <div>
             <h2 className="text-base font-bold text-slate-900">{title}</h2>
             {subtitle && <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>}
@@ -58,6 +64,7 @@ export function Modal({
         </div>
         <div className="px-6 py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

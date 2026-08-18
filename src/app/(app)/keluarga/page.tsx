@@ -10,6 +10,7 @@ import { useAuth } from '@/stores/auth-store'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState, Textarea } from '@/components/ui/primitives'
 import { Modal } from '@/components/ui/Modal'
+import { Drawer } from '@/components/ui/Drawer'
 import type { Keluarga, WilayahRef } from '@/types'
 
 const STATUS_KELUARGA = ['Aktif', 'Pindah', 'Non-Aktif', 'Dibubarkan']
@@ -158,12 +159,10 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
   const { data: wargaResults } = useWargaList({ search: wargaSearch.length >= 3 ? wargaSearch : undefined, per_page: 5, status_kk: 'tanpa_kk' })
 
   return (
-    <div className="fixed inset-0 z-40">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute right-0 top-0 h-full w-full max-w-2xl overflow-y-auto bg-surface shadow-pop animate-slide-in-right">
-        {isLoading || !kel ? (
-          <div className="space-y-3 p-6">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
-        ) : (
+    <Drawer open onClose={onClose}>
+      {isLoading || !kel ? (
+        <div className="space-y-3 p-6">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
+      ) : (
           <>
             {/* Header */}
             <div className="sticky top-0 z-10 flex items-start justify-between border-b border-line bg-white/95 px-6 py-4 backdrop-blur">
@@ -275,7 +274,6 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
             </div>
           </>
         )}
-      </div>
 
       {/* Add member modal */}
       <Modal open={memberModal} onClose={() => setMemberModal(false)} title="Tambah Anggota" subtitle="Warga tanpa KK saja yang muncul">
@@ -329,7 +327,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
           )}
         </div>
       </Modal>
-    </div>
+    </Drawer>
   )
 }
 
