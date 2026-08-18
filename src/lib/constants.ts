@@ -40,7 +40,7 @@ export const MODULES: SiwaModule[] = [
     label: 'Warga',
     href: '/warga',
     icon: Users,
-    match: ['/warga'],
+    match: ['/warga', '/keluarga'],
     roles: ['admin', 'lurah', 'rw', 'rt'],
     nav: [
       { label: 'Data Warga', href: '/warga', match: ['/warga'], icon: Users },
