@@ -14,11 +14,25 @@ class JenisIuranController extends Controller
     use LogsActivity;
 
     /**
-     * GET /api/jenis-iuran — list (opsi ?only_active=1 untuk dropdown).
+     * GET /api/jenis-iuran — global (rt_id null) + milik RT user/terpilih.
      */
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
         $query = JenisIuran::query();
+
+        // Scope RT: login rw/rt hanya lihat jenis global + milik RT-nya
+        if (! in_array($user->role, ['admin', 'lurah'], true)) {
+            $rtIds = $user->role === 'rw'
+                ? \App\Models\Wilayah::whereIn('parent_id', $user->wilayah()->pluck('wilayah_id'))->pluck('id')
+                : $user->wilayah()->pluck('wilayah_id');
+            $query->where(fn ($q) => $q->whereNull('rt_id')->orWhereIn('rt_id', $rtIds));
+        }
+        // Filter eksplisit ?rt_id= (admin lihat jenis satu RT)
+        if ($request->filled('rt_id')) {
+            $rtId = (int) $request->input('rt_id');
+            $query->where(fn ($q) => $q->whereNull('rt_id')->orWhere('rt_id', $rtId));
+        }
 
         if ($request->boolean('only_active')) {
             $query->where('is_aktif', true);
@@ -37,7 +51,8 @@ class JenisIuranController extends Controller
             $query->where('is_aktif', $request->input('status') === '1');
         }
 
-        $items = $query->withCount(['keluarga as koneksi_aktif' => fn ($q) => $q->where('status_aktif', true)])
+        $items = $query->with('rt:id,nama')
+            ->withCount(['keluarga as koneksi_aktif' => fn ($q) => $q->where('status_aktif', true)])
             ->orderBy('nama')
             ->get();
 
@@ -104,6 +119,7 @@ class JenisIuranController extends Controller
             'jumlah' => ['required', 'numeric', 'min:0'],
             'periode' => ['required', 'in:bulanan,tahunan,sekali'],
             'keterangan' => ['nullable', 'string'],
+            'rt_id' => ['nullable', 'exists:wilayahs,id'],
         ];
     }
 }

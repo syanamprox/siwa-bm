@@ -28,8 +28,17 @@ class JenisIuran extends Model
         'jumlah',
         'keterangan',
         'is_aktif',
-        'periode'
+        'periode',
+        'rt_id'
     ];
+
+    /**
+     * RT pemilik jenis iuran — null berarti global (semua RT).
+     */
+    public function rt()
+    {
+        return $this->belongsTo(\App\Models\Wilayah::class, 'rt_id');
+    }
 
     /**
      * The attributes that should be cast.

@@ -10,3 +10,4 @@ next-env.d.ts
 
 # Data KK asli warga (PII — JANGAN pernah di-commit)
 /kk
+/public/kk

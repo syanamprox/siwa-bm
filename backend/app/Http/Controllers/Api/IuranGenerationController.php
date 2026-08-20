@@ -131,6 +131,11 @@ class IuranGenerationController extends Controller
                 }
                 $nominal = $conn->nominal_custom ?? $jenis->jumlah;
 
+                // RT-scope: jenis global (rt_id null) atau milik RT keluarga ini — jangan campur antar RT.
+                if ($jenis->rt_id !== null && (int) $jenis->rt_id !== (int) $keluarga->rt_id) {
+                    continue;
+                }
+
                 // Idempotency semantic per jenis:
                 // bulanan → per bulan · tahunan → per tahun · sekali → selamanya.
                 $existing = $this->findExistingTagihan($keluarga->id, $jenis->id, $jenis->periode, $validated['periode_bulan']);
