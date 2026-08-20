@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import {
   Home, Plus, RotateCcw, Pencil, Trash2, Users, MapPin, ChevronRight,
-  UserPlus, UserMinus, Crown, Settings2, Coins,
+  UserPlus, UserMinus, Crown, Settings2, Coins, FileImage,
 } from 'lucide-react'
 import { useKeluargaList, useKeluarga, useKeluargaMutations, useRtOptions, useWargaList, useAvailableJenisIuran, useConnectIuran, useDisconnectIuran, type KeluargaFilters } from '@/hooks/use-siwa'
 import { useAuth } from '@/stores/auth-store'
@@ -227,6 +227,12 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                       </p>
                     </div>
                   </div>
+                  {kel.foto_kk && (
+                    <a href={`/${kel.foto_kk}`} target="_blank" rel="noreferrer"
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-[12px] font-semibold text-brand-700 transition hover:bg-brand-100">
+                      <FileImage size={13} /> Lihat Dokumen KK
+                    </a>
+                  )}
                 </Card>
               </section>
 

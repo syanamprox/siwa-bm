@@ -72,6 +72,7 @@ export interface Keluarga {
   status_label?: string
   keterangan_status: string | null
   tanggal_status: string | null
+  foto_kk?: string | null
   anggota_keluarga_count?: number
   anggota_keluarga?: Warga[]
   keluarga_iuran?: KeluargaIuranConn[]
