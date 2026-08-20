@@ -1,12 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { Users, Plus, Search, Pencil, Trash2, User, FileImage } from 'lucide-react'
+import { Users, Plus, Search, Pencil, Trash2, FileImage } from 'lucide-react'
 import { toast } from 'sonner'
 import { useWargaList, useWargaMutations, useWargaStats, type WargaFilters } from '@/hooks/use-siwa'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState } from '@/components/ui/primitives'
+import { QueryError } from '@/components/QueryError'
 import { Modal } from '@/components/ui/Modal'
+import { storageUrl } from '@/lib/api-client'
 import type { Warga } from '@/types'
 
 const AGAMA = ['Islam', 'Kristen', 'Katolik', 'Hindu', 'Buddha', 'Konghucu']
@@ -20,7 +22,7 @@ export default function WargaPage() {
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; warga?: Warga } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Warga | null>(null)
 
-  const { data, isLoading, isFetching } = useWargaList(filters)
+  const { data, isLoading, isFetching, isError, error, refetch } = useWargaList(filters)
   const { data: stats } = useWargaStats()
   const { create, update, remove } = useWargaMutations()
 
@@ -76,6 +78,8 @@ export default function WargaPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (data?.data ?? []).length === 0 ? (
           <EmptyState icon={<Users size={24} />} title="Belum ada data warga" hint="Tambahkan warga pertama atau ubah filter pencarian." />
         ) : (
@@ -109,8 +113,11 @@ export default function WargaPage() {
                       {w.keluarga ? `${w.keluarga.no_kk.slice(-4)} · ${w.keluarga.wilayah?.nama ?? ''}` : <span className="text-slate-300">tanpa KK</span>}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={w.hubungan_keluarga === 'Kepala Keluarga' ? 'active' : undefined} />
-                      <span className="ml-1.5 text-slate-600">{w.hubungan_keluarga}</span>
+                      {w.hubungan_keluarga === 'Kepala Keluarga' ? (
+                        <StatusBadge status="active" label="Kepala Keluarga" />
+                      ) : (
+                        <span className="text-slate-600">{w.hubungan_keluarga}</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
@@ -205,17 +212,32 @@ function WargaFormModal({ mode, warga, onClose, onSubmit, pending }: {
     nama_ibu: warga?.nama_ibu ?? '',
   })
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const [fotoData, setFotoData] = useState<string | null>(null)
+
+  function handleFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // agar file yang sama bisa dipilih ulang setelah validasi gagal
+    if (!file) return
+    if (!/image\/(jpe?g|png)/.test(file.type)) {
+      toast.error('Foto KTP harus berformat JPG atau PNG')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Ukuran foto KTP maksimal 2 MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setFotoData(String(reader.result))
+    reader.readAsDataURL(file)
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const payload: Record<string, string> = {}
     Object.entries(form).forEach(([k, v]) => { if (v !== '') payload[k] = v })
-    if (mode === 'edit' && foto) {
-      // foto dikirim terpisah via multipart — defer ke onSubmit caller
-    }
+    if (fotoData) payload.foto_ktp_data = fotoData // hanya kirim bila user baru memilih file
     onSubmit(payload)
   }
-  const [foto, setFoto] = useState<File | null>(null)
 
   return (
     <Modal
@@ -285,13 +307,32 @@ function WargaFormModal({ mode, warga, onClose, onSubmit, pending }: {
             <Label>Nama Ibu</Label>
             <Input value={form.nama_ibu} onChange={(e) => set('nama_ibu', e.target.value)} />
           </div>
-          {mode === 'edit' && (
-            <div>
-              <Label>Foto KTP</Label>
-              <Input type="file" accept="image/jpeg,image/png" onChange={(e) => setFoto(e.target.files?.[0] ?? null)} />
-              {warga?.foto_ktp && !foto && <p className="mt-1 text-[11px] text-slate-400">Sudah ada foto — biarkan kosong untuk pertahankan</p>}
+          <div className="sm:col-span-2 lg:col-span-3">
+            <Label>Foto KTP</Label>
+            <div className="flex items-start gap-3">
+              {fotoData || warga?.foto_ktp ? (
+                <img
+                  src={fotoData ?? storageUrl(warga?.foto_ktp)}
+                  alt="Foto KTP"
+                  className="h-16 w-24 shrink-0 rounded-lg border border-line object-cover"
+                />
+              ) : (
+                <span className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg border border-dashed border-line bg-slate-50 text-slate-300">
+                  <FileImage size={20} />
+                </span>
+              )}
+              <div className="flex-1">
+                <Input type="file" accept="image/jpeg,image/png" onChange={handleFoto} />
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {fotoData
+                    ? 'Foto baru akan diunggah saat disimpan.'
+                    : warga?.foto_ktp
+                      ? 'Sudah ada foto — biarkan kosong untuk pertahankan.'
+                      : 'JPG/PNG, maks. 2 MB.'}
+                </p>
+              </div>
             </div>
-          )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 border-t border-line pt-4">

@@ -5,6 +5,7 @@ import { Wand2, Eye, CheckCircle2, Loader2, Coins, Users, AlertTriangle } from '
 import { useGenerationPreview, useGenerate, useGenerationRtOptions, useJenisIuranList } from '@/hooks/use-siwa'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Label, Select, StatusBadge, Skeleton } from '@/components/ui/primitives'
+import { QueryError } from '@/components/QueryError'
 import { fmtMoney } from '@/lib/utils'
 
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
@@ -16,9 +17,9 @@ export default function GeneratePage() {
   const [jenisIds, setJenisIds] = useState<number[]>([])
   const [step, setStep] = useState<'form' | 'preview' | 'done'>('form')
 
-  const { data: rtOptions } = useGenerationRtOptions()
+  const { data: rtOptions, isError: rtError, refetch: refetchRt } = useGenerationRtOptions()
   const { data: jenisList } = useJenisIuranList(true)
-  const { data: preview, isLoading: loadingPreview, isFetching } = useGenerationPreview(
+  const { data: preview, isLoading: loadingPreview, isFetching, isError: previewError, error: previewErr, refetch: refetchPreview } = useGenerationPreview(
     { periode_bulan: periode, rt_id: rtId ? Number(rtId) : undefined, jenis_iuran_ids: jenisIds.length ? jenisIds : undefined },
     step !== 'form',
   )
@@ -66,8 +67,12 @@ export default function GeneratePage() {
               </div>
               <div>
                 <Label>RT (opsional — kosongkan = semua dalam scope)</Label>
-                <Select value={rtId} onChange={setRtId} placeholder="Semua RT…" searchable
-                  options={(rtOptions?.data ?? []).map((rt) => ({ value: String(rt.id), label: rt.nama }))} />
+                {rtError ? (
+                  <QueryError compact message="Daftar RT gagal dimuat." onRetry={() => refetchRt()} />
+                ) : (
+                  <Select value={rtId} onChange={setRtId} placeholder="Semua RT…" searchable
+                    options={(rtOptions?.data ?? []).map((rt) => ({ value: String(rt.id), label: rt.nama }))} />
+                )}
               </div>
             </div>
             <div>
@@ -125,6 +130,8 @@ export default function GeneratePage() {
             </div>
             {loadingPreview ? (
               <div className="space-y-2 p-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+            ) : previewError ? (
+              <QueryError message={previewErr?.message} onRetry={() => refetchPreview()} />
             ) : (
               <div className="max-h-[420px] overflow-y-auto">
                 <table className="w-full text-[13px]">
@@ -155,7 +162,7 @@ export default function GeneratePage() {
                         </td>
                         <td className="px-4 py-2.5 text-right font-bold tabular-nums text-slate-900">{fmtMoney(f.total)}</td>
                         <td className="px-4 py-2.5">
-                          {f.sudah_ada > 0 ? <StatusBadge status="pending" /> : <span className="text-slate-300">—</span>}
+                          {f.sudah_ada > 0 ? <StatusBadge status="pending" label="Sudah Ada" /> : <span className="text-slate-300">—</span>}
                         </td>
                       </tr>
                     ))}

@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Input, Select, Skeleton, EmptyState, Avatar } from '@/components/ui/primitives'
+import { QueryError } from '@/components/QueryError'
 import { fmtDateTime } from '@/lib/utils'
 import type { Aktivitas } from '@/types'
 
@@ -13,7 +14,7 @@ export default function AktivitasPage() {
   const [filters, setFilters] = useState<{ search?: string; module?: string; page?: number }>({})
   const [searchInput, setSearchInput] = useState('')
 
-  const { data, isLoading, isFetching } = useQuery({
+  const { data, isLoading, isFetching, isError, error, refetch } = useQuery({
     queryKey: ['aktivitas', filters],
     queryFn: () => api.get<{ data: Aktivitas[]; meta: { current_page: number; last_page: number; total: number } }>(
       `/aktivitas?${new URLSearchParams(Object.entries(filters).filter(([, v]) => v).map(([k, v]) => [k, String(v)]) as [string, string][])}`,
@@ -40,6 +41,8 @@ export default function AktivitasPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (data?.data ?? []).length === 0 ? (
           <EmptyState icon={<History size={24} />} title="Belum ada aktivitas" />
         ) : (

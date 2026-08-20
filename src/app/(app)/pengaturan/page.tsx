@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '@/lib/api-client'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Input, Label, Skeleton } from '@/components/ui/primitives'
+import { QueryError } from '@/components/QueryError'
 
 const GROUP_LABEL: Record<string, string> = {
   app: 'Aplikasi',
@@ -16,7 +17,7 @@ const GROUP_LABEL: Record<string, string> = {
 
 export default function PengaturanPage() {
   const qc = useQueryClient()
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['pengaturan'],
     queryFn: () => api.get<{ data: Record<string, { key: string; value: string; keterangan: string }[]> }>('/pengaturan'),
   })
@@ -50,6 +51,8 @@ export default function PengaturanPage() {
 
       {isLoading ? (
         <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32" />)}</div>
+      ) : isError ? (
+        <Card><QueryError message={error?.message} onRetry={() => refetch()} /></Card>
       ) : (
         Object.entries(data?.data ?? {}).map(([group, settings]) => (
           <Card key={group} className="mb-4 p-6">

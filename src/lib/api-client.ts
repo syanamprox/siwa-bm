@@ -91,3 +91,13 @@ export async function getCsrfToken() {
     credentials: 'include',
   })
 }
+
+/**
+ * URL publik untuk file di storage Laravel. Resource API mengembalikan
+ * path relatif (mis. "documents/ktp/x.jpg") → prefix /storage/.
+ */
+export function storageUrl(path?: string | null): string | undefined {
+  if (!path) return undefined
+  if (path.startsWith('http')) return path
+  return `${API_BASE.replace(/\/api\/?$/, '')}/storage/${path}`
+}

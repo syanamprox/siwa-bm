@@ -11,6 +11,7 @@ import { useAuth } from '@/stores/auth-store'
 import { KpiCard } from '@/components/KpiCard'
 import { PageHeader } from '@/components/PageHeader'
 import { Card, Skeleton, StatusBadge } from '@/components/ui/primitives'
+import { QueryError } from '@/components/QueryError'
 import { fmtMoney, fmtDateTime } from '@/lib/utils'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
@@ -25,7 +26,7 @@ function greeting(): string {
 
 export default function DashboardPage() {
   const user = useAuth((s) => s.user)
-  const { data: dash, isLoading } = useDashboard()
+  const { data: dash, isLoading, isError, error, refetch } = useDashboard()
   const { data: wilayahTree } = useWilayahTree()
 
   const firstName = (user?.name ?? 'User').split(' ')[0]
@@ -57,6 +58,10 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {isLoading ? (
           Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-[130px]" />)
+        ) : isError ? (
+          <div className="sm:col-span-2 xl:col-span-4">
+            <QueryError message={error?.message} onRetry={() => refetch()} />
+          </div>
         ) : (
           <>
             <KpiCard label="Total Warga" value={dash?.total_warga ?? 0} icon={<Users size={18} />} accent="#2563eb"
@@ -79,6 +84,8 @@ export default function DashboardPage() {
           </div>
           {isLoading ? (
             <Skeleton className="h-[240px]" />
+          ) : isError ? (
+            <QueryError message={error?.message} onRetry={() => refetch()} />
           ) : tren.length === 0 ? (
             <p className="py-16 text-center text-sm text-slate-400">Belum ada pembayaran</p>
           ) : (
@@ -114,6 +121,8 @@ export default function DashboardPage() {
           </div>
           {isLoading ? (
             <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+          ) : isError ? (
+            <QueryError message={error?.message} onRetry={() => refetch()} />
           ) : (dash?.recent_activities ?? []).length === 0 ? (
             <p className="py-8 text-center text-sm text-slate-400">Belum ada aktivitas</p>
           ) : (
@@ -146,6 +155,8 @@ export default function DashboardPage() {
           </div>
           {isLoading ? (
             <Skeleton className="h-[160px]" />
+          ) : isError ? (
+            <QueryError message={error?.message} onRetry={() => refetch()} />
           ) : (
             <div className="space-y-3">
               {Object.entries(dash?.warga_per_rw ?? dash?.warga_per_rt ?? {}).map(([nama, total]) => (
@@ -196,7 +207,7 @@ export default function DashboardPage() {
                       <td className="px-2 py-2.5 tabular-nums text-slate-600">{p.periode}</td>
                       <td className="px-2 py-2.5 text-right tabular-nums font-semibold text-slate-900">{fmtMoney(p.nominal)}</td>
                       <td className="px-2 py-2.5 tabular-nums text-slate-600">{p.jatuh_tempo ?? '-'}</td>
-                      <td className="px-2 py-2.5"><StatusBadge status="belum lunas" /></td>
+                      <td className="px-2 py-2.5"><StatusBadge status="belum lunas" label="Belum Lunas" /></td>
                     </tr>
                   ))}
                 </tbody>

@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState, Textarea } from '@/components/ui/primitives'
 import { Modal } from '@/components/ui/Modal'
 import { Drawer } from '@/components/ui/Drawer'
+import { QueryError } from '@/components/QueryError'
 import type { Keluarga, WilayahRef } from '@/types'
 
 const STATUS_KELUARGA = ['Aktif', 'Pindah', 'Non-Aktif', 'Dibubarkan']
@@ -24,7 +25,7 @@ export default function KeluargaPage() {
   const [detailId, setDetailId] = useState<number | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Keluarga | null>(null)
 
-  const { data, isLoading, isFetching } = useKeluargaList(filters)
+  const { data, isLoading, isFetching, isError, error, refetch } = useKeluargaList(filters)
   const { create, update, remove } = useKeluargaMutations()
 
   function applySearch() {
@@ -56,6 +57,8 @@ export default function KeluargaPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (data?.data ?? []).length === 0 ? (
           <EmptyState icon={<Home size={24} />} title="Belum ada keluarga" hint="Tambahkan kartu keluarga pertama." />
         ) : (
@@ -85,7 +88,7 @@ export default function KeluargaPage() {
                         <Users size={11} /> {k.anggota_keluarga_count ?? 0}
                       </span>
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={k.status_keluarga === 'Aktif' ? 'active' : k.status_keluarga === 'Pindah' ? 'pending' : 'archived'} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={k.status_keluarga === 'Aktif' ? 'active' : k.status_keluarga === 'Pindah' ? 'pending' : 'archived'} label={k.status_keluarga} /></td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="ghost" onClick={() => setDetailId(k.id)} title="Detail"><ChevronRight size={14} /></Button>
@@ -145,7 +148,7 @@ export default function KeluargaPage() {
 
 /* ═══════════ Detail drawer ═══════════ */
 function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => void; onEdit: (k: Keluarga) => void }) {
-  const { data, isLoading } = useKeluarga(id)
+  const { data, isLoading, isError, error, refetch } = useKeluarga(id)
   const { addMember, removeMember, updateStatus } = useKeluargaMutations()
   const { data: availableJenis } = useAvailableJenisIuran(id)
   const connectIuran = useConnectIuran()
@@ -160,8 +163,10 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
 
   return (
     <Drawer open onClose={onClose}>
-      {isLoading || !kel ? (
+      {isLoading ? (
         <div className="space-y-3 p-6">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
+      ) : isError || !kel ? (
+        <QueryError message={error?.message} onRetry={() => refetch()} />
       ) : (
           <>
             {/* Header */}
@@ -169,7 +174,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-extrabold tracking-tight text-slate-900 tabular-nums">{kel.no_kk}</h2>
-                  <StatusBadge status={kel.status_keluarga === 'Aktif' ? 'active' : kel.status_keluarga === 'Pindah' ? 'pending' : 'archived'} />
+                  <StatusBadge status={kel.status_keluarga === 'Aktif' ? 'active' : kel.status_keluarga === 'Pindah' ? 'pending' : 'archived'} label={kel.status_keluarga} />
                 </div>
                 <p className="mt-0.5 text-xs text-slate-500">
                   Kepala: {kel.nama_kepala_keluarga ?? '—'} · {kel.anggotaKeluarga?.length ?? 0} anggota
@@ -260,7 +265,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                           {' · '}{c.jenisIuran?.periode}
                         </p>
                       </div>
-                      <StatusBadge status={c.status_aktif ? 'active' : 'paused'} />
+                      <StatusBadge status={c.status_aktif ? 'active' : 'paused'} label={c.status_aktif ? 'Aktif' : 'Nonaktif'} />
                       <Button size="sm" variant="ghost" className="text-rose-400 hover:bg-rose-50" onClick={() => disconnectIuran.mutate(c.id)}>
                         <Trash2 size={13} />
                       </Button>

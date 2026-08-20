@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Home, Loader2, Search, AlertCircle } from 'lucide-react'
 import { api, ApiError } from '@/lib/api-client'
+import { QueryError } from '@/components/QueryError'
 
 interface PortalKeluarga {
   no_kk: string
@@ -19,23 +20,30 @@ interface PortalKeluarga {
 export default function CekKeluargaPage() {
   const [noKk, setNoKk] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null) // 404 — data tidak ditemukan
+  const [serverError, setServerError] = useState<string | null>(null) // 429/5xx/network
   const [result, setResult] = useState<PortalKeluarga | null>(null)
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
+  async function run() {
     setLoading(true)
     setError(null)
+    setServerError(null)
     setResult(null)
     try {
       const res = await api.post<{ data: PortalKeluarga }>('/portal/cek-keluarga', { no_kk: noKk })
       setResult(res.data)
     } catch (err) {
-      if (err instanceof ApiError && err.status === 429) setError('Terlalu banyak percobaan. Tunggu 1 menit.')
-      else setError(err instanceof ApiError ? err.message : 'Terjadi kesalahan')
+      if (err instanceof ApiError && err.status === 404) setError(err.message)
+      else if (err instanceof ApiError && err.status === 429) setServerError('Terlalu banyak permintaan. Coba lagi dalam 1 menit.')
+      else setServerError(err instanceof ApiError ? err.message : 'Tidak dapat menghubungi server.')
     } finally {
       setLoading(false)
     }
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    run()
   }
 
   return (
@@ -66,6 +74,12 @@ export default function CekKeluargaPage() {
       {error && (
         <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-rose-50 p-4 text-sm text-rose-700 ring-1 ring-rose-600/10">
           <AlertCircle size={16} className="mt-0.5 shrink-0" /> {error}
+        </div>
+      )}
+
+      {serverError && (
+        <div className="mt-6 overflow-hidden rounded-2xl border border-line bg-white shadow-card">
+          <QueryError message={serverError} onRetry={run} />
         </div>
       )}
 

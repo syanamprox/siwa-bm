@@ -6,6 +6,7 @@ import { useJenisIuranList, useJenisIuranMutations } from '@/hooks/use-siwa'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState, Textarea } from '@/components/ui/primitives'
 import { Modal } from '@/components/ui/Modal'
+import { QueryError } from '@/components/QueryError'
 import { fmtMoney } from '@/lib/utils'
 import type { JenisIuran } from '@/types'
 
@@ -15,7 +16,7 @@ export default function JenisIuranPage() {
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; jenis?: JenisIuran } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<JenisIuran | null>(null)
 
-  const { data, isLoading } = useJenisIuranList()
+  const { data, isLoading, isError, error, refetch } = useJenisIuranList()
   const { create, update, remove, toggle } = useJenisIuranMutations()
 
   return (
@@ -26,6 +27,8 @@ export default function JenisIuranPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (data?.data ?? []).length === 0 ? (
           <EmptyState icon={<Landmark size={24} />} title="Belum ada jenis iuran" />
         ) : (
@@ -52,7 +55,7 @@ export default function JenisIuranPage() {
                   <td className="px-4 py-3 text-right font-bold tabular-nums text-slate-900">{fmtMoney(Number(j.jumlah))}</td>
                   <td className="px-4 py-3 text-slate-600">{PERIODE_LABEL[j.periode] ?? j.periode}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-slate-600">{j.koneksi_aktif ?? 0}</td>
-                  <td className="px-4 py-3"><StatusBadge status={j.is_aktif ? 'active' : 'paused'} /></td>
+                   <td className="px-4 py-3"><StatusBadge status={j.is_aktif ? 'active' : 'paused'} label={j.is_aktif ? 'Aktif' : 'Nonaktif'} /></td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
                       <Button size="sm" variant="ghost" onClick={() => toggle.mutate(j.id)} title={j.is_aktif ? 'Nonaktifkan' : 'Aktifkan'}>

@@ -10,6 +10,7 @@ import { useAuth } from '@/stores/auth-store'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState, Avatar } from '@/components/ui/primitives'
 import { Modal } from '@/components/ui/Modal'
+import { QueryError } from '@/components/QueryError'
 import type { SiwaUser, WilayahRef } from '@/types'
 
 const ROLE_LABEL: Record<string, string> = { admin: 'Admin', lurah: 'Lurah', rw: 'Ketua RW', rt: 'Ketua RT' }
@@ -25,7 +26,7 @@ export default function UsersPage() {
   const [pending, setPending] = useState(false)
   const qc = useQueryClient()
 
-  const { data, isLoading } = useUserList(filters)
+  const { data, isLoading, isError, error, refetch } = useUserList(filters)
 
   async function act(fn: () => Promise<unknown>, success: string) {
     setPending(true)
@@ -63,6 +64,8 @@ export default function UsersPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (data?.data ?? []).length === 0 ? (
           <EmptyState icon={<ShieldCheck size={24} />} title="Tidak ada user" />
         ) : (
@@ -91,7 +94,7 @@ export default function UsersPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3"><StatusBadge status={u.role === 'admin' ? 'active' : 'draft'} /><span className="ml-1.5 text-slate-600">{ROLE_LABEL[u.role]}</span></td>
+                      <td className="px-4 py-3"><StatusBadge status={u.role === 'admin' ? 'active' : 'draft'} label={ROLE_LABEL[u.role]} /></td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {(u.userWilayah ?? []).length === 0 ? <span className="text-slate-300">—</span> :
@@ -100,7 +103,7 @@ export default function UsersPage() {
                             ))}
                         </div>
                       </td>
-                      <td className="px-4 py-3"><StatusBadge status={Number(u.status_aktif) ? 'active' : 'paused'} /></td>
+                      <td className="px-4 py-3"><StatusBadge status={Number(u.status_aktif) ? 'active' : 'paused'} label={Number(u.status_aktif) ? 'Aktif' : 'Nonaktif'} /></td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
                           <Button size="sm" variant="ghost" disabled={isMe} title="Reset password" onClick={() => setResetTarget(u)}><KeyRound size={14} /></Button>

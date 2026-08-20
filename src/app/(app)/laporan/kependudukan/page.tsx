@@ -7,10 +7,11 @@ import { api } from '@/lib/api-client'
 import { PageHeader } from '@/components/PageHeader'
 import { KpiCard } from '@/components/KpiCard'
 import { Card, Skeleton } from '@/components/ui/primitives'
+import { QueryError } from '@/components/QueryError'
 import type { LaporanKependudukan, WilayahRef } from '@/types'
 
 export default function LaporanKependudukanPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['laporan-kependudukan'],
     queryFn: () => api.get<{ data: LaporanKependudukan }>('/laporan/kependudukan'),
   })
@@ -77,6 +78,8 @@ export default function LaporanKependudukanPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-[13px]">

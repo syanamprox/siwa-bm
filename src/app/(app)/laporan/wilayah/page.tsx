@@ -5,10 +5,11 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api-client'
 import { PageHeader } from '@/components/PageHeader'
 import { Card, Skeleton } from '@/components/ui/primitives'
+import { QueryError } from '@/components/QueryError'
 import type { WilayahRef } from '@/types'
 
 export default function LaporanWilayahPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['laporan-wilayah'],
     queryFn: () => api.get<{ data: WilayahRef[] }>('/laporan/wilayah'),
   })
@@ -19,6 +20,8 @@ export default function LaporanWilayahPage() {
 
       {isLoading ? (
         <div className="space-y-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32" />)}</div>
+      ) : isError ? (
+        <Card><QueryError message={error?.message} onRetry={() => refetch()} /></Card>
       ) : (
         (data?.data ?? []).map((kel) => (
           <Card key={kel.id} className="mb-4 p-6">

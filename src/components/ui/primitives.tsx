@@ -101,7 +101,7 @@ const statusStyles: Record<string, string> = {
   'belum lunas': 'bg-amber-50 text-amber-700 ring-amber-600/20',
 }
 
-export function StatusBadge({ status }: { status?: string }) {
+export function StatusBadge({ status, label }: { status?: string; label?: string }) {
   const s = status ?? '—'
   const dot: Record<string, string> = {
     ACTIVE: 'bg-emerald-500',
@@ -120,12 +120,13 @@ export function StatusBadge({ status }: { status?: string }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ring-1 ring-inset',
+        !label && 'uppercase',
         statusStyles[s] ?? 'bg-slate-100 text-slate-600 ring-slate-500/20',
       )}
     >
       <span className={cn('h-1.5 w-1.5 rounded-full', dot[s] ?? 'bg-slate-400')} />
-      {s}
+      {label ?? s}
     </span>
   )
 }

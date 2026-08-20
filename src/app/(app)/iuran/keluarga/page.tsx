@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { KpiCard } from '@/components/KpiCard'
 import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState } from '@/components/ui/primitives'
 import { Modal } from '@/components/ui/Modal'
+import { QueryError } from '@/components/QueryError'
 import { fmtMoney } from '@/lib/utils'
 import type { KeluargaIuranConn } from '@/types'
 
@@ -14,8 +15,9 @@ export default function KeluargaIuranPage() {
   const [searchInput, setSearchInput] = useState('')
   const [filters, setFilters] = useState<{ search?: string; jenis_iuran_id?: number; status_aktif?: string }>({})
   const [editTarget, setEditTarget] = useState<KeluargaIuranConn | null>(null)
+  const [disconnectTarget, setDisconnectTarget] = useState<KeluargaIuranConn | null>(null)
 
-  const { data, isLoading } = useKeluargaIuranList(filters)
+  const { data, isLoading, isError, error, refetch } = useKeluargaIuranList(filters)
   const { data: jenisList } = useJenisIuranList()
   const updateConn = useUpdateConnIuran()
   const disconnect = useDisconnectIuran()
@@ -47,6 +49,8 @@ export default function KeluargaIuranPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (data?.data ?? []).length === 0 ? (
           <EmptyState icon={<Link2 size={24} />} title="Belum ada koneksi iuran"
             hint="Hubungkan jenis iuran ke keluarga dari halaman detail keluarga." />
@@ -76,14 +80,14 @@ export default function KeluargaIuranPage() {
                       {c.nominal_custom && <span className="ml-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">custom</span>}
                     </td>
                     <td className="px-4 py-3 max-w-[200px] truncate text-slate-500">{c.alasan_custom ?? '—'}</td>
-                    <td className="px-4 py-3"><StatusBadge status={c.status_aktif ? 'active' : 'paused'} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={c.status_aktif ? 'active' : 'paused'} label={c.status_aktif ? 'Aktif' : 'Nonaktif'} /></td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="ghost" onClick={() => updateConn.mutate({ id: c.id, status_aktif: !c.status_aktif })} title="Toggle">
                           <Power size={14} className={c.status_aktif ? 'text-emerald-500' : 'text-slate-300'} />
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => setEditTarget(c)}><Pencil size={14} /></Button>
-                        <Button size="sm" variant="ghost" className="text-rose-500 hover:bg-rose-50" onClick={() => disconnect.mutate(c.id)}><Trash2 size={14} /></Button>
+                        <Button size="sm" variant="ghost" className="text-rose-500 hover:bg-rose-50" onClick={() => setDisconnectTarget(c)} title="Putuskan"><Trash2 size={14} /></Button>
                       </div>
                     </td>
                   </tr>
@@ -101,6 +105,23 @@ export default function KeluargaIuranPage() {
           <ConnEditForm conn={editTarget} onClose={() => setEditTarget(null)}
             onSubmit={(payload) => { updateConn.mutate({ id: editTarget.id, ...payload }); setEditTarget(null) }} />
         )}
+      </Modal>
+
+      {/* Disconnect confirm */}
+      <Modal open={!!disconnectTarget} onClose={() => setDisconnectTarget(null)} title="Putuskan Iuran?" size="sm"
+        subtitle={disconnectTarget ? `${disconnectTarget.keluarga?.no_kk} → ${disconnectTarget.jenisIuran?.nama}` : undefined}>
+        <p className="text-sm text-slate-600">
+          Keluarga <strong>{disconnectTarget?.keluarga?.nama_kepala_keluarga ?? disconnectTarget?.keluarga?.no_kk}</strong> tidak
+          lagi ditagih <strong>{disconnectTarget?.jenisIuran?.nama}</strong> pada generate tagihan berikutnya. Riwayat tagihan
+          yang sudah ada tetap tersimpan.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setDisconnectTarget(null)}>Batal</Button>
+          <Button variant="danger" disabled={disconnect.isPending}
+            onClick={() => { disconnect.mutate(disconnectTarget!.id); setDisconnectTarget(null) }}>
+            {disconnect.isPending ? 'Memutuskan…' : 'Putuskan'}
+          </Button>
+        </div>
       </Modal>
     </div>
   )

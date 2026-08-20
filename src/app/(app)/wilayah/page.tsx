@@ -9,6 +9,7 @@ import { useWilayahTree } from '@/hooks/use-siwa'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState } from '@/components/ui/primitives'
 import { Modal } from '@/components/ui/Modal'
+import { QueryError } from '@/components/QueryError'
 import type { WilayahRef } from '@/types'
 
 const TINGKAT_ICON: Record<string, React.ReactNode> = {
@@ -18,7 +19,7 @@ const TINGKAT_ICON: Record<string, React.ReactNode> = {
 }
 
 export default function WilayahPage() {
-  const { data, isLoading } = useWilayahTree()
+  const { data, isLoading, isError, error, refetch } = useWilayahTree()
   const qc = useQueryClient()
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [modal, setModal] = useState<{ mode: 'create' | 'edit'; wilayah?: WilayahRef; parentId?: number; parentTingkat?: string } | null>(null)
@@ -83,7 +84,7 @@ export default function WilayahPage() {
           </span>
           <span className="flex-1 text-[13px] font-semibold text-slate-800">{w.nama}</span>
           <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] text-slate-500">{w.kode}</span>
-          <StatusBadge status={w.tingkat === 'Kelurahan' ? 'active' : w.tingkat === 'RW' ? 'approved' : 'draft'} />
+          <StatusBadge status={w.tingkat === 'Kelurahan' ? 'active' : w.tingkat === 'RW' ? 'approved' : 'draft'} label={w.tingkat} />
           <div className="flex gap-1">
             {w.tingkat !== 'RT' && (
               <Button size="sm" variant="ghost" title={`Tambah ${w.tingkat === 'Kelurahan' ? 'RW' : 'RT'} di bawah ini`}
@@ -108,6 +109,8 @@ export default function WilayahPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (data?.data ?? []).length === 0 ? (
           <EmptyState icon={<Map size={24} />} title="Belum ada wilayah" />
         ) : (

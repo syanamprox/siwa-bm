@@ -7,14 +7,22 @@ import { PageHeader } from '@/components/PageHeader'
 import { KpiCard } from '@/components/KpiCard'
 import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState, Textarea } from '@/components/ui/primitives'
 import { Modal } from '@/components/ui/Modal'
+import { QueryError } from '@/components/QueryError'
 import { fmtMoney, fmtDate } from '@/lib/utils'
 import type { Iuran } from '@/types'
 
-const STATUS_LABEL: Record<string, string> = {
+/* key internal → warna badge */
+const STATUS_COLOR: Record<string, string> = {
   belum_bayar: 'belum lunas',
   sebagian: 'pending',
   lunas: 'lunas',
   batal: 'cancelled',
+}
+const STATUS_LABEL: Record<string, string> = {
+  belum_bayar: 'Belum Bayar',
+  sebagian: 'Sebagian',
+  lunas: 'Lunas',
+  batal: 'Batal',
 }
 
 export default function IuranPage() {
@@ -23,7 +31,7 @@ export default function IuranPage() {
   const [bayarTarget, setBayarTarget] = useState<Iuran | null>(null)
   const [historyTarget, setHistoryTarget] = useState<Iuran | null>(null)
 
-  const { data, isLoading, isFetching } = useIuranList(filters)
+  const { data, isLoading, isFetching, isError, error, refetch } = useIuranList(filters)
   const { data: stats } = useIuranStats()
   const { data: jenisList } = useJenisIuranList(true)
 
@@ -70,6 +78,8 @@ export default function IuranPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (data?.data ?? []).length === 0 ? (
           <EmptyState icon={<Coins size={24} />} title="Belum ada tagihan"
             hint={`Gunakan Generate Tagihan untuk membuat tagihan periode ${bulanIni}.`} />
@@ -103,7 +113,7 @@ export default function IuranPage() {
                       <td className="px-4 py-3 text-right tabular-nums text-slate-600">{fmtMoney(dibayar)}</td>
                       <td className="px-4 py-3 tabular-nums text-slate-600">{i.jatuh_tempo?.slice(0, 10) ?? '—'}</td>
                       <td className="px-4 py-3">
-                        <StatusBadge status={STATUS_LABEL[i.status]} />
+                        <StatusBadge status={STATUS_COLOR[i.status]} label={STATUS_LABEL[i.status]} />
                         {i.status === 'sebagian' && <span className="ml-1 text-[11px] text-amber-600">sisa {fmtMoney(sisa)}</span>}
                       </td>
                       <td className="px-4 py-3">

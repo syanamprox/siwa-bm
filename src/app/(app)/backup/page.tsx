@@ -8,6 +8,7 @@ import { api, ApiError, getCsrfToken } from '@/lib/api-client'
 import { PageHeader } from '@/components/PageHeader'
 import { KpiCard } from '@/components/KpiCard'
 import { Button, Card, Skeleton } from '@/components/ui/primitives'
+import { QueryError } from '@/components/QueryError'
 import { Modal } from '@/components/ui/Modal'
 import { fmtDateTime } from '@/lib/utils'
 
@@ -26,12 +27,31 @@ function humanSize(bytes: number): string {
 
 export default function BackupPage() {
   const qc = useQueryClient()
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['backup'],
     queryFn: () => api.get<{ data: BackupData }>('/backup'),
   })
   const [pending, setPending] = useState(false)
   const [restoreModal, setRestoreModal] = useState(false)
+  const [restoreFile, setRestoreFile] = useState<File | null>(null)
+  const [armed, setArmed] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<BackupItem | null>(null)
+
+  function closeRestore() {
+    setRestoreModal(false)
+    setRestoreFile(null)
+    setArmed(false)
+  }
+
+  function handleRestoreClick() {
+    if (!restoreFile || pending) return
+    if (!armed) {
+      setArmed(true)
+      window.setTimeout(() => setArmed(false), 3000) // auto-batal konfirmasi kedua
+      return
+    }
+    restore(restoreFile)
+  }
 
   async function create() {
     setPending(true)
@@ -94,7 +114,7 @@ export default function BackupPage() {
       toast.error(e instanceof Error ? e.message : 'Restore gagal')
     } finally {
       setPending(false)
-      setRestoreModal(false)
+      closeRestore()
     }
   }
 
@@ -117,6 +137,8 @@ export default function BackupPage() {
       <Card className="overflow-hidden">
         {isLoading ? (
           <div className="space-y-2 p-4">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>
+        ) : isError ? (
+          <QueryError message={error?.message} onRetry={() => refetch()} />
         ) : (data?.data?.backups ?? []).length === 0 ? (
           <p className="py-12 text-center text-sm text-slate-400">Belum ada backup</p>
         ) : (
@@ -138,7 +160,7 @@ export default function BackupPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
                       <Button size="sm" variant="ghost" onClick={() => download(b.filename)} title="Download"><Download size={14} /></Button>
-                      <Button size="sm" variant="ghost" className="text-rose-500 hover:bg-rose-50" onClick={() => remove(b.filename)}><Trash2 size={14} /></Button>
+                      <Button size="sm" variant="ghost" className="text-rose-500 hover:bg-rose-50" onClick={() => setDeleteTarget(b)} title="Hapus"><Trash2 size={14} /></Button>
                     </div>
                   </td>
                 </tr>
@@ -148,12 +170,37 @@ export default function BackupPage() {
         )}
       </Card>
 
-      <Modal open={restoreModal} onClose={() => setRestoreModal(false)} title="Restore Backup" size="sm"
+      {/* Delete confirm */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title="Hapus Backup" size="sm">
+        <p className="text-sm text-slate-600">
+          Yakin hapus <strong className="font-mono text-[12px]">{deleteTarget?.filename}</strong>
+          {' '}({deleteTarget?.size_human})? File tidak bisa dikembalikan.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>Batal</Button>
+          <Button variant="danger" onClick={() => { remove(deleteTarget!.filename); setDeleteTarget(null) }}>Hapus</Button>
+        </div>
+      </Modal>
+
+      {/* Restore — 2 langkah: pilih file → konfirmasi ganda */}
+      <Modal open={restoreModal} onClose={closeRestore} title="Restore Backup" size="sm"
         subtitle="Bahaya: menimpa database & file yang ada">
         <div className="space-y-4">
-          <input type="file" accept=".zip" onChange={(e) => e.target.files?.[0] && restore(e.target.files[0])}
+          <input type="file" accept=".zip"
+            onChange={(e) => { setRestoreFile(e.target.files?.[0] ?? null); setArmed(false) }}
             className="w-full rounded-xl border border-line px-3 py-2.5 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-700" />
-          <p className="text-xs text-rose-500">Restore akan menimpa data. Pastikan backup terbaru sudah dibuat.</p>
+          {restoreFile && (
+            <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-[13px] text-slate-700">
+              File terpilih: <strong className="font-mono text-[12px]">{restoreFile.name}</strong> ({humanSize(restoreFile.size)})
+            </p>
+          )}
+          <p className="text-xs text-rose-500">Restore akan menimpa seluruh data. Pastikan backup terbaru sudah dibuat.</p>
+          <div className="flex justify-end gap-2 border-t border-line pt-4">
+            <Button variant="secondary" onClick={closeRestore}>Batal</Button>
+            <Button variant="danger" disabled={!restoreFile || pending} onClick={handleRestoreClick}>
+              {pending ? 'Memulihkan…' : armed ? 'Klik lagi untuk konfirmasi restore' : 'Restore Sekarang'}
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>
