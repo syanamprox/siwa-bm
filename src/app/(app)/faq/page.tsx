@@ -67,7 +67,7 @@ const SECTIONS: FaqSection[] = [
       {
         q: 'Kenapa ada warga "tanpa KK"?',
         a: (
-          <p>Warga tanpa KK adalah orang yang tercatat sebagai warga tapi belum terhubung ke kartu keluarga mana pun (mis. baru pindah, data belum lengkap). Warga ini tidak terlihat oleh login RT/RW — hanya admin & lurah — sampai dimasukkan ke sebuah KK.</p>
+          <p>Warga tanpa KK adalah orang yang tercatat sebagai warga tapi belum terhubung ke kartu keluarga mana pun (mis. baru pindah, data belum lengkap). Warga ini tidak terlihat oleh login RT/RW — hanya admin, camat &amp; lurah — sampai dimasukkan ke sebuah KK.</p>
         ),
       },
     ],
@@ -83,9 +83,9 @@ const SECTIONS: FaqSection[] = [
           <div className="space-y-1.5">
             <p>Empat langkah:</p>
             <ol className="ml-4 list-decimal space-y-1">
-              <li><strong>Jenis Iuran</strong> — admin mendefinisikan jenis (Kebersihan, Keamanan, dst) + nominal default &amp; periodenya.</li>
+              <li><strong>Jenis Iuran</strong> — didefinisikan <em>per RT</em> (hasil rapat RT masing-masing, tidak campur antar RT). Contoh RT 02 RW 03: Iuran Sosial Rp3.000, Iuran RT Rp2.000, Iuran Rukem Rp5.000 — semuanya bulanan.</li>
               <li><strong>Konfigurasi KK</strong> — hubungkan KK ke jenis iuran yang berlaku (nominal bisa custom per KK).</li>
-              <li><strong>Generate Tagihan</strong> — tiap periode (bulanan/tahunan), tagihan dibuat massal per RT dengan pratinjau dulu.</li>
+              <li><strong>Generate Tagihan</strong> — tiap periode (bulanan/tahunan/sekali), tagihan dibuat massal per RT dengan pratinjau dulu.</li>
               <li><strong>Bayar</strong> — petugas mencatat pembayaran di halaman Tagihan (tunai/transfer, bisa bertahap).</li>
             </ol>
           </div>
@@ -110,13 +110,21 @@ const SECTIONS: FaqSection[] = [
       {
         q: 'Kenapa KK tertentu tidak ikut saat generate tagihan?',
         a: (
-          <p>Generate hanya memproses KK yang <strong>terhubung ke jenis iuran tersebut dengan status aktif</strong> (lihat Konfigurasi KK). Jika KK tidak muncul di pratinjau, kemungkinan koneksinya belum dibuat atau sedang nonaktif. Generate juga idempotent — KK yang sudah punya tagihan di periode itu otomatis dilewati (ditandai "Sudah Ada").</p>
+          <div className="space-y-2">
+            <p>Generate hanya memproses KK yang <strong>terhubung ke jenis iuran milik RT-nya</strong> dengan status aktif. Jika KK tidak muncul di pratinjau, kemungkinan koneksinya belum dibuat, nonaktif, atau jenis iurannya milik RT lain.</p>
+            <p>Generate juga <strong>idempotent per jenis periode</strong> — yang sudah ditagih otomatis di-<em>skip</em> dengan keterangan:</p>
+            <ul className="ml-4 list-disc space-y-1">
+              <li><strong>Bulanan</strong> — skip jika sudah ada tagihan bulan yang sama.</li>
+              <li><strong>Tahunan</strong> — skip jika tahun ini sudah pernah ditagih (bulan apa pun). Contoh: Iuran Acara 17 Agustus cukup sekali setahun.</li>
+              <li><strong>Sekali</strong> — skip selamanya setelah pernah ditagih sekali. Contoh: iuran pembangunan.</li>
+            </ul>
+          </div>
         ),
       },
       {
         q: 'Apa itu nominal custom pada konfigurasi KK?',
         a: (
-          <p>Nominal default mengikuti jenis iuran (mis. Kebersihan Rp25.000). Nominal custom dipakai untuk pengecualian per KK — mis. keluarga tidak mampu dikenakan Rp10.000. Kosongkan berarti memakai default. Alasan pengecualian bisa dicatat untuk transparansi.</p>
+          <p>Nominal default mengikuti jenis iuran RT (mis. Rukem Rp5.000). Nominal custom dipakai untuk pengecualian per KK — mis. keluarga tidak mampu dikenakan setengahnya. Kosongkan berarti memakai default. Alasan pengecualian bisa dicatat untuk transparansi.</p>
         ),
       },
     ],
@@ -156,19 +164,20 @@ const SECTIONS: FaqSection[] = [
         a: (
           <div className="space-y-1.5">
             <ul className="ml-4 list-disc space-y-1.5">
-              <li><strong>Admin</strong> — akses penuh semua data &amp; pengaturan sistem (wilayah, pengguna, backup).</li>
-              <li><strong>Lurah</strong> — melihat semua data kelurahan, tanpa akses pengaturan sistem.</li>
+              <li><strong>Admin</strong> — akses penuh semua data &amp; pengaturan sistem (wilayah, pengguna, jenis iuran, backup).</li>
+              <li><strong>Camat</strong> — memantau seluruh kelurahan di kecamatan (saat ini Bendul Merisi, Jemur Wonosari, Margorejo, Sidosermo, Siwalankerto). Tanpa akses pengaturan sistem.</li>
+              <li><strong>Lurah</strong> — hanya data kelurahan yang dipimpinnya (Bendul Merisi). Tanpa akses pengaturan sistem.</li>
               <li><strong>RW</strong> — hanya data keluarga di RT-RT bawahannya.</li>
-              <li><strong>RT</strong> — hanya data keluarga di RT-nya sendiri.</li>
+              <li><strong>RT</strong> — hanya data keluarga di RT-nya sendiri, termasuk mengelola jenis iuran rapat RT-nya.</li>
             </ul>
-            <p className="text-slate-500">Data di luar wilayah login otomatis tidak muncul di daftar maupun pencarian (detail akan 404) — warga tanpa KK pun hanya terlihat oleh admin &amp; lurah.</p>
+            <p className="text-slate-500">Data di luar wilayah login otomatis tidak muncul di daftar maupun pencarian (detail akan 404) — warga tanpa KK pun hanya terlihat oleh admin, camat &amp; lurah.</p>
           </div>
         ),
       },
       {
         q: 'Apakah warga biasa bisa login?',
         a: (
-          <p>Tidak. Hanya petugas (admin/lurah/RW/RT) yang punya akun dengan username. Warga yang ingin mengecek data diri/keluarga/iurannya memakai <strong>Portal Publik</strong> tanpa login — cukup masukkan NIK atau nomor KK.</p>
+          <p>Tidak. Hanya petugas (admin/camat/lurah/RW/RT) yang punya akun dengan username. Warga yang ingin mengecek data diri/keluarga/iurannya memakai <strong>Portal Publik</strong> tanpa login — cukup masukkan NIK atau nomor KK.</p>
         ),
       },
     ],

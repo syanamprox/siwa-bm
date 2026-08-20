@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Coins, Loader2, Search, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
+import { Coins, Loader2, Search, AlertCircle, CheckCircle2, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { api, ApiError } from '@/lib/api-client'
 import { QueryError } from '@/components/QueryError'
 
@@ -10,7 +10,7 @@ interface PortalIuran {
   nama: string
   nik: string
   ringkasan: { jumlah_tagihan: number; jumlah_tunggakan: number; total_tunggakan: number; jumlah_lunas: number }
-  detail: { jenis: string; periode: string; nominal: number; status: string; jatuh_tempo: string | null; dibayar: number }[]
+  detail: { jenis: string; periode: string; nominal: number; status: string; jatuh_tempo: string | null; dibayar: number; dibayar_pada: string | null }[]
 }
 
 const STATUS_UI: Record<string, { label: string; cls: string }> = {
@@ -27,12 +27,15 @@ export default function CekIuranPage() {
   const [error, setError] = useState<string | null>(null) // 404 — data tidak ditemukan
   const [serverError, setServerError] = useState<string | null>(null) // 429/5xx/network
   const [result, setResult] = useState<PortalIuran | null>(null)
+  const [expanded, setExpanded] = useState(false) // load more rincian
+  const PAGE = 6
 
   async function run() {
     setLoading(true)
     setError(null)
     setServerError(null)
     setResult(null)
+    setExpanded(false)
     try {
       const res = await api.post<{ data: PortalIuran }>('/portal/cek-iuran', { nik })
       setResult(res.data)
@@ -108,7 +111,7 @@ export default function CekIuranPage() {
             <div className="mt-5 grid grid-cols-3 gap-3">
               <div className="rounded-xl bg-slate-50 p-3 text-center">
                 <p className="text-xl font-extrabold tabular-nums text-slate-900">{result.ringkasan.jumlah_tagihan}</p>
-                <p className="text-[11px] font-medium text-slate-500">tagihan setahun</p>
+                <p className="text-[11px] font-medium text-slate-500">tagihan · 12 bln terakhir</p>
               </div>
               <div className="rounded-xl bg-amber-50 p-3 text-center">
                 <p className="text-xl font-extrabold tabular-nums text-amber-700">{rupiah(result.ringkasan.total_tunggakan)}</p>
@@ -121,16 +124,26 @@ export default function CekIuranPage() {
             </div>
           </div>
 
-          {/* Detail table */}
+          {/* Detail table — 6 terbaru, load more untuk semua */}
           <div className="overflow-hidden rounded-2xl border border-line bg-white shadow-card">
-            <div className="border-b border-line px-5 py-3.5 text-sm font-bold text-slate-900">Rincian Terbaru</div>
+            <div className="border-b border-line px-5 py-3.5 text-sm font-bold text-slate-900">
+              Rincian Tagihan
+              <span className="ml-2 text-[11px] font-medium text-slate-400">{result.detail.length} entri</span>
+            </div>
             <table className="w-full text-[13px]">
               <tbody className="divide-y divide-line">
-                {result.detail.map((d, i) => (
+                {(expanded ? result.detail : result.detail.slice(0, PAGE)).map((d, i) => (
                   <tr key={i}>
                     <td className="px-5 py-3">
                       <p className="font-semibold text-slate-800">{d.jenis}</p>
-                      <p className="text-[11px] text-slate-400">{d.periode}{d.jatuh_tempo ? ` · jatuh tempo ${d.jatuh_tempo}` : ''}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {d.periode}
+                        {d.status === 'lunas'
+                          ? (d.dibayar_pada
+                              ? ` · dibayar ${d.dibayar_pada}`
+                              : '')
+                          : (d.jatuh_tempo ? ` · jatuh tempo ${d.jatuh_tempo}` : '')}
+                      </p>
                     </td>
                     <td className="px-5 py-3 text-right font-bold tabular-nums text-slate-900">{rupiah(d.nominal)}</td>
                     <td className="px-5 py-3">
@@ -145,6 +158,14 @@ export default function CekIuranPage() {
                 )}
               </tbody>
             </table>
+            {result.detail.length > PAGE && (
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className="flex w-full items-center justify-center gap-1.5 border-t border-line py-3 text-[13px] font-semibold text-brand-600 transition hover:bg-brand-50"
+              >
+                {expanded ? <><ChevronUp size={14} /> Tampilkan Lebih Sedikit</> : <><ChevronDown size={14} /> Muat Semua ({result.detail.length - PAGE} lagi)</>}
+              </button>
+            )}
           </div>
 
           <p className="text-center text-xs text-slate-400">

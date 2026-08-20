@@ -76,7 +76,7 @@ export default function LoginPage() {
           <div className="flex flex-col leading-tight">
             <span className="text-lg font-bold tracking-tight text-white">SIWA</span>
             <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-brand-200/70">
-              Kelurahan Bendul Merisi
+              Kecamatan Wonocolo
             </span>
           </div>
         </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
           <div className="mb-6 flex items-center gap-2">
             <span className="h-px w-12 bg-gradient-to-r from-brand-300 to-transparent" />
             <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-200">
-              Kelurahan Digital
+              Kecamatan Digital
             </span>
           </div>
 
@@ -134,16 +134,24 @@ export default function LoginPage() {
             </span>
             <div className="h-3 w-px bg-white/20" />
             <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50">by</span>
-            <Image
-              src="/images/logo-digital360.png"
-              alt="Digital360"
-              width={140}
-              height={50}
-              className="h-[18px] w-auto object-contain brightness-0 invert opacity-80"
-              priority
-            />
+            <a
+              href="https://digital360.id"
+              target="_blank"
+              rel="noreferrer"
+              title="Digital360 — digital360.id"
+              className="transition-opacity hover:opacity-100"
+            >
+              <Image
+                src="/images/logo-digital360.png"
+                alt="Digital360"
+                width={140}
+                height={50}
+                className="h-[18px] w-auto object-contain brightness-0 invert opacity-80"
+                priority
+              />
+            </a>
           </div>
-          <p className="text-[12px] text-brand-200/60">© 2026 Kelurahan Bendul Merisi · Kecamatan Wonocolo, Kota Surabaya</p>
+          <p className="text-[12px] text-brand-200/60">© 2026 Kecamatan Wonocolo, Kota Surabaya</p>
         </div>
       </div>
 
@@ -164,7 +172,7 @@ export default function LoginPage() {
             </div>
             <div className="text-center">
               <h1 className="text-xl font-extrabold tracking-tight text-slate-900">SIWA</h1>
-              <p className="text-xs text-slate-400">Kelurahan Bendul Merisi</p>
+              <p className="text-xs text-slate-400">Kecamatan Wonocolo</p>
             </div>
           </div>
 
@@ -249,7 +257,7 @@ export default function LoginPage() {
             className="mt-8 text-center text-[12px] leading-relaxed text-slate-400"
             style={{ animation: mounted ? 'lux-fade-up .6s ease .3s both' : 'none' }}
           >
-            Akun petugas dibuat oleh Admin Kelurahan.
+            Akun petugas dibuat oleh Admin Kecamatan.
             <br />
             Warga dapat mengecek iuran via{' '}
             <Link href="/portal" className="font-medium text-brand-600 hover:underline">
@@ -267,13 +275,21 @@ export default function LoginPage() {
                 Kec. Wonocolo
               </span>
               <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-slate-400">×</span>
-              <Image
-                src="/images/logo-digital360.png"
-                alt="Digital360"
-                width={80}
-                height={28}
-                className="h-[12px] w-auto object-contain"
-              />
+              <a
+                href="https://digital360.id"
+                target="_blank"
+                rel="noreferrer"
+                title="Digital360 — digital360.id"
+                className="transition-opacity hover:opacity-100"
+              >
+                <Image
+                  src="/images/logo-digital360.png"
+                  alt="Digital360"
+                  width={80}
+                  height={28}
+                  className="h-[12px] w-auto object-contain"
+                />
+              </a>
             </div>
           </div>
         </div>

@@ -10,7 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-export type SiwaRole = 'admin' | 'lurah' | 'rw' | 'rt'
+export type SiwaRole = 'admin' | 'camat' | 'lurah' | 'rw' | 'rt'
 
 export interface SiwaModule {
   key: string
@@ -42,7 +42,7 @@ export const MODULES: SiwaModule[] = [
     href: '/warga',
     icon: Users,
     match: ['/warga', '/keluarga'],
-    roles: ['admin', 'lurah', 'rw', 'rt'],
+    roles: ['admin', 'camat', 'lurah', 'rw', 'rt'],
     nav: [
       { label: 'Data Warga', href: '/warga', match: ['/warga'], icon: Users },
       { label: 'Kartu Keluarga', href: '/keluarga', match: ['/keluarga'], icon: Home },
@@ -54,7 +54,7 @@ export const MODULES: SiwaModule[] = [
     href: '/iuran',
     icon: Coins,
     match: ['/iuran'],
-    roles: ['admin', 'lurah', 'rw', 'rt'],
+    roles: ['admin', 'camat', 'lurah', 'rw', 'rt'],
     nav: [
       { label: 'Tagihan', href: '/iuran', match: ['/iuran'], icon: Coins },
       { label: 'Jenis Iuran', href: '/iuran/jenis', match: ['/iuran/jenis'], icon: Landmark },
@@ -79,7 +79,7 @@ export const MODULES: SiwaModule[] = [
     href: '/laporan',
     icon: FileBarChart,
     match: ['/laporan'],
-    roles: ['admin', 'lurah', 'rw'],
+    roles: ['admin', 'camat', 'lurah', 'rw'],
     nav: [
       { label: 'Kependudukan', href: '/laporan/kependudukan', match: ['/laporan/kependudukan'], icon: FileBarChart },
       { label: 'Wilayah', href: '/laporan/wilayah', match: ['/laporan/wilayah'], icon: Map },
@@ -105,7 +105,7 @@ export const MODULES: SiwaModule[] = [
     href: '/faq',
     icon: CircleHelp,
     match: ['/faq'],
-    roles: ['admin', 'lurah', 'rw', 'rt'],
+    roles: ['admin', 'camat', 'lurah', 'rw', 'rt'],
     nav: [
       { label: 'Dokumentasi', href: '/faq', match: ['/faq'], icon: CircleHelp },
     ],

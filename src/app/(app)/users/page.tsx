@@ -13,7 +13,7 @@ import { Modal } from '@/components/ui/Modal'
 import { QueryError } from '@/components/QueryError'
 import type { SiwaUser, WilayahRef } from '@/types'
 
-const ROLE_LABEL: Record<string, string> = { admin: 'Admin', lurah: 'Lurah', rw: 'Ketua RW', rt: 'Ketua RT' }
+const ROLE_LABEL: Record<string, string> = { admin: 'Admin', camat: 'Camat', lurah: 'Lurah', rw: 'Ketua RW', rt: 'Ketua RT' }
 
 export default function UsersPage() {
   const me = useAuth((s) => s.user)
@@ -97,8 +97,8 @@ export default function UsersPage() {
                       <td className="px-4 py-3"><StatusBadge status={u.role === 'admin' ? 'active' : 'draft'} label={ROLE_LABEL[u.role]} /></td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
-                          {(u.userWilayah ?? []).length === 0 ? <span className="text-slate-300">—</span> :
-                            u.userWilayah!.map((uw) => (
+                          {(u.user_wilayah ?? []).length === 0 ? <span className="text-slate-300">{['admin', 'camat'].includes(u.role) ? 'Semua wilayah' : '—'}</span> :
+                            u.user_wilayah!.map((uw) => (
                               <span key={uw.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-600">{uw.wilayah?.nama ?? '#'}</span>
                             ))}
                         </div>
@@ -198,7 +198,7 @@ function UserFormModal({ mode, user, onClose, onSubmit, pending }: {
     status_aktif: user ? Boolean(Number(user.status_aktif)) : true,
   })
   const [wilayahIds, setWilayahIds] = useState<number[]>(
-    (user?.userWilayah ?? []).map((uw) => uw.wilayah?.id ?? uw.id),
+    (user?.user_wilayah ?? []).map((uw) => uw.wilayah?.id ?? uw.id),
   )
   const set = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }))
 

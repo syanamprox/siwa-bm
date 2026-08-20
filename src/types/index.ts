@@ -165,10 +165,10 @@ export interface SiwaUser {
   name: string
   username: string
   email: string | null
-  role: 'admin' | 'lurah' | 'rw' | 'rt'
+  role: 'admin' | 'camat' | 'lurah' | 'rw' | 'rt'
   status_aktif: number | boolean
   avatar: string | null
-  userWilayah?: { id: number; wilayah: WilayahRef }[]
+  user_wilayah?: { id: number; wilayah: WilayahRef }[]
 }
 
 /* ── Aktivitas ── */

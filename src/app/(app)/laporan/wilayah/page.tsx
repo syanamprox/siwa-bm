@@ -48,7 +48,7 @@ export default function LaporanWilayahPage() {
                         <div key={rt.id} className="flex items-center gap-2 rounded-xl border border-line px-3 py-2">
                           <Home size={12} className="shrink-0 text-slate-300" />
                           <span className="min-w-0 flex-1 truncate text-[12px] text-slate-700">
-                            {rt.nama.replace(/^RT\s*\d+\s*RW\s*\d+\s*/, 'RT ')}
+                            {rt.nama.replace(/^(RT\s+\d+)\s+RW\s+\d+\s+.*$/, '$1')}
                           </span>
                           <span className="text-[12px] font-bold tabular-nums text-slate-900">{rt.total_kk ?? 0}</span>
                         </div>
