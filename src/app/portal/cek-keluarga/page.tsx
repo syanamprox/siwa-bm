@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Home, Loader2, Search, AlertCircle } from 'lucide-react'
 import { api, ApiError } from '@/lib/api-client'
+import { domisiliRingkas } from '@/lib/utils'
 import { QueryError } from '@/components/QueryError'
 
 interface PortalKeluarga {
@@ -90,7 +91,7 @@ export default function CekKeluargaPage() {
             <p className="mt-0.5 text-[13px] text-slate-500">
               Kepala: <strong className="text-slate-800">{result.kepala_keluarga ?? '—'}</strong> · {result.jumlah_anggota} anggota
             </p>
-            <p className="text-xs text-slate-400">{[result.rt, result.rw, result.kelurahan].filter(Boolean).join(' · ')}{result.alamat ? ` — ${result.alamat}` : ''}</p>
+            <p className="text-xs text-slate-400">{domisiliRingkas(result.rt, result.rw, result.kelurahan)}{result.alamat ? ` — ${result.alamat}` : ''}</p>
           </div>
           <ul className="divide-y divide-line">
             {result.anggota.map((a, i) => (

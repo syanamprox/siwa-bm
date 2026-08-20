@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Users, Loader2, Search, AlertCircle } from 'lucide-react'
 import { api, ApiError } from '@/lib/api-client'
+import { domisiliRingkas } from '@/lib/utils'
 import { QueryError } from '@/components/QueryError'
 
 interface PortalWarga {
@@ -100,7 +101,7 @@ export default function CekWargaPage() {
               ['Hubungan Keluarga', result.hubungan_keluarga],
               ['Telepon', result.no_telepon ?? '—'],
               ['Kartu Keluarga', result.keluarga ? `${result.keluarga.no_kk} (${result.keluarga.status_domisili})` : 'Belum terdaftar'],
-              ['Domisili', result.keluarga ? [result.keluarga.rt, result.keluarga.rw, result.keluarga.kelurahan].filter(Boolean).join(' · ') : '—'],
+              ['Domisili', result.keluarga ? domisiliRingkas(result.keluarga.rt, result.keluarga.rw, result.keluarga.kelurahan) : '—'],
               ['Alamat', result.keluarga?.alamat ?? '—'],
             ].map(([label, value]) => (
               <div key={label} className="flex gap-4 px-6 py-2.5">

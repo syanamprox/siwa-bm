@@ -85,6 +85,20 @@ export function ymd(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
+/**
+ * Path domisili ringkas dari nama wilayah lengkap.
+ * "RT 02 RW 03 Bendul Merisi" + "RW 03 Bendul Merisi" + "Kelurahan Bendul Merisi"
+ * → "RT 02 · RW 03 · Kel. Bendul Merisi" (tanpa redundansi nama kelurahan).
+ */
+export function domisiliRingkas(rt?: string | null, rw?: string | null, kelurahan?: string | null): string {
+  const m = (rt ?? '').match(/^RT\s+(\d+)\s+RW\s+(\d+)\s+(.+)$/)
+  if (m) {
+    const kel = (kelurahan ?? m[3]).replace(/^Kelurahan\s+/i, '')
+    return `RT ${m[1]} · RW ${m[2]} · Kel. ${kel}`
+  }
+  return [rt, rw, kelurahan].filter(Boolean).join(' · ')
+}
+
 export function daysAgo(n: number): Date {
   const d = new Date()
   d.setDate(d.getDate() - n)
