@@ -44,7 +44,7 @@ class Keluarga extends Model
         // Status & Keterangan
         'status_domisili_keluarga',
         'tanggal_mulai_domisili_keluarga',
-        'status_keluarga', // Aktif/Pindah/Non-Aktif/Dibubarkan
+        'status_keluarga', // Tetap/Domisili/Non Domisili/Pendatang — semua ditagih iuran, arsip = soft delete
         'keterangan_status',
         'tanggal_status',
     ];
@@ -356,11 +356,11 @@ class Keluarga extends Model
     }
 
     /**
-     * Check if keluarga is active
+     * Check if keluarga aktif (bukan arsip) — soft delete menandai arsip.
      */
     public function isActive(): bool
     {
-        return $this->status_keluarga === 'Aktif';
+        return $this->status_keluarga !== null && $this->deleted_at === null;
     }
 
     /**
@@ -369,10 +369,10 @@ class Keluarga extends Model
     public function getStatusBadgeClassAttribute(): string
     {
         return match($this->status_keluarga) {
-            'Aktif' => 'success',
-            'Pindah' => 'warning',
-            'Non-Aktif' => 'secondary',
-            'Dibubarkan' => 'danger',
+            'Tetap' => 'success',
+            'Domisili' => 'info',
+            'Non Domisili' => 'secondary',
+            'Pendatang' => 'warning',
             default => 'secondary'
         };
     }
@@ -382,13 +382,7 @@ class Keluarga extends Model
      */
     public function getStatusLabelAttribute(): string
     {
-        return match($this->status_keluarga) {
-            'Aktif' => 'Aktif',
-            'Pindah' => 'Pindah',
-            'Non-Aktif' => 'Non-Aktif',
-            'Dibubarkan' => 'Dibubarkan',
-            default => $this->status_keluarga
-        };
+        return $this->status_keluarga ?? '—';
     }
 
     /**

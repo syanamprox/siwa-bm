@@ -74,7 +74,6 @@ class IuranController extends Controller
         $data = [
             'total' => (clone $query)->count(),
             'belum_bayar' => (clone $query)->where('status', 'belum_bayar')->count(),
-            'sebagian' => (clone $query)->where('status', 'sebagian')->count(),
             'lunas' => (clone $query)->where('status', 'lunas')->count(),
             'total_nominal' => (float) (clone $query)->sum('nominal'),
             'total_denda' => (float) (clone $query)->sum('denda_terlambatan'),
@@ -87,6 +86,66 @@ class IuranController extends Controller
     }
 
     /**
+     * POST /api/iuran/bayar-batch — multi pembayaran (rapelan) beberapa tagihan sekaligus.
+     * Satu metode + keterangan untuk semua item; tiap item punya jumlah masing-masing.
+     */
+    public function bayarBatch(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'payments' => ['required', 'array', 'min:1'],
+            'payments.*.iuran_id' => ['required', 'integer', 'exists:iurans,id'],
+            'metode_pembayaran' => ['required', 'in:cash,transfer,qris,ewallet'],
+            'keterangan' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $results = ['dibayar' => 0, 'total' => 0.0, 'gagal' => []];
+
+        DB::transaction(function () use ($request, $validated, &$results) {
+            foreach ($validated['payments'] as $p) {
+                $iuran = Iuran::lockForUpdate()->find($p['iuran_id']);
+
+                if (! $iuran) {
+                    $results['gagal'][] = ['iuran_id' => $p['iuran_id'], 'alasan' => 'Tagihan tidak ditemukan'];
+                    continue;
+                }
+
+                try {
+                    $this->authorizeIuran($request, $iuran);
+                } catch (\Symfony\Component\HttpKernel\Exception\HttpException) {
+                    $results['gagal'][] = ['iuran_id' => $iuran->id, 'alasan' => 'Di luar wilayah Anda'];
+                    continue;
+                }
+
+                if ($iuran->status === 'lunas') {
+                    $results['gagal'][] = ['iuran_id' => $iuran->id, 'alasan' => 'Tagihan sudah lunas'];
+                    continue;
+                }
+
+                // Tanpa bayar sebagian — selalu nominal penuh + denda
+                $jumlah = (float) $iuran->nominal + (float) $iuran->denda_terlambatan;
+
+                PembayaranIuran::create([
+                    'iuran_id' => $iuran->id,
+                    'jumlah_bayar' => $jumlah,
+                    'metode_pembayaran' => $validated['metode_pembayaran'],
+                    'keterangan' => $validated['keterangan'] ?? null,
+                    'nomor_referensi' => PembayaranIuran::generateNomorReferensi(),
+                    'created_by' => $request->user()->id,
+                ]);
+
+                $iuran->update(['status' => 'lunas']);
+
+                $results['dibayar']++;
+                $results['total'] += $jumlah;
+            }
+        });
+
+        $this->logActivity($request, 'payment_batch', 'iuran', 'Bayar '.$results['dibayar'].' tagihan sekaligus (rapelan) total '.number_format($results['total'], 0, ',', '.'), null, ['metode' => $validated['metode_pembayaran']]);
+
+        return response()->json(['data' => $results]);
+    }
+
+    /**
      * POST /api/iuran/{iuran}/bayar — catat pembayaran.
      */
     public function bayar(Request $request, Iuran $iuran): JsonResponse
@@ -94,30 +153,28 @@ class IuranController extends Controller
         $this->authorizeIuran($request, $iuran);
 
         $validated = $request->validate([
-            'jumlah_bayar' => ['required', 'numeric', 'min:0'],
             'metode_pembayaran' => ['required', 'in:cash,transfer,qris,ewallet'],
             'keterangan' => ['nullable', 'string', 'max:255'],
         ]);
 
-        if (in_array($iuran->status, ['batal', 'lunas'], true)) {
-            return response()->json(['message' => 'Tagihan ini sudah '.$iuran->status.'.'], 422);
+        if ($iuran->status === 'lunas') {
+            return response()->json(['message' => 'Tagihan ini sudah lunas.'], 422);
         }
 
-        $pembayaran = DB::transaction(function () use ($request, $iuran, $validated) {
+        // Tanpa bayar sebagian — selalu nominal penuh + denda
+        $jumlah = (float) $iuran->nominal + (float) $iuran->denda_terlambatan;
+
+        $pembayaran = DB::transaction(function () use ($request, $iuran, $validated, $jumlah) {
             $pembayaran = PembayaranIuran::create([
                 'iuran_id' => $iuran->id,
-                'jumlah_bayar' => $validated['jumlah_bayar'],
+                'jumlah_bayar' => $jumlah,
                 'metode_pembayaran' => $validated['metode_pembayaran'],
                 'keterangan' => $validated['keterangan'] ?? null,
                 'nomor_referensi' => PembayaranIuran::generateNomorReferensi(),
                 'created_by' => $request->user()->id,
             ]);
 
-            $totalDibayar = $iuran->pembayaran()->sum('jumlah_bayar');
-            $totalTagihan = $iuran->nominal + $iuran->denda_terlambatan;
-            $iuran->update([
-                'status' => $totalDibayar >= $totalTagihan ? 'lunas' : 'sebagian',
-            ]);
+            $iuran->update(['status' => 'lunas']);
 
             return $pembayaran;
         });

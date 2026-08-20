@@ -18,11 +18,13 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             WilayahSeeder::class,
             ContohKeluargaSeeder::class,
+            Rt02Rw03BendulMerisiSeeder::class,
             KeluargaSeeder::class,
             WargaSeeder::class,
             PengaturanSistemSeeder::class,
             JenisIuranSeeder::class,
             KK1IuranConnectionSeeder::class,
+            Rt02Rw03IuranSeeder::class,
         ]);
     }
 }

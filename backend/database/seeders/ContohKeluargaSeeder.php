@@ -28,13 +28,12 @@ class ContohKeluargaSeeder extends Seeder
                 'rt_kk' => '001',
                 'rw_kk' => '001',
                 'kelurahan_kk' => 'Bendul Merisi',
-                'kecamatan_kk' => 'Wonokromo',
+                'kecamatan_kk' => 'Wonocolo',
                 'kabupaten_kk' => 'Kota Surabaya',
                 'provinsi_kk' => 'Jawa Timur',
-                'status_keluarga' => 'Aktif',
+                'status_keluarga' => 'Tetap',
                 'alamat_domisili' => 'Jl. Bendul Merisi No. 25',
                 'rt_id' => $rt?->id,
-                'status_domisili_keluarga' => 'Tetap',
                 'tanggal_mulai_domisili_keluarga' => '2010-01-01',
             ]
         );

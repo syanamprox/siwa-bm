@@ -8,6 +8,11 @@ use App\Http\Controllers\Api\Concerns\ScopesToWilayah;
 use App\Models\Warga;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Encoders\WebpEncoder;
+use Intervention\Image\ImageManager;
 
 class WargaController extends Controller
 {
@@ -18,7 +23,7 @@ class WargaController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Warga::with(['keluarga:id,no_kk,rt_id', 'keluarga.wilayah:id,nama', 'keluarga.kepalaKeluarga:id,nama_lengkap']);
+        $query = Warga::with(['keluarga:id,no_kk,rt_id,kepala_keluarga_id', 'keluarga.wilayah:id,nama', 'keluarga.kepalaKeluarga:id,nama_lengkap']);
         $query = $this->scopeWarga($query);
 
         if ($s = $request->input('search')) {
@@ -75,11 +80,11 @@ class WargaController extends Controller
         $validated = $request->validate($this->rules());
         $data = collect($validated)->except(['foto_ktp', 'foto_ktp_data'])->all();
 
-        if ($request->hasFile('foto_ktp')) {
-            $file = $request->file('foto_ktp');
-            $data['foto_ktp'] = $file->storeAs('documents/ktp', "ktp_{$validated['nik']}_".time().'.'.$file->extension(), 'public');
-        } elseif (! empty($validated['foto_ktp_data'])) {
-            $data['foto_ktp'] = $this->storeBase64Image($validated['foto_ktp_data'], $validated['nik']);
+        if ($request->hasFile('foto_ktp') || ! empty($validated['foto_ktp_data'])) {
+            $data['foto_ktp'] = $this->storeKtpPhoto(
+                $request->hasFile('foto_ktp') ? $request->file('foto_ktp') : $validated['foto_ktp_data'],
+                $validated['nik']
+            );
         }
 
         $warga = Warga::create($data + ['created_by' => $request->user()->id]);
@@ -95,17 +100,14 @@ class WargaController extends Controller
         $data = collect($validated)->except(['foto_ktp', 'foto_ktp_data'])->all();
         $old = $warga->only(['nik', 'nama_lengkap', 'kk_id', 'hubungan_keluarga']);
 
-        if ($request->hasFile('foto_ktp')) {
+        if ($request->hasFile('foto_ktp') || ! empty($validated['foto_ktp_data'])) {
             if ($warga->foto_ktp) {
                 \Storage::disk('public')->delete($warga->foto_ktp);
             }
-            $file = $request->file('foto_ktp');
-            $data['foto_ktp'] = $file->storeAs('documents/ktp', "ktp_{$validated['nik']}_".time().'.'.$file->extension(), 'public');
-        } elseif (! empty($validated['foto_ktp_data'])) {
-            if ($warga->foto_ktp) {
-                \Storage::disk('public')->delete($warga->foto_ktp);
-            }
-            $data['foto_ktp'] = $this->storeBase64Image($validated['foto_ktp_data'], $validated['nik']);
+            $data['foto_ktp'] = $this->storeKtpPhoto(
+                $request->hasFile('foto_ktp') ? $request->file('foto_ktp') : $validated['foto_ktp_data'],
+                $validated['nik']
+            );
         }
 
         $warga->update($data + ['updated_by' => $request->user()->id]);
@@ -115,18 +117,30 @@ class WargaController extends Controller
     }
 
     /**
-     * Simpan data-URL base64 image → path storage. Return path.
+     * Simpan foto KTP — kompres (max width 1200px) + konversi WebP via
+     * Intervention Image (GD). Selalu ringan, format konsisten .webp.
+     *
+     * @param  UploadedFile|string  $source  File multipart atau data-URL base64.
      */
-    private function storeBase64Image(string $dataUrl, string $nik): string
+    private function storeKtpPhoto(UploadedFile|string $source, string $nik): string
     {
-        [$meta, $content] = explode(',', $dataUrl, 2);
-        preg_match('/image\/(\w+)/', $meta, $m);
-        $ext = $m[1] ?? 'jpg';
+        if (is_string($source) && strlen($source) > 4_000_000) {
+            throw ValidationException::withMessages([
+                'foto_ktp_data' => 'Ukuran foto terlalu besar (maks 2MB).',
+            ]);
+        }
 
-        return \Storage::disk('public')->put(
-            "documents/ktp/ktp_{$nik}_".time().'.'.$ext,
-            base64_decode($content)
-        ) ? "documents/ktp/ktp_{$nik}_".time().'.'.$ext : '';
+        $manager = new ImageManager(new GdDriver);
+        $image = is_string($source)
+            ? $manager->decodeDataUri($source)
+            : $manager->decodeSplFileInfo($source);
+
+        $webp = (string) $image->scaleDown(width: 1200)->encode(new WebpEncoder(quality: 82));
+
+        $path = "documents/ktp/ktp_{$nik}_".time().'.webp';
+        \Storage::disk('public')->put($path, $webp);
+
+        return $path;
     }
 
     public function destroy(Request $request, Warga $warga): JsonResponse

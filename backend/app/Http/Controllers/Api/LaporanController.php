@@ -33,7 +33,7 @@ class LaporanController extends Controller
             ->when($rtIds, fn ($q) => $q->whereIn('id', $rtIds))
             ->with('parent:id,nama,kode')
             ->withCount([
-                'keluarga as total_kk' => fn ($q) => $q->whereNull('deleted_at')->where('status_keluarga', 'Aktif'),
+                'keluarga as total_kk' => fn ($q) => $q->whereNull('deleted_at'),
             ])
             ->orderBy('kode')
             ->get();

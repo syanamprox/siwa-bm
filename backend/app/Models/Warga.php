@@ -10,6 +10,9 @@ class Warga extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /** Accessor yang selalu ikut diserialisasi (umur dihitung dari tanggal_lahir). */
+    protected $appends = ['umur'];
+
     /**
      * The table associated with the model.
      *
@@ -186,7 +189,7 @@ class Warga extends Model
      */
     public function getUmurAttribute(): int
     {
-        return $this->tanggal_lahir->age;
+        return $this->tanggal_lahir?->age ?? 0;
     }
 
     /**

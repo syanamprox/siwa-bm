@@ -68,11 +68,8 @@ class IuranGenerationController extends Controller
 
             foreach ($preview['preview'] as $family) {
                 foreach ($family['iurans'] as $item) {
-                    $exists = Iuran::where('kk_id', $family['kk_id'])
-                        ->where('jenis_iuran_id', $item['jenis_iuran_id'])
-                        ->where('periode_bulan', $validated['periode_bulan'])
-                        ->exists();
-                    if ($exists) {
+                    // Guard semantic per jenis (concurrent-safe di dalam transaksi)
+                    if ($this->findExistingTagihan($family['kk_id'], $item['jenis_iuran_id'], $item['periode_jenis'], $validated['periode_bulan'])) {
                         $duplicates++;
                         continue;
                     }
@@ -107,20 +104,23 @@ class IuranGenerationController extends Controller
     {
         $user = $request->user();
 
+        // Semua status keluarga (Tetap/Domisili/Non Domisili/Pendatang) tetap ditagih — arsip = soft delete (auto-terkecuali).
         $query = Keluarga::with(['kepalaKeluarga:id,nama_lengkap', 'wilayah:id,nama'])
-            ->where('status_keluarga', 'Aktif')
             ->with(['keluargaIuran' => fn ($q) => $q->where('status_aktif', true)->with('jenisIuran')]);
         $query = $this->scopeKeluarga($query);
         if (! empty($validated['rt_id'])) {
             $query->where('rt_id', $validated['rt_id']);
         }
 
-        $jenisFilter = $validated['jenis_iuran_ids'] ?? null;
+        $jenisFilter = isset($validated['jenis_iuran_ids'])
+            ? array_map('intval', (array) $validated['jenis_iuran_ids']) // query string selalu string — cast utk in_array strict
+            : null;
         $preview = [];
         $totalNominal = 0;
 
         foreach ($query->get() as $keluarga) {
             $items = [];
+            $skip = [];
             foreach ($keluarga->keluargaIuran as $conn) {
                 $jenis = $conn->jenisIuran;
                 if (! $jenis || ! $jenis->is_aktif) {
@@ -130,6 +130,24 @@ class IuranGenerationController extends Controller
                     continue;
                 }
                 $nominal = $conn->nominal_custom ?? $jenis->jumlah;
+
+                // Idempotency semantic per jenis:
+                // bulanan → per bulan · tahunan → per tahun · sekali → selamanya.
+                $existing = $this->findExistingTagihan($keluarga->id, $jenis->id, $jenis->periode, $validated['periode_bulan']);
+                if ($existing) {
+                    $skip[] = [
+                        'jenis_iuran_id' => $jenis->id,
+                        'jenis_iuran' => $jenis->nama,
+                        'nominal' => (float) $nominal,
+                        'alasan' => match ($jenis->periode) {
+                            'tahunan' => 'sudah ditagih tahun ini ('.$existing->periode_bulan.')',
+                            'sekali' => 'sudah pernah ditagih ('.$existing->periode_bulan.') — iuran sekali bayar',
+                            default => 'sudah ada di periode ini',
+                        },
+                    ];
+                    continue;
+                }
+
                 $items[] = [
                     'jenis_iuran_id' => $jenis->id,
                     'jenis_iuran' => $jenis->nama,
@@ -138,14 +156,9 @@ class IuranGenerationController extends Controller
                 ];
                 $totalNominal += (float) $nominal;
             }
-            if ($items === []) {
+            if ($items === [] && $skip === []) {
                 continue; // tidak ada koneksi aktif → skip
             }
-
-            // tandai yang sudah punya tagihan periode ini (akan jadi duplicate saat generate)
-            $existing = Iuran::where('kk_id', $keluarga->id)
-                ->where('periode_bulan', $validated['periode_bulan'])
-                ->pluck('jenis_iuran_id');
 
             $preview[] = [
                 'kk_id' => $keluarga->id,
@@ -153,8 +166,9 @@ class IuranGenerationController extends Controller
                 'kepala_keluarga' => $keluarga->kepalaKeluarga?->nama_lengkap ?? '-',
                 'rt' => $keluarga->wilayah?->nama,
                 'iurans' => $items,
+                'skip' => $skip,
                 'total' => array_sum(array_column($items, 'nominal')),
-                'sudah_ada' => $existing->isEmpty() ? 0 : $existing->count(),
+                'sudah_ada' => count($skip),
             ];
         }
 
@@ -163,10 +177,26 @@ class IuranGenerationController extends Controller
             'summary' => [
                 'total_families' => count($preview),
                 'total_iuran' => array_sum(array_map(fn ($f) => count($f['iurans']), $preview)),
+                'total_skip' => array_sum(array_map(fn ($f) => count($f['skip']), $preview)),
                 'total_nominal' => $totalNominal,
                 'periode' => $validated['periode_bulan'],
             ],
         ];
+    }
+
+    /**
+     * Tagihan existing per semantic jenis — dasar idempotency generate.
+     * bulanan: bulan sama · tahunan: tahun sama (bulan apapun) · sekali: kapanpun.
+     */
+    private function findExistingTagihan(int $kkId, int $jenisId, string $periodeJenis, string $periodeBulan): ?Iuran
+    {
+        $query = Iuran::where('kk_id', $kkId)->where('jenis_iuran_id', $jenisId);
+
+        return match ($periodeJenis) {
+            'tahunan' => (clone $query)->where('periode_bulan', 'like', substr($periodeBulan, 0, 4).'%')->first(),
+            'sekali' => (clone $query)->first(),
+            default => (clone $query)->where('periode_bulan', $periodeBulan)->first(),
+        };
     }
 
     private function calculateJatuhTempo(string $periodeJenis, string $periodeBulan): string

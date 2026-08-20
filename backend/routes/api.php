@@ -59,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Iuran
     Route::get('/iuran/statistics', [IuranController::class, 'statistics']);
     Route::get('/iuran', [IuranController::class, 'index']);
+    Route::post('/iuran/bayar-batch', [IuranController::class, 'bayarBatch']);
     Route::post('/iuran/{iuran}/bayar', [IuranController::class, 'bayar']);
     Route::get('/iuran/{iuran}/payments', [IuranController::class, 'payments']);
 

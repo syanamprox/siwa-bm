@@ -7,3 +7,6 @@ next-env.d.ts
 .env
 .DS_Store
 *.log
+
+# Data KK asli warga (PII — JANGAN pernah di-commit)
+/kk

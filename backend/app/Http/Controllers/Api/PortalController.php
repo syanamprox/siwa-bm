@@ -115,7 +115,7 @@ class PortalController extends Controller
 
         $this->logPortalAccess($request, 'iuran', $warga->nik);
 
-        $tagihan = $iurans->whereIn('status', ['belum_bayar', 'sebagian']);
+        $tagihan = $iurans->where('status', 'belum_bayar');
 
         return response()->json(['data' => [
             'nama' => $warga->nama_lengkap,
@@ -160,7 +160,7 @@ class PortalController extends Controller
                 'rt' => $warga->keluarga->wilayah?->nama,
                 'rw' => $warga->keluarga->wilayah?->parent?->nama,
                 'kelurahan' => $warga->keluarga->wilayah?->parent?->parent?->nama,
-                'status_domisili' => $warga->keluarga->status_domisili_keluarga,
+                'status_domisili' => $warga->keluarga->status_keluarga,
             ] : null,
         ];
     }

@@ -26,7 +26,7 @@ class PengaturanController extends Controller
             ],
             'kelurahan' => [
                 ['key' => 'kelurahan_nama', 'value' => PengaturanSistem::getValue('kelurahan_nama', 'Bendul Merisi'), 'keterangan' => 'Nama kelurahan'],
-                ['key' => 'kecamatan_nama', 'value' => PengaturanSistem::getValue('kecamatan_nama', 'Wonokromo'), 'keterangan' => 'Nama kecamatan'],
+                ['key' => 'kecamatan_nama', 'value' => PengaturanSistem::getValue('kecamatan_nama', 'Wonocolo'), 'keterangan' => 'Nama kecamatan'],
                 ['key' => 'kota_nama', 'value' => PengaturanSistem::getValue('kota_nama', 'Kota Surabaya'), 'keterangan' => 'Nama kota'],
                 ['key' => 'kontak_telepon', 'value' => PengaturanSistem::getValue('kontak_telepon', ''), 'keterangan' => 'Telepon kantor kelurahan'],
             ],

@@ -138,13 +138,13 @@ class KeluargaController extends Controller
     }
 
     /**
-     * PATCH /api/keluarga/{id}/status — Aktif/Pindah/Non-Aktif/Dibubarkan.
+     * PATCH /api/keluarga/{id}/status — Tetap/Domisili/Non Domisili/Pendatang.
+     * Semua status tetap ditagih iuran (arsip = soft delete).
      */
     public function updateStatus(Request $request, Keluarga $keluarga): JsonResponse
     {
-        $this->authorizeKeluarga($request, $keluarga);
         $validated = $request->validate([
-            'status_keluarga' => ['required', 'in:Aktif,Pindah,Non-Aktif,Dibubarkan'],
+            'status_keluarga' => ['required', 'in:Tetap,Domisili,Non Domisili,Pendatang'],
             'keterangan_status' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -232,11 +232,10 @@ class KeluargaController extends Controller
             'provinsi_kk' => ['nullable', 'string', 'max:100'],
             'alamat_domisili' => ['nullable', 'string', 'max:500'],
             'rt_id' => ['required', 'exists:wilayahs,id'],
-            'status_domisili_keluarga' => ['required', 'in:Tetap,Non Domisili,Luar,Sementara'],
+            'status_keluarga' => ['nullable', 'in:Tetap,Domisili,Non Domisili,Pendatang'],
             'tanggal_mulai_domisili_keluarga' => ['nullable', 'date'],
             'keterangan_status' => ['nullable', 'string', 'max:255'],
             'kepala_keluarga_id' => ['nullable', 'exists:wargas,id'],
-            'status_keluarga' => ['nullable', 'in:Aktif,Pindah,Non-Aktif,Dibubarkan'],
             'warga_data' => ['nullable', 'array', 'min:1'],
             'warga_data.*.nik' => ['required_with:warga_data', 'digits:16', 'unique:wargas,nik'],
             'warga_data.*.nama_lengkap' => ['required_with:warga_data', 'string', 'max:255'],

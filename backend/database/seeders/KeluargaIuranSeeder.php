@@ -19,7 +19,7 @@ class KeluargaIuranSeeder extends Seeder
         DB::table('keluarga_iuran')->delete();
 
         // Get existing data
-        $keluargas = Keluarga::where('status_keluarga', 'Aktif')->get();
+        $keluargas = Keluarga::whereNull('deleted_at')->get();
         $jenisIurans = JenisIuran::where('is_aktif', 1)->get();
 
         if ($keluargas->isEmpty() || $jenisIurans->isEmpty()) {
