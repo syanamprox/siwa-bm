@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Coins, Users, Home, ShieldCheck, Lock, Zap } from 'lucide-react'
+import { Coins, Users, Home, ShieldCheck, Lock, Zap, Landmark } from 'lucide-react'
 
 const SERVICES = [
   {
@@ -8,6 +8,13 @@ const SERVICES = [
     title: 'Cek Iuran',
     desc: 'Lihat status tagihan & tunggakan iuran keluarga Anda 12 bulan terakhir.',
     accent: 'bg-amber-50 text-amber-600',
+  },
+  {
+    href: '/portal/kas',
+    icon: Landmark,
+    title: 'Transparansi Kas',
+    desc: 'Lihat laporan kas wilayah — pemasukan, pengeluaran & saldo terkini.',
+    accent: 'bg-purple-50 text-purple-600',
   },
   {
     href: '/portal/cek-warga',
@@ -43,8 +50,8 @@ export default function PortalPage() {
         </p>
       </div>
 
-      {/* Service cards */}
-      <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-3">
+      {/* Service cards — 2×2 */}
+      <div className="mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-5 sm:grid-cols-2">
         {SERVICES.map((s, i) => (
           <Link key={s.href} href={s.href} className="group animate-fade-up" style={{ animationDelay: `${0.1 + i * 0.08}s` }}>
             <div className="card-hover flex h-full flex-col rounded-2xl border border-line bg-white p-6 shadow-card">

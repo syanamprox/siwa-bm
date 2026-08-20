@@ -124,7 +124,7 @@ class IuranController extends Controller
                 // Tanpa bayar sebagian — selalu nominal penuh + denda
                 $jumlah = (float) $iuran->nominal + (float) $iuran->denda_terlambatan;
 
-                PembayaranIuran::create([
+                $pembayaran = PembayaranIuran::create([
                     'iuran_id' => $iuran->id,
                     'jumlah_bayar' => $jumlah,
                     'metode_pembayaran' => $validated['metode_pembayaran'],
@@ -134,6 +134,13 @@ class IuranController extends Controller
                 ]);
 
                 $iuran->update(['status' => 'lunas']);
+
+                // Auto-post kas RT — kegagalan kas tidak boleh membatalkan pembayaran
+                try {
+                    \App\Models\KasTransaksi::postFromPembayaran($pembayaran, $iuran);
+                } catch (\Throwable $e) {
+                    \Log::warning('Auto-post kas gagal (pembayaran #'.$pembayaran->id.'): '.$e->getMessage());
+                }
 
                 $results['dibayar']++;
                 $results['total'] += $jumlah;
@@ -179,8 +186,15 @@ class IuranController extends Controller
             return $pembayaran;
         });
 
-        $this->logActivity($request, 'pembayaran', 'iuran', "Pembayaran tagihan #{$iuran->id} (KK {$iuran->keluarga?->no_kk}) Rp ".number_format($validated['jumlah_bayar'], 0, ',', '.'), null, [
-            'iuran_id' => $iuran->id, 'jumlah' => $validated['jumlah_bayar'], 'metode' => $validated['metode_pembayaran'],
+        // Auto-post kas RT — kegagalan kas tidak boleh membatalkan pembayaran
+        try {
+            \App\Models\KasTransaksi::postFromPembayaran($pembayaran, $iuran);
+        } catch (\Throwable $e) {
+            \Log::warning('Auto-post kas gagal (pembayaran #'.$pembayaran->id.'): '.$e->getMessage());
+        }
+
+        $this->logActivity($request, 'pembayaran', 'iuran', "Pembayaran tagihan #{$iuran->id} (KK {$iuran->keluarga?->no_kk}) Rp ".number_format($jumlah, 0, ',', '.'), null, [
+            'iuran_id' => $iuran->id, 'jumlah' => $jumlah, 'metode' => $validated['metode_pembayaran'],
         ]);
 
         $iuran->refresh();

@@ -83,6 +83,7 @@ export const MODULES: SiwaModule[] = [
     nav: [
       { label: 'Kependudukan', href: '/laporan/kependudukan', match: ['/laporan/kependudukan'], icon: FileBarChart },
       { label: 'Wilayah', href: '/laporan/wilayah', match: ['/laporan/wilayah'], icon: Map },
+      { label: 'Keuangan', href: '/laporan/keuangan', match: ['/laporan/keuangan'], icon: Landmark },
     ],
   },
   {

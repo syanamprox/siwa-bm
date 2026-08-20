@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             PengaturanSistemSeeder::class,
             JenisIuranRt02Seeder::class,
             Rt02Rw03IuranSeeder::class,
+            KasUnitWilayahSeeder::class, // materialize unit kas wilayah (tanpa data demo)
         ]);
     }
 }

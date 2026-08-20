@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\IuranController;
 use App\Http\Controllers\Api\IuranGenerationController;
 use App\Http\Controllers\Api\JenisIuranController;
+use App\Http\Controllers\Api\KasController;
 use App\Http\Controllers\Api\KeluargaController;
 use App\Http\Controllers\Api\KeluargaIuranController;
 use App\Http\Controllers\Api\LaporanController;
@@ -32,6 +33,10 @@ Route::prefix('portal')->group(function () {
     Route::post('/cek-warga', [PortalController::class, 'cekWarga']);
     Route::post('/cek-keluarga', [PortalController::class, 'cekKeluarga']);
     Route::post('/cek-iuran', [PortalController::class, 'cekIuran']);
+
+    // Kas publik (transparansi keuangan, read-only ringkas)
+    Route::get('/kas/units', [KasController::class, 'unitsPublic']);
+    Route::get('/kas/summary', [KasController::class, 'summaryPublic']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -75,6 +80,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // Laporan
     Route::get('/laporan/kependudukan', [LaporanController::class, 'kependudukan']);
     Route::get('/laporan/wilayah', [LaporanController::class, 'wilayah']);
+
+    // Kas (semua role — scoping internal per wilayah)
+    Route::get('/kas/units', [KasController::class, 'units']);
+    Route::post('/kas/units', [KasController::class, 'storeUnit']);
+    Route::delete('/kas/units/{unit}', [KasController::class, 'destroyUnit']);
+    Route::get('/kas/summary', [KasController::class, 'summary']);
+    Route::post('/kas/transaksis', [KasController::class, 'storeTrx']);
+    Route::delete('/kas/transaksis/{trx}', [KasController::class, 'destroyTrx']);
 
     // Wilayah (admin-managed, read untuk semua role)
     Route::get('/wilayah/tree', [WilayahController::class, 'tree']);

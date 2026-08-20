@@ -19,7 +19,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-6 py-12">{children}</main>
+      <main className="mx-auto max-w-5xl px-6 py-12">{children}</main>
 
       <footer className="border-t border-line py-6 text-center text-xs text-slate-400">
         © 2026 Kelurahan — SIWA · Portal Publik

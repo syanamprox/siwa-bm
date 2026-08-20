@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { FileBarChart, Map, ArrowRight } from 'lucide-react'
+import { FileBarChart, Map, Landmark, ArrowRight } from 'lucide-react'
 
 const REPORTS = [
   {
@@ -15,6 +15,13 @@ const REPORTS = [
     title: 'Laporan Wilayah',
     desc: 'Struktur Kelurahan → RW → RT beserta sebaran kartu keluarga per RT.',
     accent: 'bg-emerald-50 text-emerald-600',
+  },
+  {
+    href: '/laporan/keuangan',
+    icon: Landmark,
+    title: 'Laporan Keuangan',
+    desc: 'Kas wilayah — saldo awal, pemasukan iuran & lainnya, pengeluaran, saldo akhir per RT/RW/Kelurahan/Kecamatan.',
+    accent: 'bg-purple-50 text-purple-600',
   },
 ]
 
