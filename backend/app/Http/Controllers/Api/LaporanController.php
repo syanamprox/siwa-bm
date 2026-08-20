@@ -55,7 +55,9 @@ class LaporanController extends Controller
             'laki' => (int) ($wargaPerRt[$rt->id]->laki ?? 0),
             'perempuan' => (int) ($wargaPerRt[$rt->id]->perempuan ?? 0),
             'total_warga' => (int) ($wargaPerRt[$rt->id]->total ?? 0),
-        ]);
+        ])
+            ->filter(fn ($r) => $r['total_kk'] > 0 || $r['total_warga'] > 0) // RT tanpa data tidak ditampilkan
+            ->values();
 
         return response()->json(['data' => [
             'rows' => $data->values(),
@@ -73,15 +75,31 @@ class LaporanController extends Controller
      */
     public function wilayah(): JsonResponse
     {
-        $keluargaQuery = Keluarga::query();
+        $user = request()->user();
         $rtIds = null;
-        if (! $this->isUnrestricted(request()->user())) {
-            $rtIds = $this->rtIdsForUser(request()->user())->all();
+        if (! $this->isUnrestricted($user)) {
+            $rtIds = $this->rtIdsForUser($user)->all();
         }
 
-        $tree = Wilayah::with(['children' => fn ($q) => $q->withCount(['keluarga as total_kk' => fn ($k) => $k->whereNull('deleted_at')])
-            ->when($rtIds, fn ($k) => $k->whereIn('id', $rtIds))])
-            ->where('tingkat', 'Kelurahan')
+        // Kelurahan dalam scope: turunan dari RT yang terlihat (lurah/rw/rt); camat/admin = semua.
+        $kelurahanIds = null;
+        if ($rtIds !== null) {
+            $kelurahanIds = Wilayah::whereIn('wilayahs.id', $rtIds)
+                ->join('wilayahs as rw', 'wilayahs.parent_id', '=', 'rw.id')
+                ->join('wilayahs as kel', 'rw.parent_id', '=', 'kel.id')
+                ->pluck('kel.id')
+                ->unique()
+                ->values();
+        }
+
+        // Tree Kelurahan → RW → RT (total_kk di level RT, RT difilter scope)
+        $tree = Wilayah::where('tingkat', 'Kelurahan')
+            ->when($kelurahanIds, fn ($q) => $q->whereIn('id', $kelurahanIds))
+            ->with(['children' => fn ($q) => $q->orderBy('kode')->with([
+                'children' => fn ($r) => $r->orderBy('kode')
+                    ->when($rtIds, fn ($r2) => $r2->whereIn('id', $rtIds))
+                    ->withCount(['keluarga as total_kk' => fn ($k) => $k->whereNull('deleted_at')]),
+            ])])
             ->orderBy('kode')
             ->get();
 

@@ -7,35 +7,61 @@ use App\Http\Controllers\Api\Concerns\LogsActivity;
 use App\Models\PengaturanSistem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PengaturanController extends Controller
 {
     use LogsActivity;
+
+    /** Key yang boleh diubah via API — di luar ini ditolak. */
+    private const ALLOWED_KEYS = [
+        'nama_aplikasi', 'versi_aplikasi', 'zona_waktu', 'format_tanggal', 'format_nomor', 'mata_uang',
+        'nama_kelurahan', 'nama_kecamatan', 'nama_kabupaten', 'nama_provinsi',
+        'telepon_kantor', 'email_kantor', 'alamat_kantor',
+        'maks_login', 'timeout_sesi', 'log_semua_aktivitas',
+    ];
+
+    /** Key canonical → [default, keterangan] */
+    private function spec(): array
+    {
+        return [
+            'app' => [
+                ['nama_aplikasi', 'SIWA - Sistem Informasi Warga', 'Nama Aplikasi'],
+                ['versi_aplikasi', '1.0.0', 'Versi Aplikasi'],
+                ['zona_waktu', 'Asia/Jakarta', 'Zona Waktu'],
+                ['format_tanggal', 'd/m/Y', 'Format Tanggal'],
+                ['format_nomor', 'id_ID', 'Format Penulisan Nomor'],
+                ['mata_uang', 'IDR', 'Mata Uang'],
+            ],
+            'kelurahan' => [
+                ['nama_kelurahan', 'Bendul Merisi', 'Nama Kelurahan'],
+                ['nama_kecamatan', 'Wonocolo', 'Nama Kecamatan'],
+                ['nama_kabupaten', 'Kota Surabaya', 'Nama Kabupaten/Kota'],
+                ['nama_provinsi', 'Jawa Timur', 'Nama Provinsi'],
+                ['telepon_kantor', '', 'Telepon Kantor Kelurahan'],
+                ['email_kantor', '', 'Email Kantor Kelurahan'],
+                ['alamat_kantor', '', 'Alamat Kantor Kelurahan'],
+            ],
+            'keamanan' => [
+                ['maks_login', '5', 'Batas Percobaan Login Gagal'],
+                ['timeout_sesi', '120', 'Sesi Login Berakhir Setelah (menit)'],
+                ['log_semua_aktivitas', '1', 'Catat Semua Aktivitas Petugas'],
+            ],
+        ];
+    }
 
     /**
      * GET /api/pengaturan — grouped settings (dengan default).
      */
     public function index(): JsonResponse
     {
-        $groups = [
-            'app' => [
-                ['key' => 'app_name', 'value' => PengaturanSistem::getValue('app_name', 'SIWA - Sistem Informasi Warga'), 'keterangan' => 'Nama aplikasi'],
-                ['key' => 'app_version', 'value' => PengaturanSistem::getValue('app_version', '1.0.0'), 'keterangan' => 'Versi aplikasi'],
-                ['key' => 'timezone', 'value' => PengaturanSistem::getValue('timezone', 'Asia/Jakarta'), 'keterangan' => 'Timezone'],
-                ['key' => 'date_format', 'value' => PengaturanSistem::getValue('date_format', 'd/m/Y'), 'keterangan' => 'Format tanggal'],
-            ],
-            'kelurahan' => [
-                ['key' => 'kelurahan_nama', 'value' => PengaturanSistem::getValue('kelurahan_nama', 'Bendul Merisi'), 'keterangan' => 'Nama kelurahan'],
-                ['key' => 'kecamatan_nama', 'value' => PengaturanSistem::getValue('kecamatan_nama', 'Wonocolo'), 'keterangan' => 'Nama kecamatan'],
-                ['key' => 'kota_nama', 'value' => PengaturanSistem::getValue('kota_nama', 'Kota Surabaya'), 'keterangan' => 'Nama kota'],
-                ['key' => 'kontak_telepon', 'value' => PengaturanSistem::getValue('kontak_telepon', ''), 'keterangan' => 'Telepon kantor kelurahan'],
-            ],
-            'keamanan' => [
-                ['key' => 'max_login_attempts', 'value' => PengaturanSistem::getValue('max_login_attempts', '5'), 'keterangan' => 'Maksimal percobaan login'],
-                ['key' => 'session_timeout', 'value' => PengaturanSistem::getValue('session_timeout', '120'), 'keterangan' => 'Timeout sesi (menit)'],
-                ['key' => 'log_all_activities', 'value' => PengaturanSistem::getValue('log_all_activities', '1'), 'keterangan' => 'Log semua aktivitas'],
-            ],
-        ];
+        $groups = [];
+        foreach ($this->spec() as $group => $items) {
+            $groups[$group] = array_map(
+                fn ($i) => ['key' => $i[0], 'value' => PengaturanSistem::getValue($i[0], $i[1]), 'keterangan' => $i[2]],
+                $items
+            );
+        }
 
         return response()->json(['data' => $groups]);
     }
@@ -47,8 +73,8 @@ class PengaturanController extends Controller
     {
         $validated = $request->validate([
             'settings' => ['required', 'array', 'min:1'],
-            'settings.*.key' => ['required', 'string', 'max:255'],
-            'settings.*.value' => ['required', 'string'],
+            'settings.*.key' => ['required', 'string', 'max:255', Rule::in(self::ALLOWED_KEYS)],
+            'settings.*.value' => ['required', 'string', 'max:1000'],
         ]);
 
         foreach ($validated['settings'] as $setting) {

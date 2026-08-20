@@ -16,7 +16,8 @@ class UserSeeder extends Seeder
     {
         $users = [
             ['name' => 'Administrator', 'username' => 'admin', 'password' => 'admin123', 'role' => 'admin', 'wilayah' => null],
-            ['name' => 'RULLY PRASETYA NEGARA, S.STP.,M.Si', 'username' => 'lurah', 'password' => 'lurah123', 'role' => 'lurah', 'wilayah' => null],
+            ['name' => 'MUSLICH HARIADI, S.SOS., M.M', 'username' => 'camat', 'password' => 'camat123', 'role' => 'camat', 'wilayah' => null],
+            ['name' => 'RULLY PRASETYA NEGARA, S.STP.,M.Si', 'username' => 'lurah', 'password' => 'lurah123', 'role' => 'lurah', 'wilayah' => 'Kelurahan Bendul Merisi'],
             ['name' => 'BAMBANG SETYAWAN', 'username' => 'rw03', 'password' => 'rw123', 'role' => 'rw', 'wilayah' => 'RW 03 Bendul Merisi'],
             ['name' => 'TRI BAGUS WAHYUDI', 'username' => 'rt01', 'password' => 'rt123', 'role' => 'rt', 'wilayah' => 'RT 01 RW 03 Bendul Merisi'],
             ['name' => 'AKHMAD SURYADI', 'username' => 'rt02', 'password' => 'rt123', 'role' => 'rt', 'wilayah' => 'RT 02 RW 03 Bendul Merisi'],

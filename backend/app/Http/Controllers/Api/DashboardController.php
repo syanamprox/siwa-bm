@@ -47,17 +47,17 @@ class DashboardController extends Controller
                 ->sum('jumlah_bayar'),
         ];
 
-        // Wilayah counts (admin/lurah: semua; rw/rt: miliknya)
+        // Wilayah counts (admin/camat: semua; lurah: kelurahan-nya; rw/rt: miliknya)
         if ($this->isUnrestricted($user)) {
             $data['total_rt'] = Wilayah::where('tingkat', 'RT')->count();
             $data['total_rw'] = Wilayah::where('tingkat', 'RW')->count();
             $data['warga_per_rw'] = $this->wargaPerRw();
         } else {
             $rtIds = $this->rtIdsForUser($user);
-            if ($user->role === 'rw') {
+            if (in_array($user->role, ['lurah', 'rw'], true)) {
                 $data['total_rt'] = $rtIds->count();
-                $data['total_rw'] = $user->userWilayah()->count();
-                $data['warga_per_rt'] = $this->wargaPerRt($rtIds);
+                $data['total_rw'] = Wilayah::whereIn('id', $rtIds)->distinct()->count('parent_id');
+                $data['warga_per_rw'] = $this->wargaPerRw($rtIds);
             } else {
                 $data['total_rt'] = 1;
                 $data['warga_per_rt'] = $this->wargaPerRt($rtIds);
@@ -107,14 +107,19 @@ class DashboardController extends Controller
         return response()->json(['data' => $data]);
     }
 
-    private function wargaPerRw()
+    private function wargaPerRw($rtIds = null)
     {
-        return Warga::join('keluargas', 'wargas.kk_id', '=', 'keluargas.id')
+        $query = Warga::join('keluargas', 'wargas.kk_id', '=', 'keluargas.id')
             ->join('wilayahs as rt', 'keluargas.rt_id', '=', 'rt.id')
             ->join('wilayahs as rw', 'rt.parent_id', '=', 'rw.id')
             ->whereNull('wargas.deleted_at')
-            ->whereNull('keluargas.deleted_at')
-            ->groupBy('rw.nama')
+            ->whereNull('keluargas.deleted_at');
+
+        if ($rtIds !== null) {
+            $query->whereIn('rt.id', $rtIds);
+        }
+
+        return $query->groupBy('rw.nama')
             ->selectRaw('rw.nama as nama, COUNT(*) as total')
             ->pluck('total', 'nama');
     }

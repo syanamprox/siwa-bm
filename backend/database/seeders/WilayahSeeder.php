@@ -31,6 +31,7 @@ class WilayahSeeder extends Seeder
             'tingkat' => 'Kelurahan',
             'parent_id' => null,
         ]);
+        $kelurahanKode = 'BM';
         $totalKelurahan++;
 
         // RW Bendul Merisi
@@ -67,7 +68,7 @@ class WilayahSeeder extends Seeder
 
         foreach ($rwBendulMerisi as $rwNumber => $rwName) {
             $rwId = DB::table('wilayahs')->insertGetId([
-                'kode' => $rwNumber,
+                'kode' => $kelurahanKode . $rwNumber,
                 'nama' => $rwName,
                 'tingkat' => 'RW',
                 'parent_id' => $bendulMerisiId,
@@ -78,7 +79,7 @@ class WilayahSeeder extends Seeder
             for ($j = 1; $j <= $rtBendulMerisi[$rwNumber]; $j++) {
                 $rtNumber = str_pad($j, 2, '0', STR_PAD_LEFT);
                 DB::table('wilayahs')->insert([
-                    'kode' => "{$rwNumber}{$rtNumber}",
+                    'kode' => $kelurahanKode . $rwNumber . $rtNumber,
                     'nama' => "RT $rtNumber $rwName",
                     'tingkat' => 'RT',
                     'parent_id' => $rwId,
@@ -94,6 +95,7 @@ class WilayahSeeder extends Seeder
             'tingkat' => 'Kelurahan',
             'parent_id' => null,
         ]);
+        $kelurahanKode = 'JW';
         $totalKelurahan++;
 
         // RW Jemur Wonosari
@@ -126,7 +128,7 @@ class WilayahSeeder extends Seeder
 
         foreach ($rwJemurWonosari as $rwNumber => $rwName) {
             $rwId = DB::table('wilayahs')->insertGetId([
-                'kode' => $rwNumber,
+                'kode' => $kelurahanKode . $rwNumber,
                 'nama' => $rwName,
                 'tingkat' => 'RW',
                 'parent_id' => $jemurWonosariId,
@@ -137,7 +139,7 @@ class WilayahSeeder extends Seeder
             for ($j = 1; $j <= $rtJemurWonosari[$rwNumber]; $j++) {
                 $rtNumber = str_pad($j, 2, '0', STR_PAD_LEFT);
                 DB::table('wilayahs')->insert([
-                    'kode' => "{$rwNumber}{$rtNumber}",
+                    'kode' => $kelurahanKode . $rwNumber . $rtNumber,
                     'nama' => "RT $rtNumber $rwName",
                     'tingkat' => 'RT',
                     'parent_id' => $rwId,
@@ -153,6 +155,7 @@ class WilayahSeeder extends Seeder
             'tingkat' => 'Kelurahan',
             'parent_id' => null,
         ]);
+        $kelurahanKode = 'MR';
         $totalKelurahan++;
 
         // RW Margorejo
@@ -181,7 +184,7 @@ class WilayahSeeder extends Seeder
 
         foreach ($rwMargorejo as $rwNumber => $rwName) {
             $rwId = DB::table('wilayahs')->insertGetId([
-                'kode' => $rwNumber,
+                'kode' => $kelurahanKode . $rwNumber,
                 'nama' => $rwName,
                 'tingkat' => 'RW',
                 'parent_id' => $margorejoId,
@@ -192,7 +195,7 @@ class WilayahSeeder extends Seeder
             for ($j = 1; $j <= $rtMargorejo[$rwNumber]; $j++) {
                 $rtNumber = str_pad($j, 2, '0', STR_PAD_LEFT);
                 DB::table('wilayahs')->insert([
-                    'kode' => "{$rwNumber}{$rtNumber}",
+                    'kode' => $kelurahanKode . $rwNumber . $rtNumber,
                     'nama' => "RT $rtNumber $rwName",
                     'tingkat' => 'RT',
                     'parent_id' => $rwId,
@@ -208,6 +211,7 @@ class WilayahSeeder extends Seeder
             'tingkat' => 'Kelurahan',
             'parent_id' => null,
         ]);
+        $kelurahanKode = 'SD';
         $totalKelurahan++;
 
         // RW Sidosermo
@@ -236,7 +240,7 @@ class WilayahSeeder extends Seeder
 
         foreach ($rwSidosermo as $rwNumber => $rwName) {
             $rwId = DB::table('wilayahs')->insertGetId([
-                'kode' => $rwNumber,
+                'kode' => $kelurahanKode . $rwNumber,
                 'nama' => $rwName,
                 'tingkat' => 'RW',
                 'parent_id' => $sidosermoId,
@@ -247,7 +251,7 @@ class WilayahSeeder extends Seeder
             for ($j = 1; $j <= $rtSidosermo[$rwNumber]; $j++) {
                 $rtNumber = str_pad($j, 2, '0', STR_PAD_LEFT);
                 DB::table('wilayahs')->insert([
-                    'kode' => "{$rwNumber}{$rtNumber}",
+                    'kode' => $kelurahanKode . $rwNumber . $rtNumber,
                     'nama' => "RT $rtNumber $rwName",
                     'tingkat' => 'RT',
                     'parent_id' => $rwId,
@@ -263,6 +267,7 @@ class WilayahSeeder extends Seeder
             'tingkat' => 'Kelurahan',
             'parent_id' => null,
         ]);
+        $kelurahanKode = 'SW';
         $totalKelurahan++;
 
         // RW Siwalankerto
@@ -287,7 +292,7 @@ class WilayahSeeder extends Seeder
 
         foreach ($rwSiwalankerto as $rwNumber => $rwName) {
             $rwId = DB::table('wilayahs')->insertGetId([
-                'kode' => $rwNumber,
+                'kode' => $kelurahanKode . $rwNumber,
                 'nama' => $rwName,
                 'tingkat' => 'RW',
                 'parent_id' => $siwalankertoId,
@@ -298,7 +303,7 @@ class WilayahSeeder extends Seeder
             for ($j = 1; $j <= $rtSiwalankerto[$rwNumber]; $j++) {
                 $rtNumber = str_pad($j, 2, '0', STR_PAD_LEFT);
                 DB::table('wilayahs')->insert([
-                    'kode' => "{$rwNumber}{$rtNumber}",
+                    'kode' => $kelurahanKode . $rwNumber . $rtNumber,
                     'nama' => "RT $rtNumber $rwName",
                     'tingkat' => 'RT',
                     'parent_id' => $rwId,

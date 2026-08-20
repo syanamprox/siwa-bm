@@ -8,19 +8,27 @@ use Illuminate\Support\Collection;
 
 /**
  * Scoping data per-role berdasarkan user_wilayahs.
- * admin/lurah: tanpa batas. rw: semua RT di bawah RW-nya. rt: RT miliknya.
+ * admin: tanpa batas (sistem). camat: seluruh kecamatan (semua kelurahan).
+ * lurah: kelurahan pivot-nya saja. rw: RT-RT di bawah RW-nya. rt: RT miliknya.
  * Data domisili mengalir via keluargas.rt_id → wilayahs tree.
  */
 trait ScopesToWilayah
 {
     /**
-     * RT wilayah IDs yang boleh diakses user (untuk role rw/rt).
+     * RT wilayah IDs yang boleh diakses user (lurah/rw/rt).
      *
      * @return Collection<int>
      */
     private function rtIdsForUser($user): Collection
     {
-        $wilayahIds = $user->userWilayah()->pluck('wilayah_id');
+        $wilayahIds = $user->wilayah()->allRelatedIds();
+
+        // lurah: pivot = Kelurahan → turun 2 level ke RT
+        if ($user->role === 'lurah') {
+            $rwIds = Wilayah::whereIn('parent_id', $wilayahIds)->pluck('id');
+
+            return Wilayah::whereIn('parent_id', $rwIds)->pluck('id');
+        }
 
         if ($user->role === 'rw') {
             return Wilayah::whereIn('parent_id', $wilayahIds)->pluck('id');
@@ -31,7 +39,7 @@ trait ScopesToWilayah
 
     private function isUnrestricted($user): bool
     {
-        return in_array($user->role, ['admin', 'lurah'], true);
+        return in_array($user->role, ['admin', 'camat'], true);
     }
 
     /**

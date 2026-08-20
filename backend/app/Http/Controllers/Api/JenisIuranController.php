@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\Concerns\LogsActivity;
+use App\Http\Controllers\Api\Concerns\ScopesToWilayah;
 use App\Models\JenisIuran;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,24 +12,22 @@ use Illuminate\Validation\Rule;
 
 class JenisIuranController extends Controller
 {
-    use LogsActivity;
+    use LogsActivity, ScopesToWilayah;
 
     /**
-     * GET /api/jenis-iuran — global (rt_id null) + milik RT user/terpilih.
+     * GET /api/jenis-iuran — global (rt_id null) + milik RT dalam scope user.
      */
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
         $query = JenisIuran::query();
 
-        // Scope RT: login rw/rt hanya lihat jenis global + milik RT-nya
-        if (! in_array($user->role, ['admin', 'lurah'], true)) {
-            $rtIds = $user->role === 'rw'
-                ? \App\Models\Wilayah::whereIn('parent_id', $user->wilayah()->pluck('wilayah_id'))->pluck('id')
-                : $user->wilayah()->pluck('wilayah_id');
+        // Scope: rw/rt/lurah hanya lihat jenis global + milik wilayahnya
+        if (! $this->isUnrestricted($user)) {
+            $rtIds = $this->rtIdsForUser($user);
             $query->where(fn ($q) => $q->whereNull('rt_id')->orWhereIn('rt_id', $rtIds));
         }
-        // Filter eksplisit ?rt_id= (admin lihat jenis satu RT)
+        // Filter eksplisit ?rt_id= (admin/camat lihat jenis satu RT)
         if ($request->filled('rt_id')) {
             $rtId = (int) $request->input('rt_id');
             $query->where(fn ($q) => $q->whereNull('rt_id')->orWhere('rt_id', $rtId));

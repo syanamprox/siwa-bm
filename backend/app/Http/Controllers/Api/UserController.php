@@ -154,7 +154,7 @@ class UserController extends Controller
             'password' => $ignoreId
                 ? ['nullable', 'string', 'min:6']
                 : ['required', 'string', 'min:6'],
-            'role' => ['required', Rule::in(['admin', 'lurah', 'rw', 'rt'])],
+            'role' => ['required', Rule::in(['admin', 'camat', 'lurah', 'rw', 'rt'])],
             'status_aktif' => ['boolean'],
             'wilayah_ids' => ['nullable', 'array'],
             'wilayah_ids.*' => ['exists:wilayahs,id'],

@@ -109,8 +109,8 @@ class PortalController extends Controller
         $iurans = Iuran::with(['jenisIuran:id,nama', 'pembayaran'])
             ->where('kk_id', $warga->kk_id)
             ->where('status', '!=', 'batal')
+            ->where('periode_bulan', '>=', now()->subMonths(11)->startOfMonth()->format('Y-m')) // 12 bulan terakhir (window), bukan 12 baris
             ->orderByDesc('periode_bulan')
-            ->take(12)
             ->get();
 
         $this->logPortalAccess($request, 'iuran', $warga->nik);
@@ -126,13 +126,16 @@ class PortalController extends Controller
                 'total_tunggakan' => (float) $tagihan->sum('nominal'),
                 'jumlah_lunas' => $iurans->where('status', 'lunas')->count(),
             ],
-            'detail' => $iurans->take(6)->map(fn ($i) => [
+            'detail' => $iurans->values()->map(fn ($i) => [
                 'jenis' => $i->jenisIuran?->nama ?? '-',
                 'periode' => $this->formatPeriode($i->periode_bulan),
                 'nominal' => (float) $i->nominal,
                 'status' => $i->status,
                 'jatuh_tempo' => $i->jatuh_tempo?->format('d/m/Y'),
                 'dibayar' => (float) $i->pembayaran->sum('jumlah_bayar'),
+                'dibayar_pada' => $i->status === 'lunas'
+                    ? $i->pembayaran->max('created_at')?->timezone(config('app.timezone'))->translatedFormat('d/m/Y')
+                    : null,
             ]),
         ]]);
     }

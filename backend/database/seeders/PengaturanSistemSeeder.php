@@ -62,6 +62,34 @@ class PengaturanSistemSeeder extends Seeder
                 'deskripsi' => 'Versi Aplikasi',
             ],
             [
+                'key' => 'zona_waktu',
+                'value' => 'Asia/Jakarta',
+                'tipe' => 'select',
+                'kategori' => 'aplikasi',
+                'deskripsi' => 'Zona Waktu',
+            ],
+            [
+                'key' => 'format_tanggal',
+                'value' => 'd/m/Y',
+                'tipe' => 'select',
+                'kategori' => 'aplikasi',
+                'deskripsi' => 'Format Tanggal',
+            ],
+            [
+                'key' => 'format_nomor',
+                'value' => 'id_ID',
+                'tipe' => 'select',
+                'kategori' => 'aplikasi',
+                'deskripsi' => 'Format Penulisan Nomor',
+            ],
+            [
+                'key' => 'mata_uang',
+                'value' => 'IDR',
+                'tipe' => 'select',
+                'kategori' => 'aplikasi',
+                'deskripsi' => 'Mata Uang',
+            ],
+            [
                 'key' => 'logo_aplikasi',
                 'value' => 'images/logo.png',
                 'tipe' => 'file',
@@ -103,9 +131,32 @@ class PengaturanSistemSeeder extends Seeder
             [
                 'key' => 'format_nomor',
                 'value' => 'id_ID',
-                'tipe' => 'text',
+                'tipe' => 'select',
                 'kategori' => 'keuangan',
                 'deskripsi' => 'Format Penulisan Nomor',
+            ],
+
+            // Keamanan
+            [
+                'key' => 'maks_login',
+                'value' => '5',
+                'tipe' => 'select',
+                'kategori' => 'keamanan',
+                'deskripsi' => 'Batas Percobaan Login Gagal',
+            ],
+            [
+                'key' => 'timeout_sesi',
+                'value' => '120',
+                'tipe' => 'select',
+                'kategori' => 'keamanan',
+                'deskripsi' => 'Sesi Login Berakhir Setelah',
+            ],
+            [
+                'key' => 'log_semua_aktivitas',
+                'value' => '1',
+                'tipe' => 'select',
+                'kategori' => 'keamanan',
+                'deskripsi' => 'Catat Semua Aktivitas Petugas',
             ],
         ];
 
