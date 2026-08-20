@@ -158,11 +158,16 @@ export default function GeneratePage() {
                                 {it.jenis_iuran} {fmtMoney(it.nominal)}
                               </span>
                             ))}
+                            {(f.skip ?? []).map((sk) => (
+                              <span key={`skip-${sk.jenis_iuran_id}`} className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-200" title={sk.alasan}>
+                                {sk.jenis_iuran} · {sk.alasan}
+                              </span>
+                            ))}
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-right font-bold tabular-nums text-slate-900">{fmtMoney(f.total)}</td>
                         <td className="px-4 py-2.5">
-                          {f.sudah_ada > 0 ? <StatusBadge status="pending" label="Sudah Ada" /> : <span className="text-slate-300">—</span>}
+                          {f.sudah_ada > 0 ? <StatusBadge status="pending" label={`${f.sudah_ada} di-skip`} /> : <span className="text-slate-300">—</span>}
                         </td>
                       </tr>
                     ))}
@@ -176,7 +181,7 @@ export default function GeneratePage() {
             <div className="flex items-center justify-between border-t border-line px-4 py-3">
               <Button variant="secondary" onClick={() => setStep('form')}>← Ubah Parameter</Button>
               <Button
-                disabled={generate.isPending || (preview?.data?.preview ?? []).length === 0}
+                disabled={generate.isPending || (preview?.data?.summary.total_iuran ?? 0) === 0}
                 onClick={() =>
                   generate.mutate(
                     {

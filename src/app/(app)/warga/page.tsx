@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Users, Plus, Search, Pencil, Trash2, FileImage } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Users, Plus, RotateCcw, Pencil, Trash2, FileImage } from 'lucide-react'
 import { toast } from 'sonner'
 import { useWargaList, useWargaMutations, useWargaStats, type WargaFilters } from '@/hooks/use-siwa'
 import { PageHeader } from '@/components/PageHeader'
@@ -26,8 +26,19 @@ export default function WargaPage() {
   const { data: stats } = useWargaStats()
   const { create, update, remove } = useWargaMutations()
 
-  function applySearch() {
-    setFilters((f) => ({ ...f, search: searchInput || undefined, page: 1 }))
+  // Auto-search: debounce 400ms — tanpa tombol cari
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilters((f) => (f.search === (searchInput || undefined) ? f : { ...f, search: searchInput || undefined, page: 1 }))
+    }, 400)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  const hasActiveFilter = Boolean(searchInput || filters.jenis_kelamin || filters.agama)
+
+  function resetFilters() {
+    setSearchInput('')
+    setFilters({ per_page: 15 })
   }
 
   return (
@@ -50,7 +61,6 @@ export default function WargaPage() {
               placeholder="Cari NIK / nama / no KK…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && applySearch()}
             />
           </div>
           <Select
@@ -68,9 +78,11 @@ export default function WargaPage() {
             placeholder="Agama"
             options={AGAMA.map((a) => ({ value: a, label: a }))}
           />
-          <Button variant="secondary" onClick={applySearch}>
-            <Search size={14} /> Cari
-          </Button>
+          {hasActiveFilter && (
+            <Button variant="secondary" onClick={resetFilters}>
+              <RotateCcw size={14} /> Reset
+            </Button>
+          )}
         </div>
       </Card>
 
@@ -109,8 +121,19 @@ export default function WargaPage() {
                     </td>
                     <td className="px-4 py-3 tabular-nums text-slate-600">{w.umur ?? '—'}</td>
                     <td className="px-4 py-3 text-slate-600">{w.pekerjaan}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {w.keluarga ? `${w.keluarga.no_kk.slice(-4)} · ${w.keluarga.wilayah?.nama ?? ''}` : <span className="text-slate-300">tanpa KK</span>}
+                    <td className="px-4 py-3">
+                      {w.keluarga ? (
+                        <div className="leading-tight">
+                          <span className="tabular-nums text-slate-600" title={`No. KK ${w.keluarga.no_kk}`}>
+                            KK ···{w.keluarga.no_kk.slice(-4)}
+                          </span>
+                          <span className="block text-[11px] text-slate-400">
+                            a.n. {w.keluarga.kepala_keluarga?.nama_lengkap ?? w.keluarga.nama_kepala_keluarga ?? '—'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-300">tanpa KK</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {w.hubungan_keluarga === 'Kepala Keluarga' ? (

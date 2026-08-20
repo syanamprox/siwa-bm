@@ -16,7 +16,7 @@ interface PortalIuran {
 const STATUS_UI: Record<string, { label: string; cls: string }> = {
   lunas: { label: 'Lunas', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' },
   belum_bayar: { label: 'Belum Bayar', cls: 'bg-amber-50 text-amber-700 ring-amber-600/20' },
-  sebagian: { label: 'Sebagian', cls: 'bg-sky-50 text-sky-700 ring-sky-600/20' },
+  sebagian: { label: 'Sebagian', cls: 'bg-sky-50 text-sky-700 ring-sky-600/20' }, // legacy — tidak dipakai lagi
 }
 
 const rupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID')

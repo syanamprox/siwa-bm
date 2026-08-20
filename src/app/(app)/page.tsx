@@ -26,7 +26,8 @@ function greeting(): string {
 
 export default function DashboardPage() {
   const user = useAuth((s) => s.user)
-  const { data: dash, isLoading, isError, error, refetch } = useDashboard()
+  const { data: raw, isLoading, isError, error, refetch } = useDashboard()
+  const dash = raw?.data
   const { data: wilayahTree } = useWilayahTree()
 
   const firstName = (user?.name ?? 'User').split(' ')[0]

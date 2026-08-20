@@ -6,6 +6,7 @@ import {
   Map,
   FileBarChart,
   ShieldCheck,
+  CircleHelp,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -96,6 +97,17 @@ export const MODULES: SiwaModule[] = [
       { label: 'Pengaturan', href: '/pengaturan', match: ['/pengaturan'], icon: ShieldCheck },
       { label: 'Backup', href: '/backup', match: ['/backup'], icon: ShieldCheck },
       { label: 'Log Aktivitas', href: '/aktivitas', match: ['/aktivitas'], icon: ShieldCheck },
+    ],
+  },
+  {
+    key: 'faq',
+    label: 'FAQ',
+    href: '/faq',
+    icon: CircleHelp,
+    match: ['/faq'],
+    roles: ['admin', 'lurah', 'rw', 'rt'],
+    nav: [
+      { label: 'Dokumentasi', href: '/faq', match: ['/faq'], icon: CircleHelp },
     ],
   },
 ]

@@ -71,12 +71,12 @@ export default function KeluargaIuranPage() {
                 {data!.data.map((c) => (
                   <tr key={c.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-900">{c.keluarga?.nama_kepala_keluarga ?? '-'}</p>
+                      <p className="font-semibold text-slate-900">{c.keluarga?.kepala_keluarga?.nama_lengkap ?? c.keluarga?.nama_kepala_keluarga ?? '-'}</p>
                       <p className="text-[11px] tabular-nums text-slate-400">{c.keluarga?.no_kk}</p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{c.jenisIuran?.nama}</td>
+                    <td className="px-4 py-3 text-slate-600">{c.jenis_iuran?.nama}</td>
                     <td className="px-4 py-3 text-right font-bold tabular-nums text-slate-900">
-                      {fmtMoney(Number(c.nominal_custom ?? c.jenisIuran?.jumlah ?? 0))}
+                      {fmtMoney(Number(c.nominal_custom ?? c.jenis_iuran?.jumlah ?? 0))}
                       {c.nominal_custom && <span className="ml-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-600">custom</span>}
                     </td>
                     <td className="px-4 py-3 max-w-[200px] truncate text-slate-500">{c.alasan_custom ?? '—'}</td>
@@ -100,7 +100,7 @@ export default function KeluargaIuranPage() {
 
       {/* Edit modal */}
       <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Edit Koneksi Iuran"
-        subtitle={`${editTarget?.keluarga?.no_kk} → ${editTarget?.jenisIuran?.nama}`} size="sm">
+        subtitle={`${editTarget?.keluarga?.no_kk} → ${editTarget?.jenis_iuran?.nama}`} size="sm">
         {editTarget && (
           <ConnEditForm conn={editTarget} onClose={() => setEditTarget(null)}
             onSubmit={(payload) => { updateConn.mutate({ id: editTarget.id, ...payload }); setEditTarget(null) }} />
@@ -109,10 +109,10 @@ export default function KeluargaIuranPage() {
 
       {/* Disconnect confirm */}
       <Modal open={!!disconnectTarget} onClose={() => setDisconnectTarget(null)} title="Putuskan Iuran?" size="sm"
-        subtitle={disconnectTarget ? `${disconnectTarget.keluarga?.no_kk} → ${disconnectTarget.jenisIuran?.nama}` : undefined}>
+        subtitle={disconnectTarget ? `${disconnectTarget.keluarga?.no_kk} → ${disconnectTarget.jenis_iuran?.nama}` : undefined}>
         <p className="text-sm text-slate-600">
-          Keluarga <strong>{disconnectTarget?.keluarga?.nama_kepala_keluarga ?? disconnectTarget?.keluarga?.no_kk}</strong> tidak
-          lagi ditagih <strong>{disconnectTarget?.jenisIuran?.nama}</strong> pada generate tagihan berikutnya. Riwayat tagihan
+          Keluarga <strong>{disconnectTarget?.keluarga?.kepala_keluarga?.nama_lengkap ?? disconnectTarget?.keluarga?.no_kk}</strong> tidak
+          lagi ditagih <strong>{disconnectTarget?.jenis_iuran?.nama}</strong> pada generate tagihan berikutnya. Riwayat tagihan
           yang sudah ada tetap tersimpan.
         </p>
         <div className="mt-5 flex justify-end gap-2">
@@ -138,7 +138,7 @@ function ConnEditForm({ conn, onClose, onSubmit }: {
   return (
     <div className="space-y-4">
       <div>
-        <Label>Nominal Custom (kosongkan = default {fmtMoney(Number(conn.jenisIuran?.jumlah ?? 0))})</Label>
+        <Label>Nominal Custom (kosongkan = default {fmtMoney(Number(conn.jenis_iuran?.jumlah ?? 0))})</Label>
         <Input type="number" min={0} value={nominal} onChange={(e) => setNominal(e.target.value)} className="tabular-nums" placeholder="default" />
       </div>
       <div>

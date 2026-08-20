@@ -9,7 +9,7 @@ import type { DashboardData, Iuran, JenisIuran, Keluarga, KeluargaIuranConn, Pag
 export function useDashboard() {
   return useQuery({
     queryKey: ['dashboard'],
-    queryFn: () => api.get<DashboardData>('/dashboard'),
+    queryFn: () => api.get<{ data: DashboardData }>('/dashboard'),
     staleTime: 30_000,
   })
 }
@@ -205,11 +205,30 @@ export function useIuranStats(filters?: Partial<IuranFilters>) {
 export function useBayar() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, ...body }: { id: number; jumlah_bayar: number; metode_pembayaran: string; keterangan?: string }) =>
+    // Tanpa jumlah — pembayaran selalu nominal penuh (tidak ada bayar sebagian)
+    mutationFn: ({ id, ...body }: { id: number; metode_pembayaran: string; keterangan?: string }) =>
       api.post(`/iuran/${id}/bayar`, body),
     onSuccess: () => {
       toast.success('Pembayaran dicatat')
       qc.invalidateQueries({ queryKey: ['iuran'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  })
+}
+
+/** Multi pembayaran (rapelan) — beberapa tagihan lunas sekaligus, satu metode. */
+export function useBayarBatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: { payments: { iuran_id: number }[]; metode_pembayaran: string; keterangan?: string }) =>
+      api.post<{ data: { dibayar: number; total: number; gagal: { iuran_id: number; alasan: string }[] } }>('/iuran/bayar-batch', body),
+    onSuccess: (r) => {
+      const d = r.data
+      if (d.gagal.length > 0) toast.warning(`${d.dibayar} tagihan lunas · ${d.gagal.length} dilewati`)
+      else toast.success(`${d.dibayar} tagihan lunas · total ${d.total.toLocaleString('id-ID')}`)
+      qc.invalidateQueries({ queryKey: ['iuran'] })
+      qc.invalidateQueries({ queryKey: ['iuran-stats'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -228,7 +247,12 @@ export function usePayments(iuranId: number | null) {
 export function useGenerationPreview(params: { periode_bulan?: string; rt_id?: number; jenis_iuran_ids?: number[] }, enabled: boolean) {
   return useQuery({
     queryKey: ['gen-preview', params],
-    queryFn: () => api.get<{ data: GenerationPreview }>(`/iuran/generation/preview?${new URLSearchParams(clean(params))}`),
+    queryFn: () => {
+      // Array harus dikirim sebagai jenis_iuran_ids[]=a&jenis_iuran_ids[]=b (URLSearchParams meringkus array jadi "1,2")
+      const qs = new URLSearchParams(clean({ periode_bulan: params.periode_bulan, rt_id: params.rt_id }))
+      ;(params.jenis_iuran_ids ?? []).forEach((id) => qs.append('jenis_iuran_ids[]', String(id)))
+      return api.get<{ data: GenerationPreview }>(`/iuran/generation/preview?${qs}`)
+    },
     enabled: enabled && !!params.periode_bulan,
   })
 }
@@ -240,6 +264,7 @@ export interface GenerationPreview {
     kepala_keluarga: string
     rt: string | null
     iurans: { jenis_iuran_id: number; jenis_iuran: string; nominal: number }[]
+    skip: { jenis_iuran_id: number; jenis_iuran: string; nominal: number; alasan: string }[]
     total: number
     sudah_ada: number
   }[]

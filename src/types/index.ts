@@ -45,6 +45,7 @@ export interface KeluargaRef {
   kepala_keluarga_id?: number | null
   rt_id?: number | null
   nama_kepala_keluarga?: string | null
+  kepala_keluarga?: { id: number; nama_lengkap: string } | null
   wilayah?: WilayahRef | null
 }
 
@@ -53,7 +54,7 @@ export interface Keluarga {
   id: number
   no_kk: string
   kepala_keluarga_id: number | null
-  kepalaKeluarga?: Warga | null
+  kepala_keluarga?: Warga | null
   nama_kepala_keluarga?: string | null
   alamat_kk: string
   rt_kk: string | null
@@ -65,15 +66,15 @@ export interface Keluarga {
   alamat_domisili: string | null
   rt_id: number | null
   wilayah?: WilayahRef | null
-  status_domisili_keluarga: string
-  tanggal_mulai_domisili_keluarga: string | null
+  status_domisili_keluarga?: string | null // dipensiunkan — status keluarga kini berbasis domisili
+  tanggal_mulai_domisili_keluarga?: string | null
   status_keluarga: string
   status_label?: string
   keterangan_status: string | null
   tanggal_status: string | null
   anggota_keluarga_count?: number
-  anggotaKeluarga?: Warga[]
-  keluargaIuran?: KeluargaIuranConn[]
+  anggota_keluarga?: Warga[]
+  keluarga_iuran?: KeluargaIuranConn[]
 }
 
 export interface KeluargaIuranConn {
@@ -83,7 +84,7 @@ export interface KeluargaIuranConn {
   nominal_custom: number | null
   alasan_custom: string | null
   status_aktif: boolean
-  jenisIuran?: JenisIuran
+  jenis_iuran?: JenisIuran
   keluarga?: KeluargaRef | null
 }
 
@@ -107,11 +108,11 @@ export interface Iuran {
   periode_bulan: string
   nominal: number
   denda_terlambatan: number
-  status: 'belum_bayar' | 'sebagian' | 'lunas' | 'batal'
+  status: 'belum_bayar' | 'lunas'
   jatuh_tempo: string | null
   keterangan: string | null
   keluarga?: KeluargaRef | null
-  jenisIuran?: JenisIuran | null
+  jenis_iuran?: JenisIuran | null
   total_dibayar?: number
 }
 

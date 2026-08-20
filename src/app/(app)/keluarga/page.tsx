@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
-  Home, Plus, Search, Pencil, Trash2, Users, MapPin, ChevronRight,
+  Home, Plus, RotateCcw, Pencil, Trash2, Users, MapPin, ChevronRight,
   UserPlus, UserMinus, Crown, Settings2, Coins,
 } from 'lucide-react'
 import { useKeluargaList, useKeluarga, useKeluargaMutations, useRtOptions, useWargaList, useAvailableJenisIuran, useConnectIuran, useDisconnectIuran, type KeluargaFilters } from '@/hooks/use-siwa'
@@ -14,8 +14,17 @@ import { Drawer } from '@/components/ui/Drawer'
 import { QueryError } from '@/components/QueryError'
 import type { Keluarga, WilayahRef } from '@/types'
 
-const STATUS_KELUARGA = ['Aktif', 'Pindah', 'Non-Aktif', 'Dibubarkan']
-const STATUS_DOMISILI = ['Tetap', 'Non Domisili', 'Luar', 'Sementara']
+const STATUS_KELUARGA = ['Tetap', 'Domisili', 'Non Domisili', 'Pendatang']
+
+/** Warna badge per status (Tetap hijau · Domisili biru · Pendatang amber · Non Domisili abu) */
+function statusBadge(status?: string | null): string {
+  switch (status) {
+    case 'Tetap': return 'active'
+    case 'Domisili': return 'approved'
+    case 'Pendatang': return 'pending'
+    default: return 'draft'
+  }
+}
 const HUBUNGAN = ['Kepala Keluarga', 'Suami', 'Istri', 'Anak', 'Menantu', 'Cucu', 'Orang Tua', 'Mertua', 'Famili Lain', 'Lainnya']
 
 export default function KeluargaPage() {
@@ -28,8 +37,19 @@ export default function KeluargaPage() {
   const { data, isLoading, isFetching, isError, error, refetch } = useKeluargaList(filters)
   const { create, update, remove } = useKeluargaMutations()
 
-  function applySearch() {
-    setFilters((f) => ({ ...f, search: searchInput || undefined, page: 1 }))
+  // Auto-search: debounce 400ms — pola sama dengan page warga
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setFilters((f) => (f.search === (searchInput || undefined) ? f : { ...f, search: searchInput || undefined, page: 1 }))
+    }, 400)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
+  const hasActiveFilter = Boolean(searchInput || filters.status)
+
+  function resetFilters() {
+    setSearchInput('')
+    setFilters({ per_page: 15 })
   }
 
   return (
@@ -45,11 +65,13 @@ export default function KeluargaPage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
             <Input placeholder="Cari no KK / nama kepala keluarga…" value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && applySearch()} />
+              onChange={(e) => setSearchInput(e.target.value)} />
           </div>
           <Select value={filters.status ?? ''} onChange={(v) => setFilters((f) => ({ ...f, status: v || undefined, page: 1 }))}
             placeholder="Semua Status" options={STATUS_KELUARGA.map((s) => ({ value: s, label: s }))} />
-          <Button variant="secondary" onClick={applySearch}><Search size={14} /> Cari</Button>
+          {hasActiveFilter && (
+            <Button variant="secondary" onClick={resetFilters}><RotateCcw size={14} /> Reset</Button>
+          )}
         </div>
       </Card>
 
@@ -79,7 +101,7 @@ export default function KeluargaPage() {
                   <tr key={k.id} className={`cursor-pointer hover:bg-slate-50 ${isFetching ? 'opacity-60' : ''}`}
                     onClick={() => setDetailId(k.id)}>
                     <td className="px-4 py-3 tabular-nums text-slate-600">{k.no_kk}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{k.nama_kepala_keluarga ?? <span className="text-amber-600">belum ada</span>}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">{k.kepala_keluarga?.nama_lengkap ?? k.nama_kepala_keluarga ?? <span className="text-amber-600">belum ada</span>}</td>
                     <td className="px-4 py-3 text-slate-600">
                       <span className="inline-flex items-center gap-1"><MapPin size={12} className="text-slate-300" />{k.wilayah?.nama ?? '-'}</span>
                     </td>
@@ -88,7 +110,7 @@ export default function KeluargaPage() {
                         <Users size={11} /> {k.anggota_keluarga_count ?? 0}
                       </span>
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={k.status_keluarga === 'Aktif' ? 'active' : k.status_keluarga === 'Pindah' ? 'pending' : 'archived'} label={k.status_keluarga} /></td>
+                    <td className="px-4 py-3"><StatusBadge status={statusBadge(k.status_keluarga)} label={k.status_keluarga} /></td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
                         <Button size="sm" variant="ghost" onClick={() => setDetailId(k.id)} title="Detail"><ChevronRight size={14} /></Button>
@@ -174,10 +196,10 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg font-extrabold tracking-tight text-slate-900 tabular-nums">{kel.no_kk}</h2>
-                  <StatusBadge status={kel.status_keluarga === 'Aktif' ? 'active' : kel.status_keluarga === 'Pindah' ? 'pending' : 'archived'} label={kel.status_keluarga} />
+                  <StatusBadge status={statusBadge(kel.status_keluarga)} label={kel.status_keluarga} />
                 </div>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Kepala: {kel.nama_kepala_keluarga ?? '—'} · {kel.anggotaKeluarga?.length ?? 0} anggota
+                  Kepala: {kel.kepala_keluarga?.nama_lengkap ?? kel.nama_kepala_keluarga ?? '—'} · {kel.anggota_keluarga?.length ?? 0} anggota
                 </p>
               </div>
               <div className="flex gap-1.5">
@@ -203,9 +225,6 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                       <p className="text-xs text-slate-500">
                         {kel.wilayah?.nama} · {kel.wilayah?.parent?.nama} · {kel.wilayah?.parent?.parent?.nama}
                       </p>
-                      <span className="mt-1 inline-block rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
-                        {kel.status_domisili_keluarga}
-                      </span>
                     </div>
                   </div>
                 </Card>
@@ -218,7 +237,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                   <Button size="sm" variant="secondary" onClick={() => setMemberModal(true)}><UserPlus size={13} /> Tambah</Button>
                 </div>
                 <Card className="divide-y divide-line">
-                  {(kel.anggotaKeluarga ?? []).map((w) => (
+                  {(kel.anggota_keluarga ?? []).map((w) => (
                     <div key={w.id} className="flex items-center gap-3 px-4 py-3">
                       {w.id === kel.kepala_keluarga_id ? (
                         <Crown size={15} className="text-amber-500" />
@@ -242,7 +261,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                       )}
                     </div>
                   ))}
-                  {(kel.anggotaKeluarga ?? []).length === 0 && (
+                  {(kel.anggota_keluarga ?? []).length === 0 && (
                     <p className="px-4 py-6 text-center text-sm text-slate-400">Belum ada anggota</p>
                   )}
                 </Card>
@@ -255,14 +274,14 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                   <Button size="sm" variant="secondary" onClick={() => setIuranModal(true)}><Coins size={13} /> Hubungkan</Button>
                 </div>
                 <Card className="divide-y divide-line">
-                  {(kel.keluargaIuran ?? []).map((c) => (
+                  {(kel.keluarga_iuran ?? []).map((c) => (
                     <div key={c.id} className="flex items-center gap-3 px-4 py-3">
                       <Coins size={15} className={c.status_aktif ? 'text-emerald-500' : 'text-slate-300'} />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-semibold text-slate-800">{c.jenisIuran?.nama}</p>
+                        <p className="text-[13px] font-semibold text-slate-800">{c.jenis_iuran?.nama}</p>
                         <p className="text-[11px] text-slate-400">
-                          {c.nominal_custom ? `Custom ${c.nominal_custom.toLocaleString('id-ID')}` : `Default ${(c.jenisIuran?.jumlah ?? 0).toLocaleString('id-ID')}`}
-                          {' · '}{c.jenisIuran?.periode}
+                          {c.nominal_custom ? `Custom ${c.nominal_custom.toLocaleString('id-ID')}` : `Default ${(c.jenis_iuran?.jumlah ?? 0).toLocaleString('id-ID')}`}
+                          {' · '}{c.jenis_iuran?.periode}
                         </p>
                       </div>
                       <StatusBadge status={c.status_aktif ? 'active' : 'paused'} label={c.status_aktif ? 'Aktif' : 'Nonaktif'} />
@@ -271,7 +290,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                       </Button>
                     </div>
                   ))}
-                  {(kel.keluargaIuran ?? []).length === 0 && (
+                  {(kel.keluarga_iuran ?? []).length === 0 && (
                     <p className="px-4 py-6 text-center text-sm text-slate-400">Belum terhubung ke jenis iuran apapun</p>
                   )}
                 </Card>
@@ -340,7 +359,7 @@ function StatusModal({ open, onClose, keluarga, onSubmit }: {
   open: boolean; onClose: () => void; keluarga?: Keluarga | null
   onSubmit: (status: string, ket?: string) => void
 }) {
-  const [status, setStatus] = useState(keluarga?.status_keluarga ?? 'Aktif')
+  const [status, setStatus] = useState(keluarga?.status_keluarga ?? 'Tetap')
   const [ket, setKet] = useState(keluarga?.keterangan_status ?? '')
 
   return (
@@ -378,13 +397,12 @@ function KeluargaFormModal({ mode, keluarga, onClose, onSubmit, pending }: {
     rt_kk: keluarga?.rt_kk ?? '',
     rw_kk: keluarga?.rw_kk ?? '',
     kelurahan_kk: keluarga?.kelurahan_kk ?? 'Bendul Merisi',
-    kecamatan_kk: keluarga?.kecamatan_kk ?? 'Wonokromo',
+    kecamatan_kk: keluarga?.kecamatan_kk ?? 'Wonocolo',
     kabupaten_kk: keluarga?.kabupaten_kk ?? 'Kota Surabaya',
     provinsi_kk: keluarga?.provinsi_kk ?? 'Jawa Timur',
     alamat_domisili: keluarga?.alamat_domisili ?? '',
     rt_id: keluarga?.rt_id ? String(keluarga.rt_id) : '',
-    status_domisili_keluarga: keluarga?.status_domisili_keluarga ?? 'Tetap',
-    status_keluarga: keluarga?.status_keluarga ?? 'Aktif',
+    status_keluarga: keluarga?.status_keluarga ?? 'Tetap',
     kepala_keluarga_id: keluarga?.kepala_keluarga_id ? String(keluarga.kepala_keluarga_id) : '',
   })
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
@@ -438,11 +456,6 @@ function KeluargaFormModal({ mode, keluarga, onClose, onSubmit, pending }: {
           <div className="sm:col-span-2">
             <Label>Alamat Domisili (jalan saja)</Label>
             <Input value={form.alamat_domisili} onChange={(e) => set('alamat_domisili', e.target.value)} />
-          </div>
-          <div>
-            <Label>Status Domisili *</Label>
-            <Select value={form.status_domisili_keluarga} onChange={(v) => set('status_domisili_keluarga', v)}
-              options={STATUS_DOMISILI.map((s) => ({ value: s, label: s }))} />
           </div>
           <div>
             <Label>Status Keluarga</Label>

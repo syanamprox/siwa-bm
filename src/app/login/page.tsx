@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import Image from 'next/image'
 import { Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/stores/auth-store'
@@ -71,7 +73,12 @@ export default function LoginPage() {
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm ring-1 ring-white/30">
             <span className="text-lg font-extrabold text-white">SW</span>
           </div>
-          <span className="text-lg font-bold tracking-tight text-white">SIWA</span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-lg font-bold tracking-tight text-white">SIWA</span>
+            <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-brand-200/70">
+              Kelurahan Bendul Merisi
+            </span>
+          </div>
         </div>
 
         {/* Center — Tagline */}
@@ -113,12 +120,30 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Bottom — Copyright */}
+        {/* Bottom — Personalization watermark + Copyright */}
         <div
-          className="relative z-10 flex items-center gap-4 p-10"
+          className="relative z-10 flex flex-col gap-4 p-10"
           style={{ animation: mounted ? 'lux-fade-in 1s ease .6s both' : 'none' }}
         >
-          <p className="text-[12px] text-brand-200/60">© 2026 Kelurahan Bendul Merisi</p>
+          <div className="flex items-center gap-3">
+            <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-white/80">
+              Kec. Wonocolo
+            </span>
+            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50">
+              personalized
+            </span>
+            <div className="h-3 w-px bg-white/20" />
+            <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50">by</span>
+            <Image
+              src="/images/logo-digital360.png"
+              alt="Digital360"
+              width={140}
+              height={50}
+              className="h-[18px] w-auto object-contain brightness-0 invert opacity-80"
+              priority
+            />
+          </div>
+          <p className="text-[12px] text-brand-200/60">© 2026 Kelurahan Bendul Merisi · Kecamatan Wonocolo, Kota Surabaya</p>
         </div>
       </div>
 
@@ -139,7 +164,7 @@ export default function LoginPage() {
             </div>
             <div className="text-center">
               <h1 className="text-xl font-extrabold tracking-tight text-slate-900">SIWA</h1>
-              <p className="text-xs text-slate-400">Sistem Informasi Warga</p>
+              <p className="text-xs text-slate-400">Kelurahan Bendul Merisi</p>
             </div>
           </div>
 
@@ -227,10 +252,30 @@ export default function LoginPage() {
             Akun petugas dibuat oleh Admin Kelurahan.
             <br />
             Warga dapat mengecek iuran via{' '}
-            <a href="/portal" className="font-medium text-brand-600 hover:underline">
+            <Link href="/portal" className="font-medium text-brand-600 hover:underline">
               Portal Publik
-            </a>
+            </Link>
           </p>
+
+          {/* Personalization stamp */}
+          <div
+            className="mt-6 flex flex-col items-center gap-3"
+            style={{ animation: mounted ? 'lux-fade-in .6s ease .5s both' : 'none' }}
+          >
+            <div className="flex items-center gap-2 opacity-70">
+              <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                Kec. Wonocolo
+              </span>
+              <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-slate-400">×</span>
+              <Image
+                src="/images/logo-digital360.png"
+                alt="Digital360"
+                width={80}
+                height={28}
+                className="h-[12px] w-auto object-contain"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
