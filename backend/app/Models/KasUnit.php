@@ -16,7 +16,7 @@ class KasUnit extends Model
      * Kategori transaksi kas (dipakai validasi KasController + FE).
      */
     public const KATEGORI = [
-        'Iuran', 'Infaq', 'Donasi', 'Saldo Awal', 'Lain-lain',
+        'Iuran', 'Parkir', 'Infaq', 'Donasi', 'Saldo Awal', 'Lain-lain',
         'Operasional', 'Rapat', 'Perlengkapan', 'Kesehatan', 'Kegiatan',
     ];
 

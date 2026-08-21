@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
             JenisIuranRt02Seeder::class,
             Rt02Rw03IuranSeeder::class,
             KasUnitWilayahSeeder::class, // materialize unit kas wilayah (tanpa data demo)
+            KasRt02Rw03RealSeeder::class, // buku kas asli RT02 RW03 2023-2026
+            KasRw03RealSeeder::class, // buku kas asli RW03 Juli 2026
         ]);
     }
 }

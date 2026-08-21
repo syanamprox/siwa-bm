@@ -11,6 +11,7 @@ const rupiah = (n: number) => 'Rp ' + n.toLocaleString('id-ID')
 
 const KAT_COLOR: Record<string, string> = {
   Iuran: 'bg-brand-50 text-brand-700',
+  Parkir: 'bg-indigo-50 text-indigo-700',
   Infaq: 'bg-emerald-50 text-emerald-700',
   Donasi: 'bg-teal-50 text-teal-700',
   'Saldo Awal': 'bg-slate-100 text-slate-600',
