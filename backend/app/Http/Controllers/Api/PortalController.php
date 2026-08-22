@@ -78,7 +78,7 @@ class PortalController extends Controller
             'kepala_keluarga' => $keluarga->kepalaKeluarga?->nama_lengkap,
             'jumlah_anggota' => $keluarga->anggotaKeluarga->count(),
             'anggota' => $keluarga->anggotaKeluarga->map(fn ($w) => [
-                'nama' => $w->nama_lengkap,
+                'nama' => $this->maskNama($w->nama_lengkap),
                 'hubungan' => $w->hubungan_keluarga,
                 'jenis_kelamin' => $w->jenis_kelamin,
             ]),
@@ -171,6 +171,30 @@ class PortalController extends Controller
     private function mask(string $num): string
     {
         return substr($num, 0, 6).'******'.substr($num, -4);
+    }
+
+    /**
+     * Nama disamarkan: kata PERTAMA & TERAKHIR utuh, hanya kata tengah
+     * yang di-blur inisial ("Tutik T*** Wahyuningsih", "Fakhri A*** R*** Al-rasyid"→
+     * 2 kata: utuh semua · 1 kata: utuh). Minimal 2 kata tetap terbaca.
+     */
+    private function maskNama(?string $nama): ?string
+    {
+        if (! $nama) {
+            return null;
+        }
+
+        $parts = preg_split('/\s+/', trim($nama));
+        $count = count($parts);
+        if ($count <= 2) {
+            return implode(' ', $parts);
+        }
+
+        $parts = array_map(function ($p, $i) use ($count) {
+            return ($i === 0 || $i === $count - 1) ? $p : mb_substr($p, 0, 1).'***';
+        }, $parts, array_keys($parts));
+
+        return implode(' ', $parts);
     }
 
     private function formatPeriode(string $periode): string

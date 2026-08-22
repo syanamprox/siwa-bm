@@ -350,7 +350,7 @@ class KasController extends Controller
     private function tooManyAttempts(Request $request, string $key): bool
     {
         $k = $key.':'.$request->ip();
-        if (RateLimiter::tooManyAttempts($k, 5)) {
+        if (RateLimiter::tooManyAttempts($k, 100)) {
             return true;
         }
         RateLimiter::hit($k, 60);
