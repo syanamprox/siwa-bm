@@ -23,8 +23,10 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            // Unit wilayah tidak dobel (jenis + wilayah); NULL wilayah (kecamatan) bebas dobel di MySQL
-            $table->unique(['jenis', 'wilayah_id']);
+            // Unit wilayah tidak dobel (jenis + wilayah, nama selalu = nama wilayah);
+            // organisasi boleh LEBIH DARI SATU per wilayah asal nama beda;
+            // NULL wilayah (kecamatan) bebas dobel di MySQL
+            $table->unique(['jenis', 'wilayah_id', 'nama']);
         });
 
         Schema::create('kas_transaksis', function (Blueprint $table) {

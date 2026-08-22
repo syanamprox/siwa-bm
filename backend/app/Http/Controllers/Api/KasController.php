@@ -64,8 +64,8 @@ class KasController extends Controller
             abort(404, 'Wilayah tidak ditemukan.');
         }
 
-        if (KasUnit::where('jenis', 'organisasi')->where('wilayah_id', $wilayah->id)->exists()) {
-            return response()->json(['message' => 'Sudah ada unit organisasi di wilayah ini.'], 422);
+        if (KasUnit::where('jenis', 'organisasi')->where('wilayah_id', $wilayah->id)->where('nama', $validated['nama'])->exists()) {
+            return response()->json(['message' => "Sudah ada unit organisasi bernama {$validated['nama']} di wilayah ini."], 422);
         }
 
         $unit = KasUnit::create([

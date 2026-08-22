@@ -120,22 +120,6 @@ class PengaturanSistemSeeder extends Seeder
                 'deskripsi' => 'Email Kantor Kelurahan',
             ],
 
-            // Keuangan
-            [
-                'key' => 'mata_uang',
-                'value' => 'IDR',
-                'tipe' => 'text',
-                'kategori' => 'keuangan',
-                'deskripsi' => 'Mata Uang Default',
-            ],
-            [
-                'key' => 'format_nomor',
-                'value' => 'id_ID',
-                'tipe' => 'select',
-                'kategori' => 'keuangan',
-                'deskripsi' => 'Format Penulisan Nomor',
-            ],
-
             // Keamanan
             [
                 'key' => 'maks_login',
