@@ -142,6 +142,15 @@ class PengaturanSistemSeeder extends Seeder
                 'kategori' => 'keamanan',
                 'deskripsi' => 'Catat Semua Aktivitas Petugas',
             ],
+            [
+                // 0 = bendahara mencatat kas di buku fisik (default, hindari double-entry).
+                // 1 = pembayaran iuran via app otomatis masuk kas (kas app sumber tunggal).
+                'key' => 'auto_post_kas_iuran',
+                'value' => '0',
+                'tipe' => 'select',
+                'kategori' => 'keuangan',
+                'deskripsi' => 'Otomatis Catat Pembayaran Iuran ke Kas',
+            ],
         ];
 
         // Insert all settings

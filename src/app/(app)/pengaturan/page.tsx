@@ -13,6 +13,7 @@ const GROUP_LABEL: Record<string, string> = {
   app: 'Aplikasi',
   kelurahan: 'Identitas Kelurahan',
   keamanan: 'Keamanan',
+  keuangan: 'Keuangan',
 }
 
 /* ── Opsi siap pilih (ramah user awam) — key di sini dirender Select ── */
@@ -54,6 +55,10 @@ const FIELD_OPTIONS: Record<string, { value: string; label: string }[]> = {
   log_semua_aktivitas: [
     { value: '1', label: 'Aktif — semua aksi dicatat' },
     { value: '0', label: 'Nonaktif' },
+  ],
+  auto_post_kas_iuran: [
+    { value: '0', label: 'Nonaktif — kas dicatat bendahara (disarankan)' },
+    { value: '1', label: 'Aktif — pembayaran iuran otomatis masuk kas' },
   ],
 }
 

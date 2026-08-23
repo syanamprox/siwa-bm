@@ -19,6 +19,7 @@ class PengaturanController extends Controller
         'nama_kelurahan', 'nama_kecamatan', 'nama_kabupaten', 'nama_provinsi',
         'telepon_kantor', 'email_kantor', 'alamat_kantor',
         'maks_login', 'timeout_sesi', 'log_semua_aktivitas',
+        'auto_post_kas_iuran',
     ];
 
     /** Key canonical → [default, keterangan] */
@@ -46,6 +47,12 @@ class PengaturanController extends Controller
                 ['maks_login', '5', 'Batas Percobaan Login Gagal'],
                 ['timeout_sesi', '120', 'Sesi Login Berakhir Setelah (menit)'],
                 ['log_semua_aktivitas', '1', 'Catat Semua Aktivitas Petugas'],
+            ],
+            'keuangan' => [
+                // Mati (0) by default: bendahara mencatat kas di buku fisik — pembayaran
+                // iuran via app TIDAK otomatis masuk kas (hindari double-entry).
+                // Nyalakan (1) saat kas app menjadi sumber tunggal (kepengurusan baru).
+                ['auto_post_kas_iuran', '0', 'Otomatis Catat Pembayaran Iuran ke Kas'],
             ],
         ];
     }

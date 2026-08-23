@@ -135,11 +135,15 @@ class IuranController extends Controller
 
                 $iuran->update(['status' => 'lunas']);
 
-                // Auto-post kas RT — kegagalan kas tidak boleh membatalkan pembayaran
-                try {
-                    \App\Models\KasTransaksi::postFromPembayaran($pembayaran, $iuran);
-                } catch (\Throwable $e) {
-                    \Log::warning('Auto-post kas gagal (pembayaran #'.$pembayaran->id.'): '.$e->getMessage());
+                // Auto-post kas RT — hanya bila diaktifkan admin (pengaturan keuangan).
+                // Default NONAKTIF: bendahara mencatat kas di buku fisik, posting otomatis
+                // akan membuat double-entry. Kegagalan kas tak boleh membatalkan pembayaran.
+                if (\App\Models\PengaturanSistem::getValue('auto_post_kas_iuran') === '1') {
+                    try {
+                        \App\Models\KasTransaksi::postFromPembayaran($pembayaran, $iuran);
+                    } catch (\Throwable $e) {
+                        \Log::warning('Auto-post kas gagal (pembayaran #'.$pembayaran->id.'): '.$e->getMessage());
+                    }
                 }
 
                 $results['dibayar']++;
@@ -186,11 +190,14 @@ class IuranController extends Controller
             return $pembayaran;
         });
 
-        // Auto-post kas RT — kegagalan kas tidak boleh membatalkan pembayaran
-        try {
-            \App\Models\KasTransaksi::postFromPembayaran($pembayaran, $iuran);
-        } catch (\Throwable $e) {
-            \Log::warning('Auto-post kas gagal (pembayaran #'.$pembayaran->id.'): '.$e->getMessage());
+        // Auto-post kas RT — hanya bila diaktifkan admin (pengaturan keuangan).
+        // Default NONAKTIF: bendahara mencatat kas di buku fisik (lihat bayarBatch).
+        if (\App\Models\PengaturanSistem::getValue('auto_post_kas_iuran') === '1') {
+            try {
+                \App\Models\KasTransaksi::postFromPembayaran($pembayaran, $iuran);
+            } catch (\Throwable $e) {
+                \Log::warning('Auto-post kas gagal (pembayaran #'.$pembayaran->id.'): '.$e->getMessage());
+            }
         }
 
         $this->logActivity($request, 'pembayaran', 'iuran', "Pembayaran tagihan #{$iuran->id} (KK {$iuran->keluarga?->no_kk}) Rp ".number_format($jumlah, 0, ',', '.'), null, [
