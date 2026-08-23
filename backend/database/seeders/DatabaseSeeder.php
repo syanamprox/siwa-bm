@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             WilayahSeeder::class,
             UserSeeder::class,
             WargaRealRt02Rw03Seeder::class,
+            MasterKkRt02Rw03Seeder::class, // 57 KK master kelurahan (stub, tanpa arsip dokumen)
             KeluargaSeeder::class,
             WargaSeeder::class,
             PengaturanSistemSeeder::class,

@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Plus, RotateCcw, Pencil, Trash2, FileImage } from 'lucide-react'
+import { Users, Plus, RotateCcw, Pencil, Trash2, FileImage, BadgeCheck, BadgeX, HeartCrack } from 'lucide-react'
 import { toast } from 'sonner'
 import { useWargaList, useWargaMutations, useWargaStats, type WargaFilters } from '@/hooks/use-siwa'
+import { useAuth } from '@/stores/auth-store'
 import { PageHeader } from '@/components/PageHeader'
-import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState } from '@/components/ui/primitives'
+import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState, Toggle } from '@/components/ui/primitives'
 import { QueryError } from '@/components/QueryError'
 import { Modal } from '@/components/ui/Modal'
 import { storageUrl } from '@/lib/api-client'
@@ -24,7 +25,8 @@ export default function WargaPage() {
 
   const { data, isLoading, isFetching, isError, error, refetch } = useWargaList(filters)
   const { data: stats } = useWargaStats()
-  const { create, update, remove } = useWargaMutations()
+  const { create, update, remove, verify } = useWargaMutations()
+  const isAdmin = useAuth((s) => s.user?.role === 'admin')
 
   // Auto-search: debounce 400ms — tanpa tombol cari
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function WargaPage() {
     return () => clearTimeout(t)
   }, [searchInput])
 
-  const hasActiveFilter = Boolean(searchInput || filters.jenis_kelamin || filters.agama)
+  const hasActiveFilter = Boolean(searchInput || filters.jenis_kelamin || filters.agama || filters.meninggal || filters.is_verified)
 
   function resetFilters() {
     setSearchInput('')
@@ -55,7 +57,7 @@ export default function WargaPage() {
 
       {/* Filter bar */}
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
             <Input
               placeholder="Cari NIK / nama / no KK…"
@@ -77,6 +79,24 @@ export default function WargaPage() {
             onChange={(v) => setFilters((f) => ({ ...f, agama: v || undefined, page: 1 }))}
             placeholder="Agama"
             options={AGAMA.map((a) => ({ value: a, label: a }))}
+          />
+          <Select
+            value={filters.meninggal ?? ''}
+            onChange={(v) => setFilters((f) => ({ ...f, meninggal: v || undefined, page: 1 }))}
+            placeholder="Status Hidup"
+            options={[
+              { value: '0', label: 'Masih Hidup' },
+              { value: '1', label: 'Meninggal' },
+            ]}
+          />
+          <Select
+            value={filters.is_verified ?? ''}
+            onChange={(v) => setFilters((f) => ({ ...f, is_verified: v || undefined, page: 1 }))}
+            placeholder="Verifikasi"
+            options={[
+              { value: '0', label: 'Belum Diverifikasi' },
+              { value: '1', label: 'Terverifikasi' },
+            ]}
           />
           {hasActiveFilter && (
             <Button variant="secondary" onClick={resetFilters}>
@@ -113,7 +133,29 @@ export default function WargaPage() {
                 {data!.data.map((w) => (
                   <tr key={w.id} className={`hover:bg-slate-50 ${isFetching ? 'opacity-60' : ''}`}>
                     <td className="px-4 py-3 tabular-nums text-slate-600">{w.nik}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{w.nama_lengkap}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">
+                      <span className="inline-flex items-center gap-1.5">
+                        {w.nama_lengkap}
+                        {w.meninggal && (
+                          <span
+                            className="inline-flex items-center gap-0.5 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-white"
+                            title={w.tanggal_meninggal ? `Meninggal ${new Date(w.tanggal_meninggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Meninggal'}
+                          >
+                            <HeartCrack size={9} /> Alm.
+                          </span>
+                        )}
+                        {w.is_verified ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-600" title="Terverifikasi">
+                            <BadgeCheck size={14} />
+                            <span className="text-[10px] font-medium text-slate-400 tabular-nums">
+                              {w.verified_at ? new Date(w.verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-dashed border-amber-400 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600" title="Data belum diverifikasi petugas">Belum verifikasi</span>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${w.jenis_kelamin === 'L' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700'}`}>
                         {w.jenis_kelamin}
@@ -144,6 +186,17 @@ export default function WargaPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
+                        {isAdmin && (w.is_verified ? (
+                          <Button size="sm" variant="ghost" className="text-amber-500 hover:bg-amber-50" disabled={verify.isPending}
+                            onClick={() => verify.mutate({ id: w.id, verified: false })} title="Batalkan verifikasi">
+                            <BadgeX size={14} />
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="ghost" className="text-emerald-600 hover:bg-emerald-50" disabled={verify.isPending}
+                            onClick={() => verify.mutate({ id: w.id, verified: true })} title="Tandai data terverifikasi">
+                            <BadgeCheck size={14} />
+                          </Button>
+                        ))}
                         <Button size="sm" variant="ghost" onClick={() => setModal({ mode: 'edit', warga: w })} title="Edit">
                           <Pencil size={14} />
                         </Button>
@@ -234,6 +287,8 @@ function WargaFormModal({ mode, warga, onClose, onSubmit, pending }: {
     nama_ayah: warga?.nama_ayah ?? '',
     nama_ibu: warga?.nama_ibu ?? '',
   })
+  const [meninggal, setMeninggal] = useState(warga?.meninggal ?? false)
+  const [tanggalMeninggal, setTanggalMeninggal] = useState(warga?.tanggal_meninggal?.slice(0, 10) ?? '')
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }))
   const [fotoData, setFotoData] = useState<string | null>(null)
 
@@ -259,6 +314,8 @@ function WargaFormModal({ mode, warga, onClose, onSubmit, pending }: {
     const payload: Record<string, string> = {}
     Object.entries(form).forEach(([k, v]) => { if (v !== '') payload[k] = v })
     if (fotoData) payload.foto_ktp_data = fotoData // hanya kirim bila user baru memilih file
+    payload.meninggal = meninggal ? '1' : '0'
+    if (meninggal && tanggalMeninggal) payload.tanggal_meninggal = tanggalMeninggal
     onSubmit(payload)
   }
 
@@ -356,6 +413,17 @@ function WargaFormModal({ mode, warga, onClose, onSubmit, pending }: {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Status kehidupan */}
+        <div className="rounded-lg border border-line bg-slate-50/60 p-3">
+          <Toggle checked={meninggal} onChange={(v) => { setMeninggal(v); if (!v) setTanggalMeninggal('') }} label="Sudah meninggal (Almarhum/Almarhumah)" />
+          {meninggal && (
+            <div className="mt-3 max-w-xs">
+              <Label>Tanggal Meninggal</Label>
+              <Input type="date" value={tanggalMeninggal} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setTanggalMeninggal(e.target.value)} />
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-2 border-t border-line pt-4">

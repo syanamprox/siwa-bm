@@ -39,6 +39,14 @@ return new class extends Migration
             $table->date('tanggal_mulai_domisili_keluarga')->nullable();
             $table->text('keterangan_status')->nullable();
 
+            // Status kemiskinan (data kelurahan): Miskin / Pra-Miskin / Non
+            $table->string('status_miskin', 20)->default('Non');
+
+            // Verifikasi data KK (admin) — verify KK = semua anggota ikut terverifikasi
+            $table->boolean('is_verified')->default(false);
+            $table->foreignId('verified_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('verified_at')->nullable();
+
             // Timestamps
             $table->timestamps();
             $table->softDeletes();

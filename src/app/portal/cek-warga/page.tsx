@@ -6,6 +6,7 @@ import { Users, Loader2, Search, AlertCircle } from 'lucide-react'
 import { api, ApiError } from '@/lib/api-client'
 import { domisiliRingkas } from '@/lib/utils'
 import { QueryError } from '@/components/QueryError'
+import { VerifiedBanner } from '@/components/VerifiedBanner'
 
 interface PortalWarga {
   nama_lengkap: string
@@ -17,6 +18,7 @@ interface PortalWarga {
   status_perkawinan: string
   pekerjaan: string
   hubungan_keluarga: string
+  is_verified: boolean
   no_telepon: string | null
   keluarga: { no_kk: string; alamat: string; rt: string | null; rw: string | null; kelurahan: string | null; status_domisili: string } | null
 }
@@ -91,6 +93,7 @@ export default function CekWargaPage() {
           <div className="border-b border-line bg-slate-50 px-6 py-4">
             <p className="text-lg font-bold text-slate-900">{result.nama_lengkap}</p>
             <p className="font-mono text-xs text-slate-400">{result.nik} · {result.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan'}</p>
+            <VerifiedBanner verified={result.is_verified} />
           </div>
           <dl className="divide-y divide-line text-[13px]">
             {[

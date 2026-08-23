@@ -10,7 +10,10 @@ use Illuminate\Database\Seeder;
 
 /**
  * DATA WARGA REAL RT 02 RW 03 Kelurahan Bendul Merisi — hasil ekstraksi 74 berkas KK
- * (kk/DATA_WARGA.md, 2026-08-20). 67 KK valid · 214 warga · 65 foto KK (public/kk/).
+ * (kk/DATA_WARGA.md, 2026-08-20). 67 KK valid · 214 warga · 67 foto KK.
+ *
+ * Foto KK disalin otomatis dari arsip kk/KK Warga/ (gitignored, PII) ke public/kk/
+ * sesuai SRC_MAP — folder arsip tetap utuh, hanya dibaca.
  *
  * Kategori arsip RT → status domisili: A1 Tetap (53) · A2 Domisili (7) ·
  * A3 Non Domisili (5) · A4 Pendatang (2). Semua KK terdaftar domisili RT 02 RW 03.
@@ -199,7 +202,7 @@ class WargaRealRt02Rw03Seeder extends Seeder
             ],
         ],
         [
-            'no_kk' => '3578021503190003', 'status' => 'Tetap', 'foto_kk' => null,
+            'no_kk' => '3578021503190003', 'status' => 'Tetap', 'foto_kk' => 'kk/3578021503190003.jpg',
             'alamat' => 'Bendul Merisi Gg 4 No. 37', 'rt_kk' => '002', 'rw_kk' => '003',
             'kelurahan' => 'Bendul Merisi', 'kecamatan' => 'Wonocolo', 'kabupaten' => 'Kota Surabaya', 'provinsi' => 'Jawa Timur',
             'anggota' => [
@@ -293,7 +296,7 @@ class WargaRealRt02Rw03Seeder extends Seeder
             ],
         ],
         [
-            'no_kk' => '3578022511210002', 'status' => 'Tetap', 'foto_kk' => null,
+            'no_kk' => '3578022511210002', 'status' => 'Tetap', 'foto_kk' => 'kk/3578022511210002.jpg',
             'alamat' => 'Bendulmerisi 4/17', 'rt_kk' => '002', 'rw_kk' => '003',
             'kelurahan' => 'Bendul Merisi', 'kecamatan' => 'Wonocolo', 'kabupaten' => 'Kota Surabaya', 'provinsi' => 'Jawa Timur',
             'anggota' => [
@@ -711,6 +714,82 @@ class WargaRealRt02Rw03Seeder extends Seeder
         ],
     ];
 
+    /**
+     * Map no_kk => nama berkas sumber di kk/KK Warga/ (arsip PII, gitignored).
+     * Dipakai run() untuk MENYALIN foto KK ke public/kk/ saat seed. Folder kk/
+     * sengaja tidak masuk repo — penyalinan hanya terjadi di mesin yang punya
+     * arsip; di mesin lain seeder skip dengan peringatan (bukan error).
+     */
+    private const SRC_MAP = [
+        '3526031512210003' => 'A4_M. Arifin.jpg',
+        '3527051110110020' => 'A2_Samhari.jpg',
+        '3578020101081330' => 'A3_Endra Sukmana.pdf',
+        '3578020101084364' => 'A1_Mat Dewi.jpg',
+        '3578020101085977' => 'A1_Chrismanu Rudyanto.jpg',
+        '3578020101086029' => 'A1_Abas Akadara.jpg',
+        '3578020101086759' => 'A1_Samsuri.jpg',
+        '3578020101086814' => 'A1_Agus Setio Wandono.jpg',
+        '3578020101087242' => 'A1_Matnali.jpg',
+        '3578020101087412' => 'A1_Ach Supai.jpg',
+        '3578020101088007' => 'A1_Satrijo.jpg',
+        '3578020101088773' => 'A1_Soekadji.jpg',
+        '3578020101088801' => 'A1_Nanang Kosim.jpg',
+        '3578020101089610' => 'A1_Suratno.jpg',
+        '3578020101089707' => 'A1_Tadju Subekti.jpg',
+        '3578020108220002' => 'A1_Syaiful Anis.jpg',
+        '3578020201080747' => 'A1_Mohamad Hadi.jpg',
+        '3578020201081199' => 'A1_Achmad Ihsan.jpg',
+        '3578020201081200' => 'A1_Henrikus Ruskristiawan.jpg',
+        '3578020201084874' => 'A1_Santoso Bin Kiman.jpg',
+        '3578020201084878' => 'A1_Akhmad Suryadi.jpg',
+        '3578020201086559' => 'A1_Muchamad Achiyat Yayak.jpg',
+        '3578020201086566' => 'A1_Moh Ali (Aba).jpg',
+        '3578020201230005' => 'A1_Yesi Rasita.jpg',
+        '3578020203150011' => 'A1_Nurfadilah.jpg',
+        '3578020204140004' => 'A1_Toemi.jpg',
+        '3578020206130001' => 'A1_Abdul Rosid.jpg',
+        '3578020306220002' => 'A1_Robi Handoyo.jpg',
+        '3578020311110001' => 'A3_Suhariyanto.jpg',
+        '3578020311180011' => 'A1_Tri Budi Cahyono.jpg',
+        '3578020410210008' => 'A1_Dwi Yulianto.jpg',
+        '3578020609220004' => 'A1_Misfa.pdf',
+        '3578020803220015' => 'A1_Ki Dwi Waluyo Jati.jpg',
+        '3578020807210013' => 'A1_Nurul Helmawati.jpg',
+        '3578020908170003' => 'A1_M Slamet Riadi.jpg',
+        '3578021306110006' => 'A1_Erich Rachmad Saufi.jpg',
+        '3578021501200046' => 'A1_Mariyati.jpg',
+        '3578021503190003' => 'A1_Jufri.jpg',
+        '3578021603220001' => 'A3_Mia Puji Astuti.jpg',
+        '3578021701230004' => 'A1_Kayatun.jpg',
+        '3578021712120003' => 'A1_Moch Nurawan.jpg',
+        '3578021911150008' => 'A1_Yoyok Sumarsono.pdf',
+        '3578022003120030' => 'A2_Slamet.jpg',
+        '3578022205120012' => 'A1_Chairul Anwar.jpg',
+        '3578022207190003' => 'A1_Rajif Al Ahmad Ramadhani.jpg',
+        '3578022208110006' => 'A3_Slamet Kuswanto.jpg',
+        '3578022501170006' => 'A1_Al Amin Chomami.jpg',
+        '3578022507220002' => 'A1_Wakidjan.jpg',
+        '3578022511210002' => 'A1_Moh Ali (Yanti).jpg',
+        '3578022603200001' => 'A1_Nur Faridah.jpg',
+        '3578022605160012' => 'A1_Putri Inang Kurniawati.jpg',
+        '3578022605170004' => 'A1_Moh Sarofik (BLURR).jpg',
+        '3578022702180010' => 'A3_Nanang Sumantri.jpg',
+        '3578022707210011' => 'A1_Wahyuningsih.jpg',
+        '3578022710200005' => 'A1_Bedrudin.jpg',
+        '3578022712180002' => 'A2_Rohamit.jpg',
+        '3578022809150010' => 'A1_Doni Eko Satrianto.jpg',
+        '3578022812220006' => 'A4_Mohammad Komaruddin.jpg',
+        '3578022901130020' => 'A1_Sunarto.jpg',
+        '3578023012200010' => 'A1_Indah Hariningsih.jpg',
+        '3578023110200003' => 'A1_Endang Soelistijowati.jpg',
+        '3578040201080406' => 'A2_Siswanto.jpg',
+        '3578042211110020' => 'A1_Syaiful Romli.jpg',
+        '3578072203110003' => 'A2_Tan Djun Bouw-Welly Setiawan.jpg',
+        '3578162505210001' => 'A2_Angga Pratama Setya Satria.jpg',
+        '3578230101082677' => 'A2_Ahmad Hidayat.pdf',
+        '3578240101087171' => 'A1_Wiyono.jpg',
+    ];
+
     public function run(): void
     {
         $rt = Wilayah::where('nama', 'RT 02 RW 03 Bendul Merisi')->where('tingkat', 'RT')->first();
@@ -722,6 +801,20 @@ class WargaRealRt02Rw03Seeder extends Seeder
 
         $adminId = 1;
         $totalWarga = 0;
+
+        // Foto KK: arsip kk/KK Warga/ ada di ROOT monorepo (bukan backend/) —
+        // seeder jalan dari backend/, public/kk yang di-serve Next.js juga di root.
+        $root = dirname(base_path());
+        $srcDir = $root.'/kk/KK Warga';
+        $pubDir = $root.'/public/kk';
+        $arsipAda = is_dir($srcDir);
+        if (! $arsipAda) {
+            $this->command->warn('Arsip kk/KK Warga/ tidak ditemukan — penyalinan foto KK dilewati (arsip PII memang tidak ikut repo).');
+        } elseif (! is_dir($pubDir)) {
+            mkdir($pubDir, 0775, true);
+        }
+        $fotoTerpasang = 0;
+        $fotoGagal = [];
 
         foreach (self::DATA as $fam) {
             $keluarga = Keluarga::updateOrCreate(
@@ -738,6 +831,8 @@ class WargaRealRt02Rw03Seeder extends Seeder
                     'alamat_domisili' => $fam['alamat'],
                     'rt_id' => $rt->id,
                     'foto_kk' => $fam['foto_kk'],
+                    // Verifikasi sengaja TIDAK di-set — semua data mulai belum terverifikasi,
+                    // admin memverifikasi manual per KK/warga lewat aplikasi.
                 ]
             );
 
@@ -760,6 +855,7 @@ class WargaRealRt02Rw03Seeder extends Seeder
                         'nama_ayah' => $a['ayah'],
                         'nama_ibu' => $a['ibu'],
                         'created_by' => $adminId,
+                        // Verifikasi sengaja tidak di-set (default false) — menyusul via aplikasi.
                     ]
                 );
                 if ($a['hub'] === 'Kepala Keluarga') {
@@ -771,8 +867,23 @@ class WargaRealRt02Rw03Seeder extends Seeder
             if ($kepala && $keluarga->kepala_keluarga_id !== $kepala->id) {
                 $keluarga->update(['kepala_keluarga_id' => $kepala->id]);
             }
+
+            // Salin foto KK terverifikasi dari arsip → public/kk/ bila belum ada
+            // (idempotent). Arsip hanya dibaca, tidak pernah dimodifikasi.
+            if ($arsipAda && $fam['foto_kk'] && ($src = self::SRC_MAP[$fam['no_kk']] ?? null)) {
+                $target = $pubDir.'/'.basename($fam['foto_kk']);
+                if (file_exists($target) || @copy($srcDir.'/'.$src, $target)) {
+                    $fotoTerpasang++;
+                } else {
+                    $fotoGagal[] = $src;
+                }
+            }
         }
 
-        $this->command->info('Warga RT 02 RW 03 (real): '.count(self::DATA).' KK + '.$totalWarga.' warga · foto KK: public/kk/.');
+        if ($fotoGagal) {
+            $this->command->warn('Foto KK gagal disalin ('.count($fotoGagal).'): '.implode(', ', $fotoGagal));
+        }
+
+        $this->command->info('Warga RT 02 RW 03 (real): '.count(self::DATA).' KK + '.$totalWarga.' warga · foto KK terpasang: '.$fotoTerpasang.'/'.count(self::SRC_MAP).'.');
     }
 }

@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Home, Loader2, Search, AlertCircle } from 'lucide-react'
+import { Home, Loader2, Search, AlertCircle, BadgeCheck } from 'lucide-react'
 import { api, ApiError } from '@/lib/api-client'
 import { domisiliRingkas } from '@/lib/utils'
 import { QueryError } from '@/components/QueryError'
+import { VerifiedBanner } from '@/components/VerifiedBanner'
 
 interface PortalKeluarga {
   no_kk: string
@@ -15,7 +16,8 @@ interface PortalKeluarga {
   kelurahan: string | null
   kepala_keluarga: string | null
   jumlah_anggota: number
-  anggota: { nama: string; hubungan: string; jenis_kelamin: 'L' | 'P' }[]
+  is_verified: boolean
+  anggota: { nama: string; hubungan: string; jenis_kelamin: 'L' | 'P'; is_verified: boolean }[]
 }
 
 export default function CekKeluargaPage() {
@@ -92,6 +94,7 @@ export default function CekKeluargaPage() {
               Kepala: <strong className="text-slate-800">{result.kepala_keluarga ?? '—'}</strong> · {result.jumlah_anggota} anggota
             </p>
             <p className="text-xs text-slate-400">{domisiliRingkas(result.rt, result.rw, result.kelurahan)}{result.alamat ? ` — ${result.alamat}` : ''}</p>
+            <VerifiedBanner verified={result.is_verified} label={result.is_verified ? 'Data keluarga terverifikasi' : 'Data keluarga belum diverifikasi'} />
           </div>
           <ul className="divide-y divide-line">
             {result.anggota.map((a, i) => (
@@ -99,7 +102,10 @@ export default function CekKeluargaPage() {
                 <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold ${a.jenis_kelamin === 'L' ? 'bg-blue-50 text-blue-700' : 'bg-pink-50 text-pink-700'}`}>
                   {a.jenis_kelamin}
                 </span>
-                <span className="flex-1 text-[13px] font-medium text-slate-800">{a.nama}</span>
+                <span className="flex-1 text-[13px] font-medium text-slate-800">
+                  {a.nama}
+                  {a.is_verified && <BadgeCheck size={12} className="ml-1.5 inline text-emerald-600" />}
+                </span>
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">{a.hubungan}</span>
               </li>
             ))}

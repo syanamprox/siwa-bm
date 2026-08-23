@@ -47,8 +47,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Kependudukan
     Route::get('/warga/statistics', [WargaController::class, 'statistics']);
+    Route::post('/warga/{warga}/verify', [WargaController::class, 'verify'])->middleware('admin');
     Route::apiResource('warga', WargaController::class)->parameters(['warga' => 'warga']);
     Route::get('/keluarga/statistics', [KeluargaController::class, 'statistics']);
+    Route::get('/keluarga/kk-token', [KeluargaController::class, 'kkToken']);
+    Route::post('/keluarga/{keluarga}/verify', [KeluargaController::class, 'verify'])->middleware('admin');
     Route::apiResource('keluarga', KeluargaController::class)->parameters(['keluarga' => 'keluarga']);
     Route::patch('/keluarga/{keluarga}/status', [KeluargaController::class, 'updateStatus']);
     Route::post('/keluarga/{keluarga}/members', [KeluargaController::class, 'addMember']);

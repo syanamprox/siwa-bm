@@ -77,10 +77,12 @@ class PortalController extends Controller
             'kelurahan' => $keluarga->wilayah?->parent?->parent?->nama,
             'kepala_keluarga' => $keluarga->kepalaKeluarga?->nama_lengkap,
             'jumlah_anggota' => $keluarga->anggotaKeluarga->count(),
+            'is_verified' => (bool) $keluarga->is_verified, // KK terverifikasi petugas kelurahan
             'anggota' => $keluarga->anggotaKeluarga->map(fn ($w) => [
                 'nama' => $this->maskNama($w->nama_lengkap),
                 'hubungan' => $w->hubungan_keluarga,
                 'jenis_kelamin' => $w->jenis_kelamin,
+                'is_verified' => (bool) $w->is_verified,
             ]),
         ]]);
     }
@@ -156,6 +158,7 @@ class PortalController extends Controller
             'status_perkawinan' => $warga->status_perkawinan,
             'pekerjaan' => $warga->pekerjaan,
             'hubungan_keluarga' => $warga->hubungan_keluarga,
+            'is_verified' => (bool) $warga->is_verified, // data terverifikasi petugas kelurahan
             'no_telepon' => $warga->no_telepon ? substr($warga->no_telepon, 0, 3).'***'.substr($warga->no_telepon, -3) : null,
             'keluarga' => $warga->keluarga ? [
                 'no_kk' => $this->mask($warga->keluarga->no_kk),

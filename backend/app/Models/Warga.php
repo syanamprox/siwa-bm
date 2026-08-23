@@ -48,6 +48,13 @@ class Warga extends Model
         'no_telepon',
         'email',
 
+        // Status Kehidupan & Verifikasi
+        'meninggal',
+        'tanggal_meninggal',
+        'is_verified',
+        'verified_by',
+        'verified_at',
+
         // Data Orang Tua
         'nama_ayah',
         'nama_ibu',
@@ -66,6 +73,10 @@ class Warga extends Model
     {
         return [
             'tanggal_lahir' => 'date',
+            'meninggal' => 'boolean',
+            'tanggal_meninggal' => 'date',
+            'is_verified' => 'boolean',
+            'verified_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',
@@ -185,11 +196,15 @@ class Warga extends Model
     }
 
     /**
-     * Get umur dalam tahun
+     * Get umur dalam tahun — dibekukan pada tanggal meninggal bila almarhum/ah
      */
     public function getUmurAttribute(): int
     {
-        return $this->tanggal_lahir?->age ?? 0;
+        if (! $this->tanggal_lahir) {
+            return 0;
+        }
+
+        return (int) $this->tanggal_lahir->diffInYears($this->meninggal ? ($this->tanggal_meninggal ?? now()) : now());
     }
 
     /**

@@ -141,6 +141,51 @@ class KeluargaController extends Controller
      * PATCH /api/keluarga/{id}/status — Tetap/Domisili/Non Domisili/Pendatang.
      * Semua status tetap ditagih iuran (arsip = soft delete).
      */
+    /**
+     * POST /api/keluarga/{keluarga}/verify — verifikasi data KK level keluarga (admin only).
+     * VERIFY: KK ditandai + semua anggota yang belum terverifikasi ikut terverifikasi
+     * (timestamp anggota yang sudah diverifikasi individual tidak ditimpa).
+     * Body {verified: false} = BATALKAN: status KK dan SELURUH anggota kembali belum
+     * (reset penuh — keluarga masuk daftar perlu pengecekan ulang). Idempotent dua arah.
+     */
+    public function verify(Request $request, Keluarga $keluarga): JsonResponse
+    {
+        abort_unless($request->user()->role === 'admin', 403, 'Hanya admin yang dapat memverifikasi data keluarga.');
+        $this->authorizeKeluarga($request, $keluarga);
+
+        $verified = $request->boolean('verified', true);
+
+        if ($verified && ! $keluarga->is_verified) {
+            DB::transaction(function () use ($request, $keluarga) {
+                $keluarga->update([
+                    'is_verified' => true,
+                    'verified_by' => $request->user()->id,
+                    'verified_at' => now(),
+                ]);
+                $keluarga->anggotaKeluarga()
+                    ->where('is_verified', false)
+                    ->update([
+                        'is_verified' => true,
+                        'verified_by' => $request->user()->id,
+                        'verified_at' => now(),
+                    ]);
+            });
+            $this->logActivity($request, 'verify', 'keluarga', "Verifikasi KK {$keluarga->no_kk} beserta seluruh anggota", null, ['is_verified' => true]);
+        } elseif (! $verified && $keluarga->is_verified) {
+            DB::transaction(function () use ($keluarga) {
+                $keluarga->update(['is_verified' => false, 'verified_by' => null, 'verified_at' => null]);
+                $keluarga->anggotaKeluarga()->update([
+                    'is_verified' => false,
+                    'verified_by' => null,
+                    'verified_at' => null,
+                ]);
+            });
+            $this->logActivity($request, 'unverify', 'keluarga', "Batalkan verifikasi KK {$keluarga->no_kk} beserta seluruh anggota", ['is_verified' => true], ['is_verified' => false]);
+        }
+
+        return response()->json(['data' => $keluarga->fresh()->only(['id', 'no_kk', 'is_verified', 'verified_by', 'verified_at'])]);
+    }
+
     public function updateStatus(Request $request, Keluarga $keluarga): JsonResponse
     {
         $validated = $request->validate([
@@ -206,6 +251,7 @@ class KeluargaController extends Controller
             'total_anggota' => (clone $query)->withCount('anggotaKeluarga')->get()->sum('anggota_keluarga_count'),
             'kk_tanpa_kepala' => (clone $query)->whereNull('kepala_keluarga_id')->count(),
             'kk_by_status' => (clone $query)->selectRaw('status_keluarga, COUNT(*) as total')->groupBy('status_keluarga')->pluck('total', 'status_keluarga'),
+            'kk_terverifikasi' => (clone $query)->where('is_verified', true)->count(),
         ];
         $data['rata_rata_anggota'] = $data['total_keluarga'] > 0
             ? round($data['total_anggota'] / $data['total_keluarga'], 2)
@@ -233,6 +279,7 @@ class KeluargaController extends Controller
             'alamat_domisili' => ['nullable', 'string', 'max:500'],
             'rt_id' => ['required', 'exists:wilayahs,id'],
             'status_keluarga' => ['nullable', 'in:Tetap,Domisili,Non Domisili,Pendatang'],
+            'status_miskin' => ['nullable', 'in:Miskin,Pra-Miskin,Non'],
             'tanggal_mulai_domisili_keluarga' => ['nullable', 'date'],
             'keterangan_status' => ['nullable', 'string', 'max:255'],
             'kepala_keluarga_id' => ['nullable', 'exists:wargas,id'],
@@ -272,5 +319,42 @@ class KeluargaController extends Controller
         }
         $rtIds = $this->rtIdsForUser($request->user());
         abort_if(! $rtIds->contains($keluarga->rt_id), 404, 'Keluarga tidak ditemukan.');
+    }
+
+    /**
+     * GET /api/keluarga/kk-token?path=kk/{no_kk}.{ext} — signature akses file dokumen KK.
+     *
+     * File fisik diserve Next.js dari public/kk (di-commit), tapi middleware Next
+     * memblokir akses tanpa signature valid. Token = HMAC-SHA256("/{path}|{expires}")
+     * dengan secret bersama KK_LINK_SECRET (env Laravel & Next), TTL 5 menit,
+     * scoped ke path persis (token file A tak berlaku utk file B) dan hanya utk
+     * KK dalam scope user (rt/rw/lurah/admin).
+     */
+    public function kkToken(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'path' => ['required', 'string', 'regex:#^kk/\d{16}\.(jpe?g|png|webp|pdf)$#i'],
+        ]);
+
+        $path = strtolower($validated['path']);
+        $noKk = substr($path, 3, 16);
+
+        $keluarga = Keluarga::where('no_kk', $noKk)->first();
+        abort_unless($keluarga && $keluarga->foto_kk, 404, 'Dokumen KK tidak ditemukan.');
+        $this->authorizeKeluarga($request, $keluarga);
+
+        $file = dirname(base_path()).'/public/'.$path;
+        abort_unless(is_file($file), 404, 'Dokumen KK tidak ditemukan.');
+
+        $secret = (string) config('services.kk_link_secret');
+        abort_unless($secret !== '', 500, 'KK_LINK_SECRET belum dikonfigurasi.');
+
+        $expires = now()->addMinutes(5)->getTimestamp();
+        $sig = hash_hmac('sha256', "/{$path}|{$expires}", $secret);
+
+        return response()->json(['data' => [
+            'url' => "/{$path}?e={$expires}&s={$sig}",
+            'expires_at' => $expires,
+        ]]);
     }
 }

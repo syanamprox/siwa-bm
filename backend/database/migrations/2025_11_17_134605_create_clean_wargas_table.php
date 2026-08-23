@@ -39,6 +39,13 @@ return new class extends Migration
             $table->string('no_telepon', 15)->nullable();
             $table->string('email')->nullable();
 
+            // Status Kehidupan & Verifikasi Data
+            $table->boolean('meninggal')->default(false); // almarhum/Almarhumah
+            $table->date('tanggal_meninggal')->nullable();
+            $table->boolean('is_verified')->default(false); // data telah diverifikasi petugas (admin)
+            $table->foreignId('verified_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->timestamp('verified_at')->nullable();
+
             // Audit & Timestamps
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->foreignId('updated_by')->nullable()->constrained('users')->onDelete('set null');

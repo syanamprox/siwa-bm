@@ -9,6 +9,7 @@ next-env.d.ts
 .DS_Store
 *.log
 
-# Data KK asli warga (PII — JANGAN pernah di-commit)
+# Data KK asli warga (PII — arsip sumber, JANGAN pernah di-commit)
 /kk
-/public/kk
+# public/kk TIDAK di-ignore: salinan foto KK ter-seed ikut repo private.
+# Aksesnya dikunci middleware signature (KK_LINK_SECRET) — bukan URL publik bebas.

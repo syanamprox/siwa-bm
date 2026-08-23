@@ -42,6 +42,12 @@ class WargaController extends Controller
         if ($request->filled('pendidikan')) {
             $query->where('pendidikan_terakhir', $request->input('pendidikan'));
         }
+        if ($request->filled('meninggal')) {
+            $query->where('meninggal', $request->boolean('meninggal'));
+        }
+        if ($request->filled('is_verified')) {
+            $query->where('is_verified', $request->boolean('is_verified'));
+        }
         if ($request->filled('kk_id')) {
             $query->where('kk_id', $request->input('kk_id'));
         }
@@ -162,6 +168,37 @@ class WargaController extends Controller
     }
 
     /**
+     * POST /api/warga/{warga}/verify — tandai data terverifikasi petugas (admin only).
+     * Body opsional {verified: false} untuk MEMBATALKAN verifikasi (status kembali
+     * belum, verified_by/at dikosongkan). Idempotent dua arah.
+     */
+    public function verify(Request $request, Warga $warga): JsonResponse
+    {
+        abort_unless($request->user()->role === 'admin', 403, 'Hanya admin yang dapat memverifikasi data warga.');
+        $this->authorizeWarga($request, $warga);
+
+        $verified = $request->boolean('verified', true);
+
+        if ($verified && ! $warga->is_verified) {
+            $warga->update([
+                'is_verified' => true,
+                'verified_by' => $request->user()->id,
+                'verified_at' => now(),
+            ]);
+            $this->logActivity($request, 'verify', 'warga', "Verifikasi data warga {$warga->nama_lengkap} (NIK {$warga->nik})", null, ['is_verified' => true]);
+        } elseif (! $verified && $warga->is_verified) {
+            $warga->update([
+                'is_verified' => false,
+                'verified_by' => null,
+                'verified_at' => null,
+            ]);
+            $this->logActivity($request, 'unverify', 'warga', "Batalkan verifikasi data warga {$warga->nama_lengkap} (NIK {$warga->nik})", ['is_verified' => true], ['is_verified' => false]);
+        }
+
+        return response()->json(['data' => $warga->fresh()->only(['id', 'nik', 'is_verified', 'verified_by', 'verified_at'])]);
+    }
+
+    /**
      * GET /api/warga/statistics — scoped.
      */
     public function statistics(Request $request): JsonResponse
@@ -175,6 +212,8 @@ class WargaController extends Controller
             'warga_perempuan' => (clone $query)->where('jenis_kelamin', 'P')->count(),
             'warga_dengan_kk' => (clone $query)->whereNotNull('kk_id')->count(),
             'warga_tanpa_kk' => (clone $query)->whereNull('kk_id')->count(),
+            'warga_meninggal' => (clone $query)->where('meninggal', true)->count(),
+            'warga_terverifikasi' => (clone $query)->where('is_verified', true)->count(),
             'warga_by_agama' => (clone $query)->selectRaw('agama, COUNT(*) as total')->groupBy('agama')->pluck('total', 'agama'),
             'warga_by_pendidikan' => (clone $query)->selectRaw('pendidikan_terakhir, COUNT(*) as total')->groupBy('pendidikan_terakhir')->pluck('total', 'pendidikan_terakhir'),
         ];
@@ -206,6 +245,8 @@ class WargaController extends Controller
             'kewarganegaraan' => ['required', 'in:WNI,WNA'],
             'hubungan_keluarga' => ['required', 'string', 'max:50'],
             'kk_id' => ['nullable', 'exists:keluargas,id'],
+            'meninggal' => ['nullable', 'boolean'],
+            'tanggal_meninggal' => ['nullable', 'date', 'after:tanggal_lahir', 'before_or_equal:today'],
             'foto_ktp' => ['nullable', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
             'foto_ktp_data' => ['nullable', 'string', 'starts_with:data:image'],
         ];

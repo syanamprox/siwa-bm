@@ -45,6 +45,10 @@ class Keluarga extends Model
         'status_domisili_keluarga',
         'tanggal_mulai_domisili_keluarga',
         'status_keluarga', // Tetap/Domisili/Non Domisili/Pendatang — semua ditagih iuran, arsip = soft delete
+        'status_miskin', // Miskin/Pra-Miskin/Non — klasifikasi kelurahan
+        'is_verified', // data KK terverifikasi admin — cascades ke seluruh anggota
+        'verified_by',
+        'verified_at',
         'keterangan_status',
         'tanggal_status',
     ];
@@ -59,6 +63,8 @@ class Keluarga extends Model
         return [
             'tanggal_mulai_domisili_keluarga' => 'date',
             'tanggal_status' => 'date',
+            'is_verified' => 'boolean',
+            'verified_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
             'deleted_at' => 'datetime',

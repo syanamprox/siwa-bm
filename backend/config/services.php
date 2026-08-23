@@ -35,4 +35,7 @@ return [
         ],
     ],
 
+    // Secret bersama dgn Next.js (KK_LINK_SECRET) — signature akses file dokumen KK
+    'kk_link_secret' => env('KK_LINK_SECRET'),
+
 ];

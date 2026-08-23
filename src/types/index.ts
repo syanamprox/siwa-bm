@@ -34,6 +34,10 @@ export interface Warga {
   email: string | null
   nama_ayah: string | null
   nama_ibu: string | null
+  meninggal: boolean
+  tanggal_meninggal: string | null
+  is_verified: boolean
+  verified_at: string | null
   foto_ktp: string | null
   keluarga?: KeluargaRef | null
   umur?: number
@@ -69,6 +73,9 @@ export interface Keluarga {
   status_domisili_keluarga?: string | null // dipensiunkan — status keluarga kini berbasis domisili
   tanggal_mulai_domisili_keluarga?: string | null
   status_keluarga: string
+  status_miskin?: 'Miskin' | 'Pra-Miskin' | 'Non' | null
+  is_verified?: boolean
+  verified_at?: string | null
   status_label?: string
   keterangan_status: string | null
   tanggal_status: string | null

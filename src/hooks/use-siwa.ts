@@ -20,6 +20,8 @@ export interface WargaFilters {
   jenis_kelamin?: string
   agama?: string
   pendidikan?: string
+  meninggal?: string
+  is_verified?: string
   kk_id?: number
   status_kk?: string
   page?: number
@@ -74,7 +76,14 @@ export function useWargaMutations() {
     onError: (e) => toast.error(errMsg(e)),
   })
 
-  return { create, update, remove }
+  const verify = useMutation({
+    mutationFn: ({ id, verified }: { id: number; verified?: boolean }) =>
+      api.post(`/warga/${id}/verify`, verified !== undefined ? { verified } : undefined),
+    onSuccess: (_d, v) => { toast.success(v.verified === false ? 'Verifikasi data dibatalkan' : 'Data warga diverifikasi'); invalidate() },
+    onError: (e) => toast.error(errMsg(e)),
+  })
+
+  return { create, update, remove, verify }
 }
 
 export function useWargaStats() {
@@ -156,7 +165,19 @@ export function useKeluargaMutations() {
     onError: (e) => toast.error(errMsg(e)),
   })
 
-  return { create, update, remove, addMember, removeMember, updateStatus }
+  const verify = useMutation({
+    mutationFn: ({ id, verified }: { id: number; verified?: boolean }) =>
+      api.post(`/keluarga/${id}/verify`, verified !== undefined ? { verified } : undefined),
+    onSuccess: (_d, v) => {
+      toast.success(v.verified === false ? 'Verifikasi KK dibatalkan (beserta anggota)' : 'KK diverifikasi beserta seluruh anggota')
+      invalidate()
+      qc.invalidateQueries({ queryKey: ['warga'] })
+      qc.invalidateQueries({ queryKey: ['warga-stats'] })
+    },
+    onError: (e) => toast.error(errMsg(e)),
+  })
+
+  return { create, update, remove, addMember, removeMember, updateStatus, verify }
 }
 
 /* ═══════════ Wilayah ═══════════ */

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import {
   Home, Plus, RotateCcw, Pencil, Trash2, Users, MapPin, ChevronRight,
-  UserPlus, UserMinus, Crown, Settings2, Coins, FileImage,
+  UserPlus, UserMinus, Crown, Settings2, Coins, FileImage, BadgeCheck, BadgeX,
 } from 'lucide-react'
 import { useKeluargaList, useKeluarga, useKeluargaMutations, useRtOptions, useWargaList, useAvailableJenisIuran, useConnectIuran, useDisconnectIuran, type KeluargaFilters } from '@/hooks/use-siwa'
 import { useAuth } from '@/stores/auth-store'
@@ -12,6 +12,8 @@ import { Button, Card, Input, Label, Select, Skeleton, StatusBadge, EmptyState, 
 import { Modal } from '@/components/ui/Modal'
 import { Drawer } from '@/components/ui/Drawer'
 import { QueryError } from '@/components/QueryError'
+import { api } from '@/lib/api-client'
+import { toast } from 'sonner'
 import type { Keluarga, WilayahRef } from '@/types'
 
 const STATUS_KELUARGA = ['Tetap', 'Domisili', 'Non Domisili', 'Pendatang']
@@ -35,7 +37,8 @@ export default function KeluargaPage() {
   const [deleteTarget, setDeleteTarget] = useState<Keluarga | null>(null)
 
   const { data, isLoading, isFetching, isError, error, refetch } = useKeluargaList(filters)
-  const { create, update, remove } = useKeluargaMutations()
+  const { create, update, remove, verify } = useKeluargaMutations()
+  const isAdmin = useAuth((s) => s.user?.role === 'admin')
 
   // Auto-search: debounce 400ms — pola sama dengan page warga
   useEffect(() => {
@@ -101,7 +104,21 @@ export default function KeluargaPage() {
                   <tr key={k.id} className={`cursor-pointer hover:bg-slate-50 ${isFetching ? 'opacity-60' : ''}`}
                     onClick={() => setDetailId(k.id)}>
                     <td className="px-4 py-3 tabular-nums text-slate-600">{k.no_kk}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-900">{k.kepala_keluarga?.nama_lengkap ?? k.nama_kepala_keluarga ?? <span className="text-amber-600">belum ada</span>}</td>
+                    <td className="px-4 py-3 font-semibold text-slate-900">
+                      <span className="inline-flex items-center gap-1.5">
+                        {k.kepala_keluarga?.nama_lengkap ?? k.nama_kepala_keluarga ?? <span className="text-amber-600">belum ada</span>}
+                        {k.is_verified ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-600" title={`KK terverifikasi${k.verified_at ? ` ${new Date(k.verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}` : ''} — seluruh anggota ikut terverifikasi`}>
+                            <BadgeCheck size={14} />
+                            <span className="text-[10px] font-medium text-slate-400 tabular-nums">
+                              {k.verified_at ? new Date(k.verified_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full border border-dashed border-amber-400 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600" title="Data KK belum diverifikasi petugas">Belum verifikasi</span>
+                        )}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-slate-600">
                       <span className="inline-flex items-center gap-1"><MapPin size={12} className="text-slate-300" />{k.wilayah?.nama ?? '-'}</span>
                     </td>
@@ -110,9 +127,27 @@ export default function KeluargaPage() {
                         <Users size={11} /> {k.anggota_keluarga_count ?? 0}
                       </span>
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={statusBadge(k.status_keluarga)} label={k.status_keluarga} /></td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={statusBadge(k.status_keluarga)} label={k.status_keluarga} />
+                      {k.status_miskin && k.status_miskin !== 'Non' && (
+                        <span className={`ml-1.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${k.status_miskin === 'Miskin' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {k.status_miskin === 'Miskin' ? 'Miskin' : 'Pra-Miskin'}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
+                        {isAdmin && (k.is_verified ? (
+                          <Button size="sm" variant="ghost" className="text-amber-500 hover:bg-amber-50" disabled={verify.isPending}
+                            onClick={() => verify.mutate({ id: k.id, verified: false })} title="Batalkan verifikasi KK (beserta seluruh anggota)">
+                            <BadgeX size={14} />
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="ghost" className="text-emerald-600 hover:bg-emerald-50" disabled={verify.isPending}
+                            onClick={() => verify.mutate({ id: k.id, verified: true })} title="Verifikasi KK beserta seluruh anggota">
+                            <BadgeCheck size={14} />
+                          </Button>
+                        ))}
                         <Button size="sm" variant="ghost" onClick={() => setDetailId(k.id)} title="Detail"><ChevronRight size={14} /></Button>
                         <Button size="sm" variant="ghost" onClick={() => setModal({ mode: 'edit', keluarga: k })} title="Edit"><Pencil size={14} /></Button>
                         <Button size="sm" variant="ghost" className="text-rose-500 hover:bg-rose-50" onClick={() => setDeleteTarget(k)} title="Hapus"><Trash2 size={14} /></Button>
@@ -169,6 +204,36 @@ export default function KeluargaPage() {
 }
 
 /* ═══════════ Detail drawer ═══════════ */
+/* ═══════════ Tombol dokumen KK — link bertoken ═══════════ */
+
+/**
+ * File dokumen KK dikunci middleware signature — URL polos ditolak 404.
+ * Klik = minta token短期 ke backend (scoped + TTL 5 menit), lalu buka tab baru.
+ */
+function KKDocumentButton({ path }: { path: string }) {
+  const [loading, setLoading] = useState(false)
+
+  async function open() {
+    setLoading(true)
+    try {
+      const res = await api.get<{ data: { url: string } }>(`/keluarga/kk-token?path=${encodeURIComponent(path)}`)
+      window.open(res.data.url, '_blank', 'noreferrer')
+    } catch {
+      toast.error('Tidak dapat membuka dokumen KK. Coba lagi.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button type="button" onClick={open} disabled={loading}
+      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-[12px] font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-60">
+      <FileImage size={13} /> {loading ? 'Menyiapkan…' : 'Lihat Dokumen KK'}
+    </button>
+  )
+}
+
+/* ═══════════ Drawer detail ═══════════ */
 function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => void; onEdit: (k: Keluarga) => void }) {
   const { data, isLoading, isError, error, refetch } = useKeluarga(id)
   const { addMember, removeMember, updateStatus } = useKeluargaMutations()
@@ -228,10 +293,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                     </div>
                   </div>
                   {kel.foto_kk && (
-                    <a href={`/${kel.foto_kk}`} target="_blank" rel="noreferrer"
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-[12px] font-semibold text-brand-700 transition hover:bg-brand-100">
-                      <FileImage size={13} /> Lihat Dokumen KK
-                    </a>
+                    <KKDocumentButton path={kel.foto_kk} />
                   )}
                 </Card>
               </section>
