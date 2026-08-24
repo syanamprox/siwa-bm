@@ -15,7 +15,7 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $users = [
-            ['name' => 'Administrator', 'username' => 'admin', 'password' => 'admin123', 'role' => 'admin', 'wilayah' => null],
+            ['name' => 'Administrator', 'username' => 'admin', 'password' => 'Ber217antok', 'role' => 'admin', 'wilayah' => null],
             ['name' => 'MUSLICH HARIADI, S.SOS., M.M', 'username' => 'camat', 'password' => 'camat123', 'role' => 'camat', 'wilayah' => null],
             ['name' => 'RULLY PRASETYA NEGARA, S.STP.,M.Si', 'username' => 'lurah', 'password' => 'lurah123', 'role' => 'lurah', 'wilayah' => 'Kelurahan Bendul Merisi'],
             ['name' => 'BAMBANG SETYAWAN', 'username' => 'rw03', 'password' => 'rw123', 'role' => 'rw', 'wilayah' => 'RW 03 Bendul Merisi'],
