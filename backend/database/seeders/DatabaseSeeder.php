@@ -30,6 +30,7 @@ class DatabaseSeeder extends Seeder
             KasOrganisasiRw03Seeder::class, // unit kas organisasi real RW03 & RT02 (musholla, rukem, PKK, karang taruna, sosial)
             KasRt02Rw03RealSeeder::class, // buku kas asli RT02 RW03 2023-2026
             KasRw03RealSeeder::class, // buku kas asli RW03 Juli 2026
+            KasKartarRw03RealSeeder::class, // buku kas asli Karang Taruna RW03 Feb 2023-Jul 2026
         ]);
     }
 }
