@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
             KasRt02Rw03RealSeeder::class, // buku kas asli RT02 RW03 2023-2026
             KasRw03RealSeeder::class, // buku kas asli RW03 Juli 2026
             KasKartarRw03RealSeeder::class, // buku kas asli Karang Taruna RW03 Feb 2023-Jul 2026
+            KasRukemRw03RealSeeder::class, // buku kas asli Rukem Sehati RW03 Feb 2017-Agt 2026
         ]);
     }
 }
