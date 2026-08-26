@@ -24,6 +24,8 @@ export interface KasSummary {
   pemasukan_lain: number
   pengeluaran: number
   saldo_akhir: number
+  tx_count: number
+  tx_keluar_count: number
   tren: { bulan: string; masuk: number; keluar: number }[]
   tx: { id: number; tgl: string; ket: string | null; kat: string; masuk: number; keluar: number; sumber: string }[]
 }
@@ -42,12 +44,13 @@ export function useKasUnits() {
   })
 }
 
-/** Summary kas (auth — scoped). */
-export function useKasSummary(unitId: number | null, bulan?: string) {
+/** Summary kas (auth — scoped). Periode custom via mulai+sampai; q/tipe = filter daftar transaksi. */
+export function useKasSummary(unitId: number | null, params?: { mulai?: string; sampai?: string; q?: string; tipe?: string }) {
+  const { mulai, sampai, q, tipe } = params ?? {}
   return useQuery({
-    queryKey: ['kas-summary', unitId, bulan],
-    queryFn: () => api.get<{ data: KasSummary }>(`/kas/summary?${qs({ unit_id: unitId ?? undefined, bulan })}`),
-    enabled: !!unitId,
+    queryKey: ['kas-summary', unitId, mulai, sampai, q, tipe],
+    queryFn: () => api.get<{ data: KasSummary }>(`/kas/summary?${qs({ unit_id: unitId ?? undefined, mulai, sampai, q, tipe })}`),
+    enabled: !!unitId && !!mulai && !!sampai && mulai <= sampai,
   })
 }
 

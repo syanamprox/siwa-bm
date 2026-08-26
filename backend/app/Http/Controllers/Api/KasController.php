@@ -102,19 +102,31 @@ class KasController extends Controller
     }
 
     /**
-     * GET /api/kas/summary?unit_id=&bulan=YYYY-M — ringkasan kas per unit.
+     * GET /api/kas/summary?unit_id=&mulai=&sampai=&bulan=&q=&tipe= — ringkasan kas per unit.
+     * Periode: mulai+sampai (custom, YYYY-MM-DD) > bulan (YYYY-M) > default bulan ini.
+     * q/tipe = filter daftar transaksi (search + masuk/keluar) — tidak mengubah KPI/saldo.
      */
     public function summary(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'unit_id' => ['required', 'integer'],
             'bulan' => ['nullable', 'date_format:Y-m'],
+            'mulai' => ['nullable', 'date'],
+            'sampai' => ['nullable', 'date'],
+            'q' => ['nullable', 'string', 'max:100'],
+            'tipe' => ['nullable', 'in:masuk,keluar'],
         ]);
 
         $unit = $this->findUnitInScope($request, (int) $validated['unit_id']);
-        $bulan = $validated['bulan'] ?? now()->format('Y-m');
+        [$start, $end] = $this->resolvePeriode($validated);
 
-        return response()->json(['data' => $this->buildSummary($unit, $bulan)]);
+        return response()->json(['data' => $this->buildSummary(
+            $unit,
+            $start,
+            $end,
+            $validated['q'] ?? null,
+            $validated['tipe'] ?? null,
+        )]);
     }
 
     /**
@@ -209,7 +221,9 @@ class KasController extends Controller
         $unit = KasUnit::find((int) $validated['unit_id']);
         abort_unless($unit, 404, 'Unit kas tidak ditemukan.');
 
-        return response()->json(['data' => $this->buildSummary($unit, $validated['bulan'] ?? now()->format('Y-m'))]);
+        $start = Carbon::createFromFormat('Y-m', $validated['bulan'] ?? now()->format('Y-m'))->startOfMonth();
+
+        return response()->json(['data' => $this->buildSummary($unit, $start, $start->copy()->endOfMonth())]);
     }
 
     /* ────────────────────────── HELPERS ────────────────────────── */
@@ -284,28 +298,54 @@ class KasController extends Controller
     }
 
     /**
-     * Ringkasan kas satu unit untuk satu bulan (dipakai endpoint auth + portal).
+     * Resolve rentang periode dari input: mulai+sampai (custom) > bulan > bulan ini.
+     * Satu sisi saja terkirim → pasangannya mengikuti batas bulan sisi yang ada.
      */
-    private function buildSummary(KasUnit $unit, string $bulan): array
+    private function resolvePeriode(array $v): array
+    {
+        if (! empty($v['mulai']) || ! empty($v['sampai'])) {
+            $start = Carbon::parse($v['mulai'] ?? $v['sampai'])->startOfDay();
+            $end = Carbon::parse($v['sampai'] ?? $v['mulai'])->endOfDay();
+
+            // Satu sisi kosong → ambil batas bulan sisi satunya
+            if (empty($v['mulai'])) {
+                $start = $end->copy()->startOfMonth();
+            }
+            if (empty($v['sampai'])) {
+                $end = $start->copy()->endOfMonth();
+            }
+        } else {
+            $start = Carbon::createFromFormat('Y-m', $v['bulan'] ?? now()->format('Y-m'))->startOfMonth();
+            $end = $start->copy()->endOfMonth();
+        }
+
+        abort_if($start->gt($end), 422, 'Tanggal mulai tidak boleh melebihi tanggal sampai.');
+
+        return [$start, $end];
+    }
+
+    /**
+     * Ringkasan kas satu unit untuk satu rentang tanggal (dipakai endpoint auth + portal).
+     * $q/$tipe (opsional) hanya memfilter daftar tx — KPI & saldo selalu agregat penuh periode.
+     */
+    private function buildSummary(KasUnit $unit, Carbon $start, Carbon $end, ?string $q = null, ?string $tipe = null): array
     {
         $unit->load('wilayah.parent');
-
-        $start = Carbon::createFromFormat('Y-m', $bulan)->startOfMonth();
-        $end = $start->copy()->endOfMonth();
 
         $trx = KasTransaksi::where('kas_unit_id', $unit->id);
 
         $saldoAwal = (float) (clone $trx)->where('tanggal', '<', $start->toDateString())
             ->sum(DB::raw("CASE WHEN tipe = 'masuk' THEN jumlah ELSE -jumlah END"));
 
-        $inMonth = fn ($q) => $q->whereBetween('tanggal', [$start->toDateString(), $end->toDateString()]);
+        $inRange = fn ($qy) => $qy->whereBetween('tanggal', [$start->toDateString(), $end->toDateString()]);
 
-        $pemasukanIuran = (float) $inMonth(clone $trx)->where('tipe', 'masuk')->where('sumber', 'iuran')->sum('jumlah');
-        $pemasukanLain = (float) $inMonth(clone $trx)->where('tipe', 'masuk')->where('sumber', 'manual')->sum('jumlah');
-        $pengeluaran = (float) $inMonth(clone $trx)->where('tipe', 'keluar')->sum('jumlah');
+        $pemasukanIuran = (float) $inRange(clone $trx)->where('tipe', 'masuk')->where('sumber', 'iuran')->sum('jumlah');
+        $pemasukanLain = (float) $inRange(clone $trx)->where('tipe', 'masuk')->where('sumber', 'manual')->sum('jumlah');
+        $pengeluaran = (float) $inRange(clone $trx)->where('tipe', 'keluar')->sum('jumlah');
 
-        // Tren 3 bulan (2 bulan sebelum + bulan query)
-        $trenStart = $start->copy()->subMonths(2)->startOfMonth();
+        // Tren 3 bulan berakhir di bulan akhir periode (2 bulan sebelum + bulan sampai)
+        $trenEnd = $end->copy()->startOfMonth();
+        $trenStart = $trenEnd->copy()->subMonths(2)->startOfMonth();
         $perBulan = (clone $trx)->whereBetween('tanggal', [$trenStart->toDateString(), $end->toDateString()])
             ->selectRaw("DATE_FORMAT(tanggal, '%Y-%m') as bulan")
             ->selectRaw("SUM(CASE WHEN tipe = 'masuk' THEN jumlah ELSE 0 END) as masuk")
@@ -314,7 +354,7 @@ class KasController extends Controller
 
         $tren = [];
         for ($i = 2; $i >= 0; $i--) {
-            $m = $start->copy()->subMonths($i)->format('Y-m');
+            $m = $trenEnd->copy()->subMonths($i)->format('Y-m');
             $tren[] = [
                 'bulan' => $m,
                 'masuk' => (float) ($perBulan[$m]->masuk ?? 0),
@@ -322,11 +362,32 @@ class KasController extends Controller
             ];
         }
 
-        $tx = $inMonth(KasTransaksi::where('kas_unit_id', $unit->id))
-            ->orderBy('tanggal')->orderBy('id')->get()
+        // Label periode: bulan penuh → "Agustus 2026" · custom → "1 Agu – 31 Agu 2026"
+        $fullMonth = $start->day === 1 && $start->isSameMonth($end) && $end->day === $end->daysInMonth;
+        $startFmt = $start->year === $end->year ? 'j M' : 'j M Y';
+        $periodeLabel = $fullMonth
+            ? $start->locale('id')->translatedFormat('F Y')
+            : $start->locale('id')->translatedFormat($startFmt).' – '.$end->locale('id')->translatedFormat('j M Y');
+
+        // Tanggal baris: sertakan tahun bila rentang lintas tahun
+        $tglFmt = $start->year === $end->year ? 'd M' : 'd M Y';
+
+        $txBase = $inRange(KasTransaksi::where('kas_unit_id', $unit->id));
+        $txCount = (int) (clone $txBase)->count();
+        $txKeluarCount = (int) (clone $txBase)->where('tipe', 'keluar')->count();
+
+        $txQuery = clone $txBase;
+        if ($q !== null && $q !== '') {
+            $txQuery->where(fn ($w) => $w->where('keterangan', 'like', "%{$q}%")->orWhere('kategori', 'like', "%{$q}%"));
+        }
+        if ($tipe !== null && $tipe !== '') {
+            $txQuery->where('tipe', $tipe);
+        }
+
+        $tx = $txQuery->orderBy('tanggal')->orderBy('id')->get()
             ->map(fn ($t) => [
                 'id' => $t->id,
-                'tgl' => $t->tanggal->locale('id')->translatedFormat('d M'),
+                'tgl' => $t->tanggal->locale('id')->translatedFormat($tglFmt),
                 'ket' => $t->keterangan,
                 'kat' => $t->kategori,
                 'masuk' => $t->tipe === 'masuk' ? (float) $t->jumlah : 0,
@@ -336,12 +397,14 @@ class KasController extends Controller
 
         return [
             'unit' => $this->formatUnit($unit),
-            'periode_label' => $start->locale('id')->translatedFormat('F Y'),
+            'periode_label' => $periodeLabel,
             'saldo_awal' => $saldoAwal,
             'pemasukan_iuran' => $pemasukanIuran,
             'pemasukan_lain' => $pemasukanLain,
             'pengeluaran' => $pengeluaran,
             'saldo_akhir' => $saldoAwal + $pemasukanIuran + $pemasukanLain - $pengeluaran,
+            'tx_count' => $txCount,
+            'tx_keluar_count' => $txKeluarCount,
             'tren' => $tren,
             'tx' => $tx,
         ];

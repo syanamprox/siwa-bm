@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, Landmark, Plus, Building2, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, Landmark, Plus, Building2, Trash2, Search } from 'lucide-react'
 import { useKasUnits, useKasSummary, useCreateKasUnit, useDeleteKasUnit, useCreateKasTrx, useDeleteKasTrx, type KasUnitItem } from '@/hooks/use-kas'
 import { useWilayahTree } from '@/hooks/use-siwa'
 import { PageHeader } from '@/components/PageHeader'
@@ -29,18 +29,37 @@ const KAT_COLOR: Record<string, string> = {
 
 const ym = (d: Date) => d.toISOString().slice(0, 7)
 
+/** Default periode: bulan ini penuh (tgl 1 s/d akhir bulan). */
+const monthBounds = () => {
+  const now = new Date()
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  return { mulai: `${ym(now)}-01`, sampai: `${ym(now)}-${String(last).padStart(2, '0')}` }
+}
+
 export default function LaporanKeuanganPage() {
   const isAdmin = useAuth((s) => s.user?.role === 'admin')
   const [unitId, setUnitId] = useState<number | null>(null)
-  const [bulan, setBulan] = useState(ym(new Date()))
+  const [mulai, setMulai] = useState(monthBounds().mulai)
+  const [sampai, setSampai] = useState(monthBounds().sampai)
+  const [cari, setCari] = useState('')
+  const [q, setQ] = useState('')
+  const [tipe, setTipe] = useState('')
   const [trxOpen, setTrxOpen] = useState(false)
   const [orgOpen, setOrgOpen] = useState(false)
+
+  // Debounce search — jangan spam API tiap ketikan
+  useEffect(() => {
+    const t = setTimeout(() => setQ(cari.trim()), 300)
+    return () => clearTimeout(t)
+  }, [cari])
+
+  const rangeValid = mulai <= sampai
 
   const { data: unitsData, isLoading: loadingUnits, isError: errUnits, error: errUnitsObj, refetch: refetchUnits } = useKasUnits()
   const units = unitsData?.data ?? []
   const unit = units.find((u) => u.id === unitId) ?? units[0]
 
-  const { data: sumData, isLoading: loadingSum, isError: errSum, error: errSumObj, refetch: refetchSum } = useKasSummary(unit?.id ?? null, bulan)
+  const { data: sumData, isLoading: loadingSum, isError: errSum, error: errSumObj, refetch: refetchSum } = useKasSummary(unit?.id ?? null, { mulai, sampai, q, tipe: tipe || undefined })
   const s = sumData?.data
 
   return (
@@ -63,21 +82,57 @@ export default function LaporanKeuanganPage() {
         ) : errUnits ? (
           <QueryError message={errUnitsObj?.message} onRetry={() => refetchUnits()} />
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Select
-              value={String(unit?.id ?? '')}
-              onChange={(v) => setUnitId(Number(v))}
-              placeholder="Pilih unit kas…"
-              options={units.map((u) => ({
-                value: String(u.id),
-                label: u.jenis === 'organisasi' ? `${u.nama} ${u.parent_label ?? ''}` : u.nama,
-              }))}
-            />
-            <Input type="month" value={bulan} onChange={(e) => setBulan(e.target.value || ym(new Date()))} />
-            <div className="flex items-center gap-2 text-[12px] text-slate-400">
-              <Landmark size={13} className="shrink-0" /> {unit ? `${unit.jenis.toUpperCase()} · ${unit.parent_label ?? unit.wilayah_nama ?? ''}` : ''}
+          <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+              <div>
+                <Label>Unit Kas</Label>
+                <Select
+                  value={String(unit?.id ?? '')}
+                  onChange={(v) => setUnitId(Number(v))}
+                  placeholder="Pilih unit kas…"
+                  options={units.map((u) => ({
+                    value: String(u.id),
+                    label: u.jenis === 'organisasi' ? `${u.nama} ${u.parent_label ?? ''}` : u.nama,
+                  }))}
+                />
+              </div>
+              <div>
+                <Label>Dari Tanggal</Label>
+                <Input type="date" value={mulai} onChange={(e) => setMulai(e.target.value)} />
+              </div>
+              <div>
+                <Label>Sampai Tanggal</Label>
+                <Input type="date" value={sampai} onChange={(e) => setSampai(e.target.value)} />
+              </div>
+              <div>
+                <Label>Tipe</Label>
+                <Select
+                  value={tipe || 'semua'}
+                  onChange={(v) => setTipe(v === 'semua' ? '' : v)}
+                  options={[
+                    { value: 'semua', label: 'Semua (masuk + keluar)' },
+                    { value: 'masuk', label: 'Pemasukan saja' },
+                    { value: 'keluar', label: 'Pengeluaran saja' },
+                  ]}
+                />
+              </div>
+              <div>
+                <Label>Cari Transaksi</Label>
+                <div className="relative">
+                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <Input value={cari} onChange={(e) => setCari(e.target.value)} placeholder="keterangan / kategori…" className="pl-8" />
+                </div>
+              </div>
+              <div className="flex items-end">
+                <p className="flex items-center gap-2 pb-2.5 text-[12px] text-slate-400">
+                  <Landmark size={13} className="shrink-0" /> {unit ? `${unit.jenis.toUpperCase()} · ${unit.parent_label ?? unit.wilayah_nama ?? ''}` : ''}
+                </p>
+              </div>
             </div>
-          </div>
+            {!rangeValid && (
+              <p className="mt-2 text-[12px] font-medium text-rose-500">Tanggal mulai melebihi tanggal sampai — sesuaikan rentang.</p>
+            )}
+          </>
         )}
       </Card>
 
@@ -94,7 +149,7 @@ export default function LaporanKeuanganPage() {
             <Card className="p-5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400"><Wallet size={13} /> Saldo Awal</div>
               <p className="mt-2 text-[26px] font-extrabold tabular-nums text-slate-900">{fmtMoney(s.saldo_awal)}</p>
-              <p className="mt-1 text-[11px] text-slate-400">s.d. bulan sebelumnya</p>
+              <p className="mt-1 text-[11px] text-slate-400">s.d. sebelum {new Date(mulai).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
             </Card>
             <Card className="p-5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-emerald-600"><ArrowDownToLine size={13} /> Pemasukan</div>
@@ -104,7 +159,7 @@ export default function LaporanKeuanganPage() {
             <Card className="p-5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-rose-600"><ArrowUpFromLine size={13} /> Pengeluaran</div>
               <p className="mt-2 text-[26px] font-extrabold tabular-nums text-rose-700">{fmtMoney(s.pengeluaran)}</p>
-              <p className="mt-1 text-[11px] text-slate-400">{s.tx.filter((t) => t.keluar > 0).length} transaksi</p>
+              <p className="mt-1 text-[11px] text-slate-400">{s.tx_keluar_count} transaksi</p>
             </Card>
             <Card className="bg-brand-600 p-5">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-brand-200"><Landmark size={13} /> Saldo Akhir</div>
@@ -117,15 +172,19 @@ export default function LaporanKeuanganPage() {
           <Card className="overflow-hidden">
             <div className="border-b border-line px-5 py-3.5 text-sm font-bold text-slate-900">
               Buku Kas — {s.unit.nama}
-              <span className="ml-2 text-[11px] font-medium text-slate-400">{s.tx.length} entri · {s.periode_label}</span>
+              <span className="ml-2 text-[11px] font-medium text-slate-400">
+                {(q || tipe) && s.tx.length !== s.tx_count ? `${s.tx.length} dari ${s.tx_count} entri` : `${s.tx_count} entri`} · {s.periode_label}
+              </span>
             </div>
             {s.tx.length === 0 ? (
               <p className="px-5 py-8 text-center text-sm text-slate-400">
-                {s.unit.jenis === 'rt'
-                  ? 'Belum ada transaksi. Iuran warga yang dibayarkan otomatis tercatat di sini — atau catat "Saldo Awal" (masuk) untuk opening balance.'
-                  : s.unit.jenis === 'organisasi'
-                    ? 'Belum ada transaksi. Mulai dengan catat "Saldo Awal" (masuk) sebagai modal awal organisasi.'
-                    : 'Belum ada transaksi. Kas RW/Kelurahan tidak menerima iuran otomatis — mulai dengan catat "Saldo Awal" (masuk), lalu setoran dari RT sebagai pemasukan.'}
+                {q || tipe
+                  ? `Tidak ada transaksi${tipe === 'masuk' ? ' pemasukan' : tipe === 'keluar' ? ' pengeluaran' : ''}${q ? ` yang cocok dengan "${q}"` : ''} dalam periode ini.`
+                  : s.unit.jenis === 'rt'
+                    ? 'Belum ada transaksi. Iuran warga yang dibayarkan otomatis tercatat di sini — atau catat "Saldo Awal" (masuk) untuk opening balance.'
+                    : s.unit.jenis === 'organisasi'
+                      ? 'Belum ada transaksi. Mulai dengan catat "Saldo Awal" (masuk) sebagai modal awal organisasi.'
+                      : 'Belum ada transaksi. Kas RW/Kelurahan tidak menerima iuran otomatis — mulai dengan catat "Saldo Awal" (masuk), lalu setoran dari RT sebagai pemasukan.'}
               </p>
             ) : (
               <div className="overflow-x-auto">
