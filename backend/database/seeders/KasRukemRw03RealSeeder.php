@@ -555,11 +555,11 @@ class KasRukemRw03RealSeeder extends Seeder
         ['2026-06-30', 'keluar', 640000, 'Pemakaman', 'Diambil Meninggalnya. IBU RUSIAH Warga RT 04 RW 03: Opo Rampe, Bpk. MODIN L, IBU. MODIN'],
         // ── Juli 2026 ────────────────────
         ['2026-07-01', 'masuk', 760000, 'Iuran', 'Dari RT 02 SDR. Nusa Setor iuran Rukem. Maret s/d Mei 2026'],
+        ['2026-07-13', 'masuk', 240000, 'Parkir', 'Dari parkir mobil area B. RW 03'],
         ['2026-07-18', 'masuk', 400000, 'Iuran', 'Dari RT 01 RW 03 Setor Kas Rukem Juni S/d Juli 2026'],
         ['2026-07-21', 'masuk', 1515000, 'Iuran', 'Dari RT 04 RW 03 Setor, Rukem. RT 03 S/D Bulan April 2026'],
         // ── Agustus 2026 ────────────────────
         ['2026-08-10', 'keluar', 1200000, 'Pemakaman', 'Diambil Meninggalnya. Bpk HOIRI RT 01 RW 03: Opo Rampe, Gali Makam (Malam), Modin Laki2, papan 3. Lonjor'],
-        ['2026-08-13', 'masuk', 240000, 'Parkir', 'Dari parkir mobil area B. RW 03'],
         ['2026-08-13', 'masuk', 240000, 'Parkir', 'Dari parkir mobil area B. RW 03'],
         ['2026-08-18', 'masuk', 400000, 'Iuran', 'Dari RT 01 RW 03 Setor Kas Rukem untuk bulan Agustus 2026'],
         ['2026-08-22', 'keluar', 1250000, 'Pemakaman', 'Diambil meninggalnya Bpk Ahmat Tohe Warga RT 02 RW 03: Opo Rampe, Gali Makam, Modin penggan ti Bpk Sumairi, papan 3 Ljr'],
