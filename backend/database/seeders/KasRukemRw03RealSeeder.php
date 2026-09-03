@@ -564,7 +564,7 @@ class KasRukemRw03RealSeeder extends Seeder
         ['2026-08-18', 'masuk', 400000, 'Iuran', 'Dari RT 01 RW 03 Setor Kas Rukem untuk bulan Agustus 2026'],
         ['2026-08-22', 'keluar', 1250000, 'Pemakaman', 'Diambil meninggalnya Bpk Ahmat Tohe Warga RT 02 RW 03: Opo Rampe, Gali Makam, Modin penggan ti Bpk Sumairi, papan 3 Ljr'],
         ['2026-08-25', 'masuk', 1260000, 'Iuran', 'Dari RT 03 RW 03 Setor Kas Rukem untuk bulan. April S/d Juni 2026'],
-        ['2026-08-26', 'masuk', 410000, 'Iuran', 'Dari RT 02 RW 03 Setor Kas Rukem untuk bulan Juni & Agustus 2026'],
+        ['2026-08-26', 'masuk', 410000, 'Iuran', 'Dari RT 02 RW 03 Setor Kas Rukem untuk bulan Juli s/d Agustus 2026'],
         ['2026-08-27', 'keluar', 1050000, 'Pemakaman', 'Diambil meninggalnya Bpk IIN RT 01 RW 03 B. Merisi: Opo Rampe, Gali Makam, papan, Bpk Modin'],
     ];
 
