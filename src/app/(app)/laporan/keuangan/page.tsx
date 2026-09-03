@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, Landmark, Plus, Building2, Trash2, Search } from 'lucide-react'
-import { useKasUnits, useKasSummary, useCreateKasUnit, useDeleteKasUnit, useCreateKasTrx, useDeleteKasTrx, type KasUnitItem } from '@/hooks/use-kas'
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, Landmark, Plus, Building2, Trash2, Search, Pencil } from 'lucide-react'
+import { useKasUnits, useKasSummary, useCreateKasUnit, useDeleteKasUnit, useCreateKasTrx, useUpdateKasTrx, useDeleteKasTrx, type KasUnitItem, type KasSummary } from '@/hooks/use-kas'
 import { useWilayahTree } from '@/hooks/use-siwa'
 import { PageHeader } from '@/components/PageHeader'
 import { Button, Card, Input, Label, Select, Skeleton, StatusBadge } from '@/components/ui/primitives'
@@ -11,7 +11,17 @@ import { QueryError } from '@/components/QueryError'
 import { fmtMoney } from '@/lib/utils'
 import { useAuth } from '@/stores/auth-store'
 
-const KATEGORI = ['Iuran', 'Parkir', 'Infaq', 'Donasi', 'Saldo Awal', 'Lain-lain', 'Operasional', 'Rapat', 'Perlengkapan', 'Kesehatan', 'Kegiatan']
+/* Kategori dikelompokkan agar jelas mana pemasukan / pengeluaran (Donasi & Lain-lain dua arah — sesuai buku kas asli) */
+const KAT_MASUK = ['Iuran', 'Parkir', 'Infaq', 'Saldo Awal']
+const KAT_KELUAR = ['Operasional', 'Rapat', 'Perlengkapan', 'Kesehatan', 'Kegiatan', 'Pemakaman']
+const KAT_DUA_ARAH = ['Donasi', 'Lain-lain']
+const KATEGORI = [
+  ...KAT_MASUK.map((k) => ({ value: k, label: k, group: 'Pemasukan' })),
+  ...KAT_KELUAR.map((k) => ({ value: k, label: k, group: 'Pengeluaran' })),
+  ...KAT_DUA_ARAH.map((k) => ({ value: k, label: k, group: 'Bisa keduanya' })),
+]
+const SET_MASUK = new Set(KAT_MASUK)
+const SET_KELUAR = new Set(KAT_KELUAR)
 
 const KAT_COLOR: Record<string, string> = {
   Iuran: 'bg-brand-50 text-brand-700',
@@ -25,9 +35,12 @@ const KAT_COLOR: Record<string, string> = {
   Perlengkapan: 'bg-purple-50 text-purple-700',
   Kesehatan: 'bg-emerald-50 text-emerald-700',
   Kegiatan: 'bg-sky-50 text-sky-700',
+  Pemakaman: 'bg-zinc-800 text-zinc-100',
 }
 
 const ym = (d: Date) => d.toISOString().slice(0, 7)
+
+type KasTx = KasSummary['tx'][number]
 
 /** Default periode: bulan ini penuh (tgl 1 s/d akhir bulan). */
 const monthBounds = () => {
@@ -45,6 +58,7 @@ export default function LaporanKeuanganPage() {
   const [q, setQ] = useState('')
   const [tipe, setTipe] = useState('')
   const [trxOpen, setTrxOpen] = useState(false)
+  const [editTx, setEditTx] = useState<KasTx | null>(null)
   const [orgOpen, setOrgOpen] = useState(false)
 
   // Debounce search — jangan spam API tiap ketikan
@@ -201,7 +215,7 @@ export default function LaporanKeuanganPage() {
                   </thead>
                   <tbody className="divide-y divide-line">
                     {s.tx.map((t) => (
-                      <TrxRow key={t.id} t={t} />
+                      <TrxRow key={t.id} t={t} onEdit={() => setEditTx(t)} />
                     ))}
                     <tr className="bg-slate-50 font-bold">
                       <td colSpan={4} className="px-5 py-3 text-right text-slate-600">Saldo akhir periode</td>
@@ -217,13 +231,14 @@ export default function LaporanKeuanganPage() {
       )}
 
       {trxOpen && unit && <TrxModal unitId={unit.id} kategori={KATEGORI} isEmpty={s ? s.tx.length === 0 : false} onClose={() => setTrxOpen(false)} />}
+      {editTx && <TrxModal kategori={KATEGORI} edit={editTx} onClose={() => setEditTx(null)} />}
       {orgOpen && <OrgModal onClose={() => setOrgOpen(false)} isAdmin={isAdmin} />}
     </div>
   )
 }
 
-/* ═══ Row + hapus manual ═══ */
-function TrxRow({ t }: { t: { id: number; tgl: string; ket: string | null; kat: string; masuk: number; keluar: number; sumber: string } }) {
+/* ═══ Row + edit/hapus manual ═══ */
+function TrxRow({ t, onEdit }: { t: KasTx; onEdit: (t: KasTx) => void }) {
   const del = useDeleteKasTrx()
   return (
     <tr className="hover:bg-slate-50">
@@ -239,31 +254,49 @@ function TrxRow({ t }: { t: { id: number; tgl: string; ket: string | null; kat: 
       <td className="px-5 py-3 text-right font-semibold tabular-nums text-rose-700">{t.keluar ? fmtMoney(t.keluar) : '—'}</td>
       <td className="px-5 py-3 text-right">
         {t.sumber === 'manual' && (
-          <Button size="sm" variant="ghost" className="text-rose-400 hover:bg-rose-50" onClick={() => del.mutate(t.id)} title="Hapus">
-            <Trash2 size={13} />
-          </Button>
+          <div className="flex justify-end gap-1">
+            <Button size="sm" variant="ghost" className="text-slate-400 hover:bg-slate-100" onClick={() => onEdit(t)} title="Edit">
+              <Pencil size={13} />
+            </Button>
+            <Button size="sm" variant="ghost" className="text-rose-400 hover:bg-rose-50" onClick={() => del.mutate(t.id)} title="Hapus">
+              <Trash2 size={13} />
+            </Button>
+          </div>
         )}
       </td>
     </tr>
   )
 }
 
-/* ═══ Modal transaksi ═══ */
-function TrxModal({ unitId, kategori, isEmpty, onClose }: { unitId: number; kategori: string[]; isEmpty: boolean; onClose: () => void }) {
+/* ═══ Modal transaksi — catat baru (unitId) atau edit (edit) ═══ */
+function TrxModal({ unitId, kategori, isEmpty, edit, onClose }: { unitId?: number; kategori: { value: string; label: string; group?: string }[]; isEmpty?: boolean; edit?: KasTx; onClose: () => void }) {
   const create = useCreateKasTrx()
-  const [tipe, setTipe] = useState<'masuk' | 'keluar'>('masuk')
-  const [jumlah, setJumlah] = useState('')
-  const [kat, setKat] = useState(isEmpty ? 'Saldo Awal' : 'Donasi')
-  const [ket, setKet] = useState(isEmpty ? 'Saldo awal kas' : '')
-  const [tanggal, setTanggal] = useState(ym(new Date()) + '-' + String(new Date().getDate()).padStart(2, '0'))
+  const update = useUpdateKasTrx()
+  const [tipe, setTipe] = useState<'masuk' | 'keluar'>(edit ? (edit.masuk > 0 ? 'masuk' : 'keluar') : 'masuk')
+  const [jumlah, setJumlah] = useState(edit ? String(edit.masuk || edit.keluar) : '')
+  const [kat, setKat] = useState(edit ? edit.kat : isEmpty ? 'Saldo Awal' : 'Donasi')
+  const [ket, setKet] = useState(edit ? (edit.ket ?? '') : isEmpty ? 'Saldo awal kas' : '')
+  const [tanggal, setTanggal] = useState(edit ? edit.tanggal : ym(new Date()) + '-' + String(new Date().getDate()).padStart(2, '0'))
+  const pending = create.isPending || update.isPending
+  const valid = !pending && !!jumlah && Number(jumlah) >= 100 && !!tanggal && (edit || !!unitId)
+
+  /** Ganti tipe → kategori yang jelas lawan tipe auto-switch ke default grup baru (yang dua arah dibiarkan). */
+  function onTipeChange(v: string) {
+    const nt = v as 'masuk' | 'keluar'
+    setTipe(nt)
+    if (nt === 'masuk' && SET_KELUAR.has(kat)) setKat(isEmpty ? 'Saldo Awal' : 'Iuran')
+    else if (nt === 'keluar' && SET_MASUK.has(kat)) setKat('Operasional')
+  }
 
   return (
-    <Modal open onClose={onClose} title="Catat Transaksi Kas" subtitle="Pemasukan manual / pengeluaran unit ini">
+    <Modal open onClose={onClose}
+      title={edit ? 'Edit Transaksi Kas' : 'Catat Transaksi Kas'}
+      subtitle={edit ? 'Perbaiki data transaksi manual ini' : 'Pemasukan manual / pengeluaran unit ini'}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Tipe *</Label>
-            <Select value={tipe} onChange={(v) => setTipe(v as 'masuk' | 'keluar')}
+            <Select value={tipe} onChange={onTipeChange}
               options={[{ value: 'masuk', label: 'Masuk (pemasukan)' }, { value: 'keluar', label: 'Keluar (pengeluaran)' }]} />
           </div>
           <div>
@@ -278,7 +311,7 @@ function TrxModal({ unitId, kategori, isEmpty, onClose }: { unitId: number; kate
           </div>
           <div>
             <Label>Kategori *</Label>
-            <Select value={kat} onChange={setKat} options={kategori.map((k) => ({ value: k, label: k }))} />
+            <Select value={kat} onChange={setKat} options={kategori} />
           </div>
         </div>
         <div>
@@ -288,13 +321,16 @@ function TrxModal({ unitId, kategori, isEmpty, onClose }: { unitId: number; kate
         <div className="flex justify-end gap-2 border-t border-line pt-4">
           <Button variant="secondary" onClick={onClose}>Batal</Button>
           <Button
-            disabled={create.isPending || !jumlah || Number(jumlah) < 100 || !tanggal}
-            onClick={() => create.mutate(
-              { kas_unit_id: unitId, tipe, jumlah: Number(jumlah), kategori: kat, keterangan: ket || undefined, tanggal },
-              { onSuccess: onClose },
-            )}
+            disabled={!valid}
+            onClick={() => {
+              if (edit) {
+                update.mutate({ id: edit.id, tipe, jumlah: Number(jumlah), kategori: kat, keterangan: ket || undefined, tanggal }, { onSuccess: onClose })
+              } else {
+                create.mutate({ kas_unit_id: unitId!, tipe, jumlah: Number(jumlah), kategori: kat, keterangan: ket || undefined, tanggal }, { onSuccess: onClose })
+              }
+            }}
           >
-            {create.isPending ? 'Menyimpan…' : 'Simpan'}
+            {pending ? 'Menyimpan…' : edit ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
         </div>
       </div>

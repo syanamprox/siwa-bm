@@ -21,6 +21,7 @@ const KAT_COLOR: Record<string, string> = {
   Perlengkapan: 'bg-purple-50 text-purple-700',
   Kesehatan: 'bg-emerald-50 text-emerald-700',
   Kegiatan: 'bg-sky-50 text-sky-700',
+  Pemakaman: 'bg-zinc-800 text-zinc-100',
 }
 
 const LEVEL_LABEL: Record<string, string> = { rt: 'RT', rw: 'RW', kelurahan: 'Kelurahan', kecamatan: 'Kecamatan', organisasi: 'Organisasi' }

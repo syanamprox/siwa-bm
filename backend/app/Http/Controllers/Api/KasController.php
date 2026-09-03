@@ -171,6 +171,47 @@ class KasController extends Controller
     }
 
     /**
+     * PUT /api/kas/transaksis/{trx} — edit transaksi manual dalam scope (unit tidak dapat dipindah).
+     */
+    public function updateTrx(Request $request, KasTransaksi $trx): JsonResponse
+    {
+        $unit = $this->findUnitInScope($request, $trx->kas_unit_id);
+
+        if ($trx->sumber !== 'manual') {
+            abort(403, 'Transaksi hasil pembayaran iuran tidak dapat diedit manual.');
+        }
+
+        $validated = $request->validate([
+            'tipe' => ['required', 'in:masuk,keluar'],
+            'jumlah' => ['required', 'numeric', 'min:100'],
+            'kategori' => ['required', 'string', 'in:'.implode(',', KasUnit::KATEGORI)],
+            'keterangan' => ['nullable', 'string', 'max:255'],
+            'tanggal' => ['required', 'date'],
+        ]);
+
+        $trx->update([
+            'tipe' => $validated['tipe'],
+            'jumlah' => $validated['jumlah'],
+            'kategori' => $validated['kategori'],
+            'keterangan' => $validated['keterangan'] ?? null,
+            'tanggal' => $validated['tanggal'],
+        ]);
+
+        $this->logActivity($request, 'update', 'kas', "Edit transaksi kas {$validated['tipe']} Rp ".number_format((float) $validated['jumlah'], 0, ',', '.')." ({$validated['kategori']}) di {$unit->nama}", null, ['trx_id' => $trx->id, 'unit_id' => $unit->id]);
+
+        return response()->json(['data' => [
+            'id' => $trx->id,
+            'kas_unit_id' => $trx->kas_unit_id,
+            'tipe' => $trx->tipe,
+            'sumber' => $trx->sumber,
+            'jumlah' => (float) $trx->jumlah,
+            'kategori' => $trx->kategori,
+            'keterangan' => $trx->keterangan,
+            'tanggal' => $trx->tanggal->toDateString(),
+        ]]);
+    }
+
+    /**
      * DELETE /api/kas/transaksis/{trx} — hanya transaksi manual dalam scope.
      */
     public function destroyTrx(Request $request, KasTransaksi $trx): JsonResponse
@@ -388,6 +429,7 @@ class KasController extends Controller
             ->map(fn ($t) => [
                 'id' => $t->id,
                 'tgl' => $t->tanggal->locale('id')->translatedFormat($tglFmt),
+                'tanggal' => $t->tanggal->toDateString(),
                 'ket' => $t->keterangan,
                 'kat' => $t->kategori,
                 'masuk' => $t->tipe === 'masuk' ? (float) $t->jumlah : 0,

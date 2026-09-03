@@ -17,7 +17,7 @@ class KasUnit extends Model
      */
     public const KATEGORI = [
         'Iuran', 'Parkir', 'Infaq', 'Donasi', 'Saldo Awal', 'Lain-lain',
-        'Operasional', 'Rapat', 'Perlengkapan', 'Kesehatan', 'Kegiatan',
+        'Operasional', 'Rapat', 'Perlengkapan', 'Kesehatan', 'Kegiatan', 'Pemakaman',
     ];
 
     protected $fillable = [

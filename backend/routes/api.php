@@ -92,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/kas/units/{unit}', [KasController::class, 'destroyUnit']);
     Route::get('/kas/summary', [KasController::class, 'summary']);
     Route::post('/kas/transaksis', [KasController::class, 'storeTrx']);
+    Route::put('/kas/transaksis/{trx}', [KasController::class, 'updateTrx']);
     Route::delete('/kas/transaksis/{trx}', [KasController::class, 'destroyTrx']);
 
     // Wilayah (admin-managed, read untuk semua role)

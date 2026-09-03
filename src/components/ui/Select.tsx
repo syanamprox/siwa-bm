@@ -18,6 +18,8 @@ export interface SelectOption {
   value: string
   label: React.ReactNode
   disabled?: boolean
+  /** Optional group heading — options with the same group render under one non-clickable header (in first-occurrence order). */
+  group?: string
 }
 
 interface SelectProps {
@@ -85,6 +87,26 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(function 
     const q = query.toLowerCase()
     return options.filter((o) => String(o.label).toLowerCase().includes(q))
   }, [options, query])
+
+  /* Grouped view: [header|null, options...] — options without group stay on top level */
+  const grouped = React.useMemo(() => {
+    const noGroup = filtered.filter((o) => !o.group)
+    const groups: { name: string; items: SelectOption[] }[] = []
+    for (const o of filtered) {
+      if (!o.group) continue
+      let g = groups.find((x) => x.name === o.group)
+      if (!g) { g = { name: o.group, items: [] }; groups.push(g) }
+      g.items.push(o)
+    }
+    const sections: ({ header: string } | { option: SelectOption; idx: number })[] = []
+    let idx = 0
+    for (const o of noGroup) sections.push({ option: o, idx: idx++ })
+    for (const g of groups) {
+      sections.push({ header: g.name })
+      for (const o of g.items) sections.push({ option: o, idx: idx++ })
+    }
+    return sections
+  }, [filtered])
 
   /* Compute popover position from trigger button rect */
   const computePosition = React.useCallback(() => {
@@ -172,10 +194,10 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(function 
   /* reset highlight */
   React.useEffect(() => setHi(0), [query])
 
-  /* scroll highlighted item into view */
+  /* scroll highlighted item into view (by data-idx — list may contain group headers) */
   React.useEffect(() => {
     if (!open || !listRef.current) return
-    const el = listRef.current.children[hi] as HTMLElement | undefined
+    const el = listRef.current.querySelector(`[data-idx="${hi}"]`) as HTMLElement | null
     el?.scrollIntoView({ block: 'nearest' })
   }, [hi, open])
 
@@ -279,25 +301,30 @@ export const Select = React.forwardRef<HTMLButtonElement, SelectProps>(function 
           )}
 
           <div ref={listRef} className="max-h-60 overflow-y-auto py-1">
-            {filtered.length === 0 ? (
+            {grouped.length === 0 ? (
               <p className="px-3 py-4 text-center text-xs text-slate-400">Tidak ditemukan</p>
             ) : (
-              filtered.map((opt, i) => (
+              grouped.map((s, i) => 'header' in s ? (
+                <p key={`h-${i}`} className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {s.header}
+                </p>
+              ) : (
                 <button
-                  key={opt.value + i}
+                  key={s.option.value + s.idx}
+                  data-idx={s.idx}
                   type="button"
-                  disabled={opt.disabled}
-                  onClick={() => pick(opt)}
-                  onMouseEnter={() => setHi(i)}
+                  disabled={s.option.disabled}
+                  onClick={() => pick(s.option)}
+                  onMouseEnter={() => setHi(s.idx)}
                   className={cn(
                     'flex w-full items-center justify-between px-3 py-2 text-left text-sm transition',
-                    hi === i ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
-                    opt.value === value && 'font-semibold',
-                    opt.disabled && 'cursor-not-allowed opacity-40',
+                    hi === s.idx ? 'bg-brand-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50',
+                    s.option.value === value && 'font-semibold',
+                    s.option.disabled && 'cursor-not-allowed opacity-40',
                   )}
                 >
-                  <span className="truncate">{opt.label}</span>
-                  {opt.value === value && <Check size={14} className="shrink-0 text-brand-600" />}
+                  <span className="truncate">{s.option.label}</span>
+                  {s.option.value === value && <Check size={14} className="shrink-0 text-brand-600" />}
                 </button>
               ))
             )}

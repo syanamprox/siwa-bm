@@ -27,7 +27,7 @@ export interface KasSummary {
   tx_count: number
   tx_keluar_count: number
   tren: { bulan: string; masuk: number; keluar: number }[]
-  tx: { id: number; tgl: string; ket: string | null; kat: string; masuk: number; keluar: number; sumber: string }[]
+  tx: { id: number; tgl: string; tanggal: string; ket: string | null; kat: string; masuk: number; keluar: number; sumber: string }[]
 }
 
 function qs(p: Record<string, string | number | undefined>) {
@@ -95,6 +95,27 @@ export function useCreateKasTrx() {
     mutationFn: (body: KasTrxInput) => api.post('/kas/transaksis', body),
     onSuccess: () => {
       toast.success('Transaksi dicatat')
+      qc.invalidateQueries({ queryKey: ['kas-summary'] })
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Gagal menyimpan'),
+  })
+}
+
+export interface KasTrxEditInput {
+  id: number
+  tipe: 'masuk' | 'keluar'
+  jumlah: number
+  kategori: string
+  keterangan?: string
+  tanggal: string
+}
+
+export function useUpdateKasTrx() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: KasTrxEditInput) => api.put(`/kas/transaksis/${id}`, body),
+    onSuccess: () => {
+      toast.success('Transaksi diperbarui')
       qc.invalidateQueries({ queryKey: ['kas-summary'] })
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : 'Gagal menyimpan'),
