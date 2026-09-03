@@ -9,7 +9,7 @@ use App\Models\Wilayah;
 use Illuminate\Database\Seeder;
 
 /**
- * Buku kas ASLI Rukem Sehati RW 03 Bendul Merisi — Februari 2017 s.d. 25 Agustus 2026.
+ * Buku kas ASLI Rukem Sehati RW 03 Bendul Merisi — Februari 2017 s.d. 27 Agustus 2026.
  * Rukem Sehati = organisasi dana pembiayaan pemakaman warga RW03, TERPISAH dari kas RW03
  * (KasRw03RealSeeder). Pemasukan: iuran warga disetor per RT + bagi hasil parkir dari RW.
  * Sumber: transkrip Rukem.xlsx (buku kas fisik bendahara Rukem), 45 halaman/periode.
@@ -47,7 +47,7 @@ use Illuminate\Database\Seeder;
 class KasRukemRw03RealSeeder extends Seeder
 {
     /** Saldo akhir sesuai buku asli per 25/08/2026 — self-check, selisih 1 rupiah = gagal seed. */
-    private const SALDO_AKHIR = 11212000;
+    private const SALDO_AKHIR = 10572000;
 
     /** @var array<int, array{0: string, 1: string, 2: int, 3: string, 4: string}> [tanggal, tipe, jumlah, kategori, keterangan] */
     private const TRANSAKSI = [
@@ -564,6 +564,8 @@ class KasRukemRw03RealSeeder extends Seeder
         ['2026-08-18', 'masuk', 400000, 'Iuran', 'Dari RT 01 RW 03 Setor Kas Rukem untuk bulan Agustus 2026'],
         ['2026-08-22', 'keluar', 1250000, 'Pemakaman', 'Diambil meninggalnya Bpk Ahmat Tohe Warga RT 02 RW 03: Opo Rampe, Gali Makam, Modin penggan ti Bpk Sumairi, papan 3 Ljr'],
         ['2026-08-25', 'masuk', 1260000, 'Iuran', 'Dari RT 03 RW 03 Setor Kas Rukem untuk bulan. April S/d Juni 2026'],
+        ['2026-08-26', 'masuk', 410000, 'Iuran', 'Dari RT 02 RW 03 Setor Kas Rukem untuk bulan Juni & Agustus 2026'],
+        ['2026-08-27', 'keluar', 1050000, 'Pemakaman', 'Diambil meninggalnya Bpk IIN RT 01 RW 03 B. Merisi: Opo Rampe, Gali Makam, papan, Bpk Modin'],
     ];
 
     public function run(): void
@@ -607,7 +609,7 @@ class KasRukemRw03RealSeeder extends Seeder
             ['Baris Perlu Konfirmasi', (string) $konfirmasi->count().' (total Rp'.number_format(
                 $konfirmasi->sum(fn ($r) => $r[1] === 'masuk' ? $r[2] : -$r[2]), 0, ',', '.'
             ).', net)'],
-            ['Saldo akhir (25/08/2026)', 'Rp'.number_format($saldo, 0, ',', '.')],
+            ['Saldo akhir (27/08/2026)', 'Rp'.number_format($saldo, 0, ',', '.')],
         ]);
     }
 
