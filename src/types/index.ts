@@ -80,6 +80,7 @@ export interface Keluarga {
   keterangan_status: string | null
   tanggal_status: string | null
   foto_kk?: string | null
+  foto_rumah?: string | null // foto rumah + penghuni (upload petugas) — path "rumah/{no_kk}.ext"
   anggota_keluarga_count?: number
   anggota_keluarga?: Warga[]
   keluarga_iuran?: KeluargaIuranConn[]

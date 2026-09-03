@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * Gerbang file dokumen KK (public/kk/*).
+ * Gerbang file dokumen terkunci (public/kk/* dan public/rumah/*).
  *
- * File fisik ikut repo, tapi BUKAN URL publik bebas: request tanpa signature
- * valid ditolak 404. Signature dihasilkan backend Laravel (endpoint
- * /api/keluarga/kk-token) memakai secret bersama KK_LINK_SECRET:
+ * File fisik ikut repo (KK) atau hasil upload petugas (foto rumah), tapi BUKAN
+ * URL publik bebas: request tanpa signature valid ditolak 404. Signature
+ * dihasilkan backend Laravel (endpoint /api/keluarga/doc-token) memakai secret
+ * bersama KK_LINK_SECRET:
  *
  *   s = HMAC-SHA256("/{path}|{e}", KK_LINK_SECRET)   e = epoch detik
  *
@@ -58,6 +59,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Hanya jalur file dokumen KK — statis lain tetap bebas
-  matcher: ['/kk/:path*'],
+  // Hanya jalur file dokumen terkunci — statis lain tetap bebas
+  matcher: ['/kk/:path*', '/rumah/:path*'],
 }

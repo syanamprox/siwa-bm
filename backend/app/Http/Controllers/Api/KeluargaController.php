@@ -322,29 +322,32 @@ class KeluargaController extends Controller
     }
 
     /**
-     * GET /api/keluarga/kk-token?path=kk/{no_kk}.{ext} — signature akses file dokumen KK.
+     * GET /api/keluarga/doc-token?path={kk|rumah}/{no_kk}.{ext} — signature akses
+     * file dokumen terkunci (dokumen KK & foto rumah + penghuni).
      *
-     * File fisik diserve Next.js dari public/kk (di-commit), tapi middleware Next
-     * memblokir akses tanpa signature valid. Token = HMAC-SHA256("/{path}|{expires}")
+     * File fisik diserve Next.js dari public/{kk|rumah} (matcher middleware Next),
+     * request tanpa signature valid ditolak 404. Token = HMAC-SHA256("/{path}|{expires}")
      * dengan secret bersama KK_LINK_SECRET (env Laravel & Next), TTL 5 menit,
      * scoped ke path persis (token file A tak berlaku utk file B) dan hanya utk
      * KK dalam scope user (rt/rw/lurah/admin).
      */
-    public function kkToken(Request $request): JsonResponse
+    public function docToken(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'path' => ['required', 'string', 'regex:#^kk/\d{16}\.(jpe?g|png|webp|pdf)$#i'],
+            'path' => ['required', 'string', 'regex:#^(kk|rumah)/\d{16}\.(jpe?g|png|webp|pdf)$#i'],
         ]);
 
         $path = strtolower($validated['path']);
-        $noKk = substr($path, 3, 16);
+        [$folder, $file] = explode('/', $path, 2);
+        $noKk = substr($file, 0, 16);
 
         $keluarga = Keluarga::where('no_kk', $noKk)->first();
-        abort_unless($keluarga && $keluarga->foto_kk, 404, 'Dokumen KK tidak ditemukan.');
+        $kolom = $folder === 'kk' ? 'foto_kk' : 'foto_rumah';
+        abort_unless($keluarga && $keluarga->{$kolom} === $path, 404, 'Dokumen tidak ditemukan.');
         $this->authorizeKeluarga($request, $keluarga);
 
-        $file = dirname(base_path()).'/public/'.$path;
-        abort_unless(is_file($file), 404, 'Dokumen KK tidak ditemukan.');
+        $fileDisk = dirname(base_path()).'/public/'.$path;
+        abort_unless(is_file($fileDisk), 404, 'Dokumen tidak ditemukan.');
 
         $secret = (string) config('services.kk_link_secret');
         abort_unless($secret !== '', 500, 'KK_LINK_SECRET belum dikonfigurasi.');
@@ -356,5 +359,58 @@ class KeluargaController extends Controller
             'url' => "/{$path}?e={$expires}&s={$sig}",
             'expires_at' => $expires,
         ]]);
+    }
+
+    /**
+     * POST /api/keluarga/{keluarga}/foto-rumah — upload/ganti foto rumah + penghuni.
+     *
+     * File disimpan sebagai public/rumah/{no_kk}.{ext} (root monorepo, diserve
+     * Next.js, dikunci middleware signature). Nama deterministik per KK — upload
+     * ulang menimpa file lama (semua varian ekstensi lama dibersihkan).
+     */
+    public function uploadFotoRumah(Request $request, Keluarga $keluarga): JsonResponse
+    {
+        $this->authorizeKeluarga($request, $keluarga);
+        $validated = $request->validate([
+            'foto' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+        ]);
+
+        $ext = strtolower($validated['foto']->getClientOriginalExtension());
+        abort_unless(in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true), 422, 'Ekstensi file tidak didukung.');
+
+        $dir = dirname(base_path()).'/public/rumah';
+        if (! is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+
+        // Bersihkan file lama (ekstensi apa pun) — nama final deterministik per KK
+        foreach (glob($dir.'/'.$keluarga->no_kk.'.*') ?: [] as $old) {
+            @unlink($old);
+        }
+
+        $path = 'rumah/'.$keluarga->no_kk.'.'.$ext;
+        $validated['foto']->move($dir, basename($path));
+
+        $keluarga->update(['foto_rumah' => $path]);
+        $this->logActivity($request, 'upload_foto_rumah', 'keluarga', "Upload foto rumah KK {$keluarga->no_kk}", null, ['foto_rumah' => $path]);
+
+        return response()->json(['data' => $keluarga->fresh()->only(['id', 'no_kk', 'foto_rumah'])]);
+    }
+
+    /**
+     * DELETE /api/keluarga/{keluarga}/foto-rumah — hapus foto rumah (file + kolom).
+     * Idempotent: KK tanpa foto = no-op sukses.
+     */
+    public function deleteFotoRumah(Request $request, Keluarga $keluarga): JsonResponse
+    {
+        $this->authorizeKeluarga($request, $keluarga);
+
+        if ($keluarga->foto_rumah) {
+            @unlink(dirname(base_path()).'/public/rumah/'.basename($keluarga->foto_rumah));
+            $keluarga->update(['foto_rumah' => null]);
+            $this->logActivity($request, 'delete_foto_rumah', 'keluarga', "Hapus foto rumah KK {$keluarga->no_kk}", ['foto_rumah' => null], null);
+        }
+
+        return response()->json(['data' => $keluarga->fresh()->only(['id', 'no_kk', 'foto_rumah'])]);
     }
 }

@@ -13,3 +13,5 @@ next-env.d.ts
 /kk
 # public/kk TIDAK di-ignore: salinan foto KK ter-seed ikut repo private.
 # Aksesnya dikunci middleware signature (KK_LINK_SECRET) — bukan URL publik bebas.
+# public/rumah = hasil upload petugas saat runtime (bukan konten repo) — di-ignore.
+/public/rumah

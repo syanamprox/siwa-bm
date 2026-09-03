@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Home, Plus, RotateCcw, Pencil, Trash2, Users, MapPin, ChevronRight,
-  UserPlus, UserMinus, Crown, Settings2, Coins, FileImage, BadgeCheck, BadgeX,
+  UserPlus, UserMinus, Crown, Settings2, Coins, FileImage, BadgeCheck, BadgeX, Upload,
 } from 'lucide-react'
 import { useKeluargaList, useKeluarga, useKeluargaMutations, useRtOptions, useWargaList, useAvailableJenisIuran, useConnectIuran, useDisconnectIuran, type KeluargaFilters } from '@/hooks/use-siwa'
 import { useAuth } from '@/stores/auth-store'
@@ -207,19 +207,19 @@ export default function KeluargaPage() {
 /* ═══════════ Tombol dokumen KK — link bertoken ═══════════ */
 
 /**
- * File dokumen KK dikunci middleware signature — URL polos ditolak 404.
- * Klik = minta token短期 ke backend (scoped + TTL 5 menit), lalu buka tab baru.
+ * File dokumen terkunci (dokumen KK / foto rumah) — URL polos ditolak 404 middleware.
+ * Klik = minta token ke backend (scoped + TTL 5 menit), lalu buka tab baru.
  */
-function KKDocumentButton({ path }: { path: string }) {
+function DocumentButton({ path, label, failLabel }: { path: string; label: string; failLabel?: string }) {
   const [loading, setLoading] = useState(false)
 
   async function open() {
     setLoading(true)
     try {
-      const res = await api.get<{ data: { url: string } }>(`/keluarga/kk-token?path=${encodeURIComponent(path)}`)
+      const res = await api.get<{ data: { url: string } }>(`/keluarga/doc-token?path=${encodeURIComponent(path)}`)
       window.open(res.data.url, '_blank', 'noreferrer')
     } catch {
-      toast.error('Tidak dapat membuka dokumen KK. Coba lagi.')
+      toast.error(failLabel ?? 'Tidak dapat membuka dokumen. Coba lagi.')
     } finally {
       setLoading(false)
     }
@@ -227,8 +227,8 @@ function KKDocumentButton({ path }: { path: string }) {
 
   return (
     <button type="button" onClick={open} disabled={loading}
-      className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-[12px] font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-60">
-      <FileImage size={13} /> {loading ? 'Menyiapkan…' : 'Lihat Dokumen KK'}
+      className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-[12px] font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-60">
+      <FileImage size={13} /> {loading ? 'Menyiapkan…' : label}
     </button>
   )
 }
@@ -236,7 +236,7 @@ function KKDocumentButton({ path }: { path: string }) {
 /* ═══════════ Drawer detail ═══════════ */
 function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => void; onEdit: (k: Keluarga) => void }) {
   const { data, isLoading, isError, error, refetch } = useKeluarga(id)
-  const { addMember, removeMember, updateStatus } = useKeluargaMutations()
+  const { addMember, removeMember, updateStatus, uploadFotoRumah, deleteFotoRumah } = useKeluargaMutations()
   const { data: availableJenis } = useAvailableJenisIuran(id)
   const connectIuran = useConnectIuran()
   const disconnectIuran = useDisconnectIuran()
@@ -244,6 +244,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
   const [statusModal, setStatusModal] = useState(false)
   const [iuranModal, setIuranModal] = useState(false)
   const [wargaSearch, setWargaSearch] = useState('')
+  const fotoRumahInput = useRef<HTMLInputElement>(null)
 
   const kel = data?.data
   const { data: wargaResults } = useWargaList({ search: wargaSearch.length >= 3 ? wargaSearch : undefined, per_page: 5, status_kk: 'tanpa_kk' })
@@ -293,8 +294,39 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                     </div>
                   </div>
                   {kel.foto_kk && (
-                    <KKDocumentButton path={kel.foto_kk} />
+                    <DocumentButton path={kel.foto_kk} label="Lihat Dokumen KK" />
                   )}
+
+                  {/* Foto rumah + penghuni — upload petugas, untuk verifikasi visual saat turun lapangan */}
+                  <div className="mt-4 border-t border-line pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Foto Rumah &amp; Penghuni</p>
+                    <p className="mt-0.5 text-xs text-slate-500">Foto rumah bersama penghuninya — agar petugas mengenali keluarga aslinya.</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {kel.foto_rumah ? (
+                        <>
+                          <DocumentButton path={kel.foto_rumah} label="Lihat Foto Rumah" failLabel="Tidak dapat membuka foto rumah. Coba lagi." />
+                          <Button size="sm" variant="secondary" disabled={uploadFotoRumah.isPending} onClick={() => fotoRumahInput.current?.click()}>
+                            <Upload size={13} /> Ganti
+                          </Button>
+                          <Button size="sm" variant="secondary" disabled={deleteFotoRumah.isPending} onClick={() => deleteFotoRumah.mutate(kel.id)}>
+                            <Trash2 size={13} /> Hapus
+                          </Button>
+                        </>
+                      ) : (
+                        <Button size="sm" variant="secondary" disabled={uploadFotoRumah.isPending} onClick={() => fotoRumahInput.current?.click()}>
+                          <Upload size={13} /> {uploadFotoRumah.isPending ? 'Mengunggah…' : 'Upload Foto'}
+                        </Button>
+                      )}
+                    </div>
+                    <input
+                      ref={fotoRumahInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) uploadFotoRumah.mutate({ id: kel.id, file })
+                        e.target.value = '' // file sama bisa dipilih ulang setelah gagal
+                      }}
+                    />
+                  </div>
                 </Card>
               </section>
 

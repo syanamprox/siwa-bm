@@ -27,9 +27,11 @@ async function request<T>(
   options: RequestInit = {},
 ): Promise<T> {
   // Read XSRF-TOKEN cookie and set as header (fetch doesn't do this automatically like axios)
+  // FormData body: biarkan browser set Content-Type + boundary (jangan paksa JSON)
+  const isForm = options.body instanceof FormData
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    'Content-Type': 'application/json',
+    ...(isForm ? {} : { 'Content-Type': 'application/json' }),
     ...options.headers as Record<string, string>,
   }
 
@@ -74,6 +76,8 @@ export const api = {
   get: <T>(path: string) => request<T>(path, { method: 'GET' }),
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+  upload: <T>(path: string, form: FormData) =>
+    request<T>(path, { method: 'POST', body: form }),
   put: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'PUT', body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>

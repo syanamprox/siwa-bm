@@ -27,6 +27,7 @@ class Keluarga extends Model
         'no_kk',
         'kepala_keluarga_id',
         'foto_kk',
+        'foto_rumah', // foto rumah + penghuni (upload petugas) — path "rumah/{no_kk}.ext", terkunci signature
 
         // Alamat KTP (Input Manual Lengkap)
         'alamat_kk',
