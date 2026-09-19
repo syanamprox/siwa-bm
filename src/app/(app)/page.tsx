@@ -10,6 +10,7 @@ import { useDashboard, useWilayahTree } from '@/hooks/use-siwa'
 import { useAuth } from '@/stores/auth-store'
 import { KpiCard } from '@/components/KpiCard'
 import { PageHeader } from '@/components/PageHeader'
+import { IntelPromptBar } from '@/components/IntelPromptBar'
 import { Card, Skeleton, StatusBadge } from '@/components/ui/primitives'
 import { QueryError } from '@/components/QueryError'
 import { fmtMoney, fmtDateTime } from '@/lib/utils'
@@ -54,6 +55,11 @@ export default function DashboardPage() {
         title={`${greeting()}, ${firstName}`}
         subtitle={`${today}${user?.wilayah ? ` · ${user.wilayah.nama}` : ''}`}
       />
+
+      {/* Intelligence prompt bar — kantor kelurahan saja (gate di dalam komponen) */}
+      <div className="mb-6">
+        <IntelPromptBar />
+      </div>
 
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -83,7 +83,7 @@ const SECTIONS: FaqSection[] = [
           <div className="space-y-1.5">
             <p>Empat langkah:</p>
             <ol className="ml-4 list-decimal space-y-1">
-              <li><strong>Jenis Iuran</strong> — didefinisikan <em>per RT</em> (hasil rapat RT masing-masing, tidak campur antar RT). Contoh RT 02 RW 03: Iuran Sosial Rp3.000, Iuran RT Rp2.000, Iuran Rukem Rp5.000 — semuanya bulanan.</li>
+              <li><strong>Jenis Iuran</strong> — didefinisikan <em>per RT</em> (hasil rapat RT masing-masing, tidak campur antar RT). Contoh RT 02 RW 03: Iuran Kampung Rp5.000, Iuran Rukem Rp5.000 — semuanya bulanan.</li>
               <li><strong>Konfigurasi KK</strong> — hubungkan KK ke jenis iuran yang berlaku (nominal bisa custom per KK).</li>
               <li><strong>Generate Tagihan</strong> — tiap periode (bulanan/tahunan/sekali), tagihan dibuat massal per RT dengan pratinjau dulu.</li>
               <li><strong>Bayar</strong> — petugas mencatat pembayaran di halaman Tagihan (tunai/transfer, bisa bertahap).</li>
@@ -149,7 +149,7 @@ const SECTIONS: FaqSection[] = [
       {
         q: 'Bagaimana cara membaca NIK?',
         a: (
-          <p>NIK 16 digit: <strong>3578 20</strong> (3578 = Kota Surabaya, 20 = Kecamatan Wonocolo — dipakai semua kelurahan di Wonocolo termasuk Bendul Merisi) + <strong>YYMMDD</strong> tanggal lahir — <em>tanggal +40 untuk perempuan</em> (mis. lahir 5 Maret tampil "05" pria / "45" wanita) + <strong>4 digit serial</strong> unik.</p>
+          <p>NIK 16 digit: <strong>3578 20</strong> (3578 = Kota Surabaya, 20 = kode kecamatan) + <strong>YYMMDD</strong> tanggal lahir — <em>tanggal +40 untuk perempuan</em> (mis. lahir 5 Maret tampil "05" pria / "45" wanita) + <strong>4 digit serial</strong> unik.</p>
         ),
       },
     ],
@@ -165,8 +165,8 @@ const SECTIONS: FaqSection[] = [
           <div className="space-y-1.5">
             <ul className="ml-4 list-disc space-y-1.5">
               <li><strong>Admin</strong> — akses penuh semua data &amp; pengaturan sistem (wilayah, pengguna, jenis iuran, backup).</li>
-              <li><strong>Camat</strong> — memantau seluruh kelurahan di kecamatan (saat ini Bendul Merisi, Jemur Wonosari, Margorejo, Sidosermo, Siwalankerto). Tanpa akses pengaturan sistem.</li>
-              <li><strong>Lurah</strong> — hanya data kelurahan yang dipimpinnya (Bendul Merisi). Tanpa akses pengaturan sistem.</li>
+              <li><strong>Camat</strong> — memantau seluruh kelurahan di kecamatan. Tanpa akses pengaturan sistem.</li>
+              <li><strong>Lurah</strong> — hanya data kelurahan yang dipimpinnya. Tanpa akses pengaturan sistem.</li>
               <li><strong>RW</strong> — hanya data keluarga di RT-RT bawahannya.</li>
               <li><strong>RT</strong> — hanya data keluarga di RT-nya sendiri, termasuk mengelola jenis iuran rapat RT-nya.</li>
             </ul>
@@ -216,7 +216,7 @@ export default function FaqPage() {
     <div className="animate-fade-up">
       <PageHeader
         title="FAQ & Dokumentasi"
-        subtitle="Definisi, konsep, dan cara kerja sistem SIWA Kelurahan Bendul Merisi"
+        subtitle="Definisi, konsep, dan cara kerja sistem SIWA"
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[220px_1fr]">

@@ -184,7 +184,7 @@ function WilayahFormModal({ modal, onClose, onSubmit, pending }: {
         </div>
         <div>
           <Label>Nama * ({prefix ? `tanpa awalan "${form.tingkat}"` : 'nama kelurahan'})</Label>
-          <Input value={form.nama} onChange={(e) => set('nama', e.target.value)} required placeholder={form.tingkat === 'Kelurahan' ? 'mis. Bendul Merisi' : 'mis. 01 Bendul Merisi'} />
+          <Input value={form.nama} onChange={(e) => set('nama', e.target.value)} required placeholder={form.tingkat === 'Kelurahan' ? 'mis. Nama Kelurahan' : 'mis. 01'} />
           <p className="mt-1 text-[11px] text-slate-400">Akan tersimpan sebagai: <strong>{prefix + form.nama || '—'}</strong></p>
         </div>
         <div className="flex justify-end gap-2 border-t border-line pt-4">

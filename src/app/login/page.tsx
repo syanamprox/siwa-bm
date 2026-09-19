@@ -76,7 +76,7 @@ export default function LoginPage() {
           <div className="flex flex-col leading-tight">
             <span className="text-lg font-bold tracking-tight text-white">SIWA</span>
             <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-brand-200/70">
-              Kecamatan Wonocolo
+              Sistem Informasi Warga
             </span>
           </div>
         </div>
@@ -127,7 +127,7 @@ export default function LoginPage() {
         >
           <div className="flex items-center gap-3">
             <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-white/80">
-              Kec. Wonocolo
+              SIWA
             </span>
             <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50">
               personalized
@@ -151,7 +151,7 @@ export default function LoginPage() {
               />
             </a>
           </div>
-          <p className="text-[12px] text-brand-200/60">© 2026 Kecamatan Wonocolo, Kota Surabaya</p>
+          <p className="text-[12px] text-brand-200/60">© 2026 Sistem Informasi Warga</p>
         </div>
       </div>
 
@@ -172,7 +172,7 @@ export default function LoginPage() {
             </div>
             <div className="text-center">
               <h1 className="text-xl font-extrabold tracking-tight text-slate-900">SIWA</h1>
-              <p className="text-xs text-slate-400">Kecamatan Wonocolo</p>
+              <p className="text-xs text-slate-400">Sistem Informasi Warga</p>
             </div>
           </div>
 
@@ -272,7 +272,7 @@ export default function LoginPage() {
           >
             <div className="flex items-center gap-2 opacity-70">
               <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
-                Kec. Wonocolo
+                SIWA
               </span>
               <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-slate-400">×</span>
               <a

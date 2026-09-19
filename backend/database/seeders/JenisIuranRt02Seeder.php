@@ -9,11 +9,13 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 /**
- * Jenis iuran MILIK RT 02 RW 03 Bendul Merisi (rt_id scope) — keputusan rapat RT:
- * Sosial Rp3.000 · Iuran RT Rp2.000 · Rukem Rp5.000 (semuanya bulanan).
+ * Jenis iuran MILIK RT 02 RW 03 Bendul Merisi (rt_id scope) — keputusan user 19 Sep 2026:
+ * Iuran Kampung Rp5.000 · Iuran Rukem Rp5.000 (bulanan). Iuran Sosial DIHAPUS,
+ * Iuran RT lama (Rp2.000) diganti Iuran Kampung.
  *
- * Otomatis menghubungkan semua KK domisili RT 02 RW 03 ke 3 jenis ini
- * (tanpa nominal custom — pakai default). Idempotent.
+ * Otomatis menghubungkan semua KK domisili RT 02 RW 03 ke 2 jenis ini
+ * (tanpa nominal custom — pakai default). Idempotent — jenis lama di luar daftar
+ * ikut dibersihkan bersama koneksi keluarga_iuran-nya.
  */
 class JenisIuranRt02Seeder extends Seeder
 {
@@ -29,8 +31,7 @@ class JenisIuranRt02Seeder extends Seeder
         }
 
         $jenisList = [
-            ['nama' => 'Iuran Sosial', 'kode' => 'SOS-0302', 'jumlah' => 3000, 'periode' => 'bulanan', 'keterangan' => 'Dana sosial/kematian RT 02 RW 03'],
-            ['nama' => 'Iuran RT', 'kode' => 'RT-0302', 'jumlah' => 2000, 'periode' => 'bulanan', 'keterangan' => 'Operasional RT 02 RW 03'],
+            ['nama' => 'Iuran Kampung', 'kode' => 'KPG-0302', 'jumlah' => 5000, 'periode' => 'bulanan', 'keterangan' => 'Iuran kampung RT 02 RW 03'],
             ['nama' => 'Iuran Rukem', 'kode' => 'RUK-0302', 'jumlah' => 5000, 'periode' => 'bulanan', 'keterangan' => 'Rukun kemasyarakatan RT 02 RW 03'],
         ];
 
@@ -41,7 +42,15 @@ class JenisIuranRt02Seeder extends Seeder
             );
         }
 
-        // Hubungkan semua KK RT 02 RW 03 ke 3 jenis ini (default nominal)
+        // Bersihkan jenis lama di luar daftar (Sosial, Iuran RT kode lama) + koneksi KK-nya
+        $stale = JenisIuran::where('rt_id', $rt->id)->whereNotIn('kode', array_column($jenisList, 'kode'))->pluck('id');
+        if ($stale->isNotEmpty()) {
+            KeluargaIuran::whereIn('jenis_iuran_id', $stale)->delete();
+            JenisIuran::whereIn('id', $stale)->delete();
+            $this->command->warn('🧹 Dihapus '.count($stale).' jenis iuran lama RT 02 (beserta koneksi KK).');
+        }
+
+        // Hubungkan semua KK RT 02 RW 03 ke 2 jenis ini (default nominal)
         $jenisIds = JenisIuran::whereIn('kode', array_column($jenisList, 'kode'))->pluck('id');
         $kkIds = Keluarga::where('rt_id', $rt->id)->pluck('id');
         $conns = 0;

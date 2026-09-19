@@ -16,7 +16,7 @@ export function Topbar() {
 
   // Lurah/RW/RT: tampilkan kelurahan scope-nya · camat/admin: level kecamatan
   const scopedKelurahan = user?.wilayah?.kelurahan_nama?.replace(/^Kelurahan\s+/i, '')
-  const wilayahLabel = scopedKelurahan ? `Kelurahan ${scopedKelurahan}` : 'Kecamatan Wonocolo'
+  const wilayahLabel = scopedKelurahan ? `Kelurahan ${scopedKelurahan}` : 'Sistem Informasi Warga'
 
   return (
     <header className="sticky top-0 z-20 flex h-16 flex-shrink-0 items-center justify-between border-b border-line bg-white/85 px-6 backdrop-blur-md">

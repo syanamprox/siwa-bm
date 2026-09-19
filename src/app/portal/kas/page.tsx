@@ -154,7 +154,7 @@ export default function KasPublikPage() {
             )}
             <input type="month" value={bulan} onChange={(e) => setBulan(e.target.value || ym(new Date()))} className={selCls} />
           </div>
-          {jenis === 'kecamatan' && <p className="text-[13px] text-slate-500">Kecamatan Wonocolo — agregat kecamatan.</p>}
+          {jenis === 'kecamatan' && <p className="text-[13px] text-slate-500">Tingkat kecamatan — agregat seluruh kelurahan.</p>}
         </div>
       )}
 

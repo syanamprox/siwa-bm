@@ -18,7 +18,8 @@ class RoleMiddleware
      */
     public function handle(Request $request, Closure $next, $roles = null): Response
     {
-        $this->allowedRoles = is_array($roles) ? $roles : func_get_args()[2] ?? [];
+        // role:a,b,c → Laravel kirim tiap role sbg argumen terpisah, kumpulkan semua
+        $this->allowedRoles = is_array($roles) ? $roles : array_slice(func_get_args(), 2);
 
         if (!Auth::check()) {
             if ($request->ajax() || $request->wantsJson()) {

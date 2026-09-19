@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AktivitasController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BackupController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\IuranController;
 use App\Http\Controllers\Api\IuranGenerationController;
@@ -102,6 +103,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Aktivitas log (admin + lurah)
     Route::get('/aktivitas', [AktivitasController::class, 'index'])->middleware('role:admin,lurah');
+
+    // AI Intelligence (chat + sessions) — read-only, kantor kelurahan saja
+    // (RT/RW di-scope wilayah di UI; AI query SQL mentah akan mem-bypass scoping → tidak diberi akses)
+    Route::prefix('intelligence')->middleware('role:admin,camat,lurah')->group(function () {
+        Route::get('sessions', [ChatController::class, 'sessions']);
+        Route::get('sessions/latest', [ChatController::class, 'latestSession']);
+        Route::get('sessions/{id}', [ChatController::class, 'showSession']);
+        Route::delete('sessions/{id}', [ChatController::class, 'destroySession']);
+        Route::post('chat', [ChatController::class, 'chat']);
+    });
 
     // ── Admin only ──
     Route::middleware('admin')->group(function () {

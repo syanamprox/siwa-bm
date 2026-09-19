@@ -7,6 +7,7 @@ import {
   FileBarChart,
   ShieldCheck,
   CircleHelp,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -110,6 +111,16 @@ export const MODULES: SiwaModule[] = [
     nav: [
       { label: 'Dokumentasi', href: '/faq', match: ['/faq'], icon: CircleHelp },
     ],
+  },
+  {
+    key: 'intelligence',
+    label: 'Intel',
+    href: '/intelligence',
+    icon: Sparkles,
+    match: ['/intelligence'],
+    // kantor kelurahan saja — sinkron dgn middleware role BE (AI query SQL mentah
+    // akan mem-bypass scoping wilayah RT/RW → tidak diberi akses)
+    roles: ['admin', 'camat', 'lurah'],
   },
 ]
 
