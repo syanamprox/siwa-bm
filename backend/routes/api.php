@@ -53,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/keluarga/statistics', [KeluargaController::class, 'statistics']);
     Route::get('/keluarga/doc-token', [KeluargaController::class, 'docToken']);
     Route::post('/keluarga/{keluarga}/verify', [KeluargaController::class, 'verify'])->middleware('admin');
+    Route::post('/keluarga/{keluarga}/foto-kk', [KeluargaController::class, 'uploadFotoKk']);
     Route::post('/keluarga/{keluarga}/foto-rumah', [KeluargaController::class, 'uploadFotoRumah']);
     Route::delete('/keluarga/{keluarga}/foto-rumah', [KeluargaController::class, 'deleteFotoRumah']);
     Route::apiResource('keluarga', KeluargaController::class)->parameters(['keluarga' => 'keluarga']);

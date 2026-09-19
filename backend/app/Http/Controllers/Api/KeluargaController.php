@@ -9,7 +9,11 @@ use App\Models\Keluarga;
 use App\Models\Warga;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Encoders\WebpEncoder;
+use Intervention\Image\ImageManager;
 
 class KeluargaController extends Controller
 {
@@ -268,7 +272,7 @@ class KeluargaController extends Controller
 
         return [
             'no_kk' => $kkUnique,
-            'foto_kk' => ['nullable', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
+            // foto_kk diupload via endpoint khusus POST /keluarga/{id}/foto-kk
             'alamat_kk' => ['required', 'string', 'max:500'],
             'rt_kk' => ['nullable', 'string', 'max:10'],
             'rw_kk' => ['nullable', 'string', 'max:10'],
@@ -362,39 +366,68 @@ class KeluargaController extends Controller
     }
 
     /**
+     * POST /api/keluarga/{keluarga}/foto-kk — upload/ganti dokumen KK.
+     * Image dikompres WebP (max 1600px, q82); PDF disimpan apa adanya.
+     */
+    public function uploadFotoKk(Request $request, Keluarga $keluarga): JsonResponse
+    {
+        $this->authorizeKeluarga($request, $keluarga);
+        $validated = $request->validate([
+            'foto' => ['required', 'file', 'mimes:jpeg,jpg,png,webp,pdf', 'max:5120'],
+        ]);
+
+        $path = $this->storeDokumen($validated['foto'], 'kk', $keluarga->no_kk);
+        $keluarga->update(['foto_kk' => $path]);
+        $this->logActivity($request, 'upload_foto_kk', 'keluarga', "Upload dokumen KK {$keluarga->no_kk}", null, ['foto_kk' => $path]);
+
+        return response()->json(['data' => $keluarga->fresh()->only(['id', 'no_kk', 'foto_kk'])]);
+    }
+
+    /**
      * POST /api/keluarga/{keluarga}/foto-rumah — upload/ganti foto rumah + penghuni.
-     *
-     * File disimpan sebagai public/rumah/{no_kk}.{ext} (root monorepo, diserve
-     * Next.js, dikunci middleware signature). Nama deterministik per KK — upload
-     * ulang menimpa file lama (semua varian ekstensi lama dibersihkan).
+     * Image dikompres WebP (max 1600px, q82); PDF disimpan apa adanya.
      */
     public function uploadFotoRumah(Request $request, Keluarga $keluarga): JsonResponse
     {
         $this->authorizeKeluarga($request, $keluarga);
         $validated = $request->validate([
-            'foto' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
+            'foto' => ['required', 'file', 'mimes:jpeg,jpg,png,webp,pdf', 'max:5120'],
         ]);
 
-        $ext = strtolower($validated['foto']->getClientOriginalExtension());
-        abort_unless(in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true), 422, 'Ekstensi file tidak didukung.');
-
-        $dir = dirname(base_path()).'/public/rumah';
-        if (! is_dir($dir)) {
-            mkdir($dir, 0775, true);
-        }
-
-        // Bersihkan file lama (ekstensi apa pun) — nama final deterministik per KK
-        foreach (glob($dir.'/'.$keluarga->no_kk.'.*') ?: [] as $old) {
-            @unlink($old);
-        }
-
-        $path = 'rumah/'.$keluarga->no_kk.'.'.$ext;
-        $validated['foto']->move($dir, basename($path));
-
+        $path = $this->storeDokumen($validated['foto'], 'rumah', $keluarga->no_kk);
         $keluarga->update(['foto_rumah' => $path]);
         $this->logActivity($request, 'upload_foto_rumah', 'keluarga', "Upload foto rumah KK {$keluarga->no_kk}", null, ['foto_rumah' => $path]);
 
         return response()->json(['data' => $keluarga->fresh()->only(['id', 'no_kk', 'foto_rumah'])]);
+    }
+
+    /**
+     * Simpan file dokumen sebagai public/{folder}/{no_kk}.{ext} (root monorepo,
+     * diserve Next.js, dikunci middleware signature). Nama deterministik per KK —
+     * upload ulang menimpa file lama (semua varian ekstensi lama dibersihkan).
+     * Image: kompres WebP max 1600px q82 via Intervention (GD). PDF: mentah.
+     */
+    private function storeDokumen(UploadedFile $file, string $folder, string $noKk): string
+    {
+        $dir = dirname(base_path()).'/public/'.$folder;
+        if (! is_dir($dir)) {
+            mkdir($dir, 0775, true);
+        }
+        foreach (glob($dir.'/'.$noKk.'.*') ?: [] as $old) {
+            @unlink($old);
+        }
+
+        if ($file->getMimeType() === 'application/pdf') {
+            $file->move($dir, $noKk.'.pdf');
+
+            return "{$folder}/{$noKk}.pdf";
+        }
+
+        $image = (new ImageManager(new GdDriver))->decodeSplFileInfo($file);
+        $webp = (string) $image->scaleDown(width: 1600)->encode(new WebpEncoder(quality: 82));
+        file_put_contents($dir.'/'.$noKk.'.webp', $webp);
+
+        return "{$folder}/{$noKk}.webp";
     }
 
     /**

@@ -177,6 +177,16 @@ export function useKeluargaMutations() {
     onError: (e) => toast.error(errMsg(e)),
   })
 
+  const uploadFotoKk = useMutation({
+    mutationFn: ({ id, file }: { id: number; file: File }) => {
+      const form = new FormData()
+      form.append('foto', file)
+      return api.upload(`/keluarga/${id}/foto-kk`, form)
+    },
+    onSuccess: () => { toast.success('Dokumen KK tersimpan'); invalidate() },
+    onError: (e) => toast.error(errMsg(e)),
+  })
+
   const uploadFotoRumah = useMutation({
     mutationFn: ({ id, file }: { id: number; file: File }) => {
       const form = new FormData()
@@ -193,7 +203,7 @@ export function useKeluargaMutations() {
     onError: (e) => toast.error(errMsg(e)),
   })
 
-  return { create, update, remove, addMember, removeMember, updateStatus, verify, uploadFotoRumah, deleteFotoRumah }
+  return { create, update, remove, addMember, removeMember, updateStatus, verify, uploadFotoKk, uploadFotoRumah, deleteFotoRumah }
 }
 
 /* ═══════════ Wilayah ═══════════ */

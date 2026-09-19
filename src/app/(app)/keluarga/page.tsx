@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import {
   Home, Plus, RotateCcw, Pencil, Trash2, Users, MapPin, ChevronRight,
-  UserPlus, UserMinus, Crown, Settings2, Coins, FileImage, BadgeCheck, BadgeX, Upload,
+  UserPlus, UserMinus, Crown, Settings2, Coins, FileImage, FileText, BadgeCheck, BadgeX, Upload,
 } from 'lucide-react'
 import { useKeluargaList, useKeluarga, useKeluargaMutations, useRtOptions, useWargaList, useAvailableJenisIuran, useConnectIuran, useDisconnectIuran, type KeluargaFilters } from '@/hooks/use-siwa'
 import { useAuth } from '@/stores/auth-store'
@@ -228,7 +228,7 @@ function DocumentButton({ path, label, failLabel }: { path: string; label: strin
   return (
     <button type="button" onClick={open} disabled={loading}
       className="inline-flex items-center gap-1.5 rounded-lg bg-brand-50 px-3 py-1.5 text-[12px] font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-60">
-      <FileImage size={13} /> {loading ? 'Menyiapkan…' : label}
+      {path.toLowerCase().endsWith('.pdf') ? <FileText size={13} /> : <FileImage size={13} />} {loading ? 'Menyiapkan…' : label}
     </button>
   )
 }
@@ -236,7 +236,7 @@ function DocumentButton({ path, label, failLabel }: { path: string; label: strin
 /* ═══════════ Drawer detail ═══════════ */
 function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => void; onEdit: (k: Keluarga) => void }) {
   const { data, isLoading, isError, error, refetch } = useKeluarga(id)
-  const { addMember, removeMember, updateStatus, uploadFotoRumah, deleteFotoRumah } = useKeluargaMutations()
+  const { addMember, removeMember, updateStatus, uploadFotoKk, uploadFotoRumah, deleteFotoRumah } = useKeluargaMutations()
   const { data: availableJenis } = useAvailableJenisIuran(id)
   const connectIuran = useConnectIuran()
   const disconnectIuran = useDisconnectIuran()
@@ -244,6 +244,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
   const [statusModal, setStatusModal] = useState(false)
   const [iuranModal, setIuranModal] = useState(false)
   const [wargaSearch, setWargaSearch] = useState('')
+  const fotoKkInput = useRef<HTMLInputElement>(null)
   const fotoRumahInput = useRef<HTMLInputElement>(null)
 
   const kel = data?.data
@@ -293,9 +294,32 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                       </p>
                     </div>
                   </div>
-                  {kel.foto_kk && (
-                    <DocumentButton path={kel.foto_kk} label="Lihat Dokumen KK" />
-                  )}
+                  {/* Dokumen KK — upload petugas (image dikompres WebP, PDF diterima apa adanya) */}
+                  <div className="mt-4 border-t border-line pt-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Dokumen KK</p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {kel.foto_kk ? (
+                        <>
+                          <DocumentButton path={kel.foto_kk} label="Lihat Dokumen KK" />
+                          <Button size="sm" variant="secondary" disabled={uploadFotoKk.isPending} onClick={() => fotoKkInput.current?.click()}>
+                            <Upload size={13} /> Ganti
+                          </Button>
+                        </>
+                      ) : (
+                        <Button size="sm" variant="secondary" disabled={uploadFotoKk.isPending} onClick={() => fotoKkInput.current?.click()}>
+                          <Upload size={13} /> {uploadFotoKk.isPending ? 'Mengunggah…' : 'Upload Dokumen KK'}
+                        </Button>
+                      )}
+                    </div>
+                    <input
+                      ref={fotoKkInput} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) uploadFotoKk.mutate({ id: kel.id, file })
+                        e.target.value = '' // file sama bisa dipilih ulang setelah gagal
+                      }}
+                    />
+                  </div>
 
                   {/* Foto rumah + penghuni — upload petugas, untuk verifikasi visual saat turun lapangan */}
                   <div className="mt-4 border-t border-line pt-3">
@@ -319,7 +343,7 @@ function KeluargaDetail({ id, onClose, onEdit }: { id: number; onClose: () => vo
                       )}
                     </div>
                     <input
-                      ref={fotoRumahInput} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                      ref={fotoRumahInput} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden"
                       onChange={(e) => {
                         const file = e.target.files?.[0]
                         if (file) uploadFotoRumah.mutate({ id: kel.id, file })
